@@ -819,7 +819,7 @@ export async function createEvent({name,date,type='private',revenueMode='booking
     p_planned_guest_count:guests?Number(guests):null,
     p_revenue_mode:revenueMode,
     p_currency_code:currency,
-    p_default_price_original:null,
+    p_default_price:null,
     p_notes:null,
   });
 }
