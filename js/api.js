@@ -546,11 +546,53 @@ export async function addPurchaseItem({invoiceId,materialId,purchaseUnitId,quant
 
 export const postPurchase=id=>rpc('post_purchase_invoice',{p_invoice_id:id});
 
-export async function previousSupplierItems(invoice){
-  if(!invoice?.supplier_id) return [];
-  const all=await purchases();
-  const prev=all.find(x=>x.supplier_id===invoice.supplier_id && x.id!==invoice.id && x.status==='posted');
-  return prev ? purchaseItems(prev.id) : [];
+export async function supplierPurchaseCatalog(supplierId){
+  if(!supplierId) return [];
+  return rpc('get_supplier_purchase_catalog_v010',{p_supplier_id:supplierId});
+}
+
+export async function updatePurchaseItem({itemId,purchaseUnitId,quantity,unitPrice,discount=0}){
+  return rpc('update_purchase_invoice_item_v010',{
+    p_item_id:itemId,
+    p_purchase_unit_id:purchaseUnitId,
+    p_quantity:Number(quantity),
+    p_unit_price_original:Number(unitPrice),
+    p_line_discount_original:Number(discount||0),
+  });
+}
+
+export const deletePurchaseItem=itemId=>rpc('delete_purchase_invoice_item_v010',{p_item_id:itemId});
+export const deletePurchaseDraft=id=>rpc('delete_purchase_invoice_draft_v010',{p_invoice_id:id});
+export const voidPurchase=(id,reason=null)=>rpc('void_purchase_invoice_v010',{p_invoice_id:id,p_reason:reason});
+
+export async function analyzePurchaseInvoiceImage({imageBase64,mimeType='image/jpeg',supplierName='',currency='SYP'}){
+  let lastErr;
+  let lastStatus=0;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      const {data,error}=await need().functions.invoke('document-ocr',{
+        body:{
+          image_base64:imageBase64,
+          mime_type:mimeType,
+          supplier_name:supplierName||'',
+          currency:currency||'SYP',
+        },
+      });
+      if(error) throw error;
+      if(data?.ok===false) throw new Error(data?.message||data?.reason||'OCR_FAILED');
+      if(Array.isArray(data?.items)) return data;
+      throw new Error('OCR_EMPTY_RESPONSE');
+    }catch(e){
+      lastErr=e;
+      lastStatus=statusFromFunctionError(e);
+      const retry=!lastStatus || lastStatus===408 || lastStatus===429 || lastStatus>=500;
+      if(!retry || attempt===3) break;
+      await sleep(attempt===1?700:1600);
+    }
+  }
+  console.error(lastErr);
+  if(lastStatus===404) throw new Error('DOCUMENT_OCR_NOT_DEPLOYED');
+  throw lastErr||new Error('OCR_FAILED');
 }
 
 export async function createOrder({cashboxId,currency='SYP',number=null,date=todayISO()}){
