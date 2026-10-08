@@ -96,21 +96,20 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.2 • Supabase</div>
+        <div class="sidebar-foot">Web v0.3</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
+            <div class="title" id="top-title">Maria CFO</div>
+          </div>
+          <div class="topbar-actions">
             <button class="back-btn" id="back-btn" type="button" aria-label="رجوع">
               <span aria-hidden="true">←</span>
               <span>رجوع</span>
             </button>
-            <div>
-              <div class="title" id="top-title">Maria CFO</div>
-              <div class="sub">الأقسام الرئيسية متاحة دائمًا من القائمة</div>
-            </div>
           </div>
         </header>
         <section class="content" id="page"></section>
@@ -167,7 +166,7 @@ async function route() {
     'reports-hub': 'الإحصائيات والتقارير',
     assistant: 'المساعد الذكي',
     settings: 'الإعدادات',
-    materials: 'المواد والوحدات',
+    materials: 'المواد والكميات والأسعار',
     suppliers: 'الموردون',
     purchases: 'فواتير الشراء',
     purchase: 'تفاصيل الفاتورة',

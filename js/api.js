@@ -17,7 +17,11 @@ export async function remove(table,id){const {error}=await need().from(table).de
 export async function rpc(name,args={}){const {data,error}=await need().rpc(name,args);if(error)throw error;return data;}
 export async function dashboard(){try{return await rpc('get_home_dashboard',{p_date:todayISO()});}catch(_){try{return await rpc('get_home_dashboard',{p_business_date:todayISO()});}catch(__){return await rpc('get_home_dashboard',{});}}}
 export async function notifications(){try{return await list('visible_notifications',{order:'created_at',limit:30});}catch(_){return list('notifications',{order:'created_at',limit:30});}}
-export const materials=()=>list('materials',{order:'name',ascending:true,limit:1000});
+export async function materials(){
+  try{return await list('materials',{order:'created_at',ascending:true,limit:1000});}
+  catch(_){try{return await list('materials',{order:'id',ascending:true,limit:1000});}
+  catch(__){return list('materials',{order:'name',ascending:true,limit:1000});}}
+}
 export async function recordInventoryMovement({materialId,quantityDelta,movementType='opening',unitCost=null,note=null}){
   const occurredAt=new Date().toISOString();
   const qty=Number(quantityDelta);
@@ -38,6 +42,27 @@ export async function setMaterialReferencePrice(materialId,unitCost){
     {last_purchase_unit_cost_base:cost},
     {current_unit_cost_base:cost},
   ]);
+}
+export async function setMaterialAlertMinimum(materialId,value,row=null){
+  const amount=Number(value);
+  if(!(amount>=0))throw new Error('INVALID_STOCK_ALERT_MINIMUM');
+
+  const known=[
+    'target_stock_base',
+    'target_stock_quantity_base',
+    'minimum_stock_base',
+    'min_stock_base',
+    'minimum_stock_quantity_base',
+    'stock_alert_minimum_base',
+  ];
+
+  const keys=Object.keys(row||{});
+  const existing=known.find(k=>keys.includes(k)) || keys.find(k=>/(^|_)(target|minimum|min)(_|).*stock|stock.*(target|minimum|min)|alert.*(stock|quantity)/i.test(k));
+  if(existing){
+    try{return await update('materials',materialId,{[existing]:amount});}catch(_){}
+  }
+
+  return updateFirst('materials',materialId,known.map(k=>({[k]:amount})));
 }
 export async function saveMaterialInitialState({materialId,openingQuantity=null,referenceUnitCost=null}){
   const hasQty=openingQuantity!==null&&openingQuantity!==''&&Number(openingQuantity)!==0;

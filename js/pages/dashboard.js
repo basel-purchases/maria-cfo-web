@@ -13,7 +13,7 @@ export async function renderDashboard(root){root.innerHTML=loader();try{const [d
 <div style="height:16px"></div>
 <div class="grid cols-2">
 <div class="card"><h3>ابدأ من هنا</h3><p style="margin-bottom:10px">يظهر هذا الدليل حتى يكون تسلسل الاستخدام واضحًا.</p><div class="setup-list">
-${step('المواد','تعريف المواد والوحدات',mats.length>0,'#/materials')}
+${step('المواد','تعريف المواد والكميات والأسعار',mats.length>0,'#/materials')}
 ${step('الوجبات والوصفات','تعريف الأصناف ومكوناتها',menu.length>0,'#/menu')}
 ${step('الصناديق','التعريفات الافتراضية جاهزة',boxes.length>=3,'#/cashboxes')}
 ${step('الموظفون','اختياري للدوام والرواتب',emps.length>0,'#/employees-list',true)}
