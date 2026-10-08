@@ -12,11 +12,43 @@ export async function one(table,id){const {data,error}=await need().from(table).
 export async function insert(table,payload){const {data,error}=await need().from(table).insert(payload).select().single();if(error)throw error;return data;}
 export async function insertFirst(table,payloads){let last;for(const payload of payloads){try{return await insert(table,payload);}catch(e){last=e;}}throw last;}
 export async function update(table,id,patch){const {data,error}=await need().from(table).update(patch).eq('id',id).select().single();if(error)throw error;return data;}
+export async function updateFirst(table,id,patches){let last;for(const patch of patches){try{return await update(table,id,patch);}catch(e){last=e;}}throw last;}
 export async function remove(table,id){const {error}=await need().from(table).delete().eq('id',id);if(error)throw error;}
 export async function rpc(name,args={}){const {data,error}=await need().rpc(name,args);if(error)throw error;return data;}
 export async function dashboard(){try{return await rpc('get_home_dashboard',{p_date:todayISO()});}catch(_){try{return await rpc('get_home_dashboard',{p_business_date:todayISO()});}catch(__){return await rpc('get_home_dashboard',{});}}}
 export async function notifications(){try{return await list('visible_notifications',{order:'created_at',limit:30});}catch(_){return list('notifications',{order:'created_at',limit:30});}}
 export const materials=()=>list('materials',{order:'name',ascending:true,limit:1000});
+export async function recordInventoryMovement({materialId,quantityDelta,movementType='opening',unitCost=null,note=null}){
+  const occurredAt=new Date().toISOString();
+  const qty=Number(quantityDelta);
+  const cost=unitCost===null||unitCost===''?null:Number(unitCost);
+  const variants=[
+    {p_material_id:materialId,p_movement_type:movementType,p_quantity_delta_base:qty,p_unit_cost_base_per_base_unit:cost,p_occurred_at:occurredAt,p_source_type:'manual_adjustment',p_source_id:null,p_source_line_id:null,p_note:note},
+    {p_material_id:materialId,p_movement_type:movementType,p_quantity_delta_base:qty,p_unit_cost_base:cost,p_note:note},
+  ];
+  let last;
+  for(const args of variants){try{return await rpc('record_inventory_movement',args);}catch(e){last=e;}}
+  throw last;
+}
+export async function setMaterialReferencePrice(materialId,unitCost){
+  const cost=Number(unitCost);
+  if(!(cost>=0))throw new Error('INVALID_REFERENCE_PRICE');
+  return updateFirst('materials',materialId,[
+    {latest_purchase_unit_cost_base:cost},
+    {last_purchase_unit_cost_base:cost},
+    {current_unit_cost_base:cost},
+  ]);
+}
+export async function saveMaterialInitialState({materialId,openingQuantity=null,referenceUnitCost=null}){
+  const hasQty=openingQuantity!==null&&openingQuantity!==''&&Number(openingQuantity)!==0;
+  const hasCost=referenceUnitCost!==null&&referenceUnitCost!=='';
+  if(hasQty){
+    await recordInventoryMovement({materialId,quantityDelta:Number(openingQuantity),movementType:'opening',unitCost:hasCost?Number(referenceUnitCost):null,note:'رصيد افتتاحي من إعداد المادة'});
+  }
+  if(hasCost){
+    try{await setMaterialReferencePrice(materialId,Number(referenceUnitCost));}catch(e){console.warn('Reference price snapshot was not updated; opening movement remains authoritative when available.',e);}
+  }
+}
 export const units=()=>list('units',{order:'code',ascending:true,limit:100});
 export const suppliers=()=>list('suppliers',{order:'name',ascending:true,limit:500});
 export const purchases=()=>list('purchase_invoices',{order:'occurred_at',limit:500});
@@ -49,4 +81,4 @@ export async function initializeAttendance(date){return rpc('initialize_daily_at
 export async function setAttendance({employeeId,date,worked,status='full',expected=null,overtime=null,shortage=null,note=null}){return rpc('set_employee_attendance',{p_employee_id:employeeId,p_work_date:date,p_worked_hours:Number(worked||0),p_status:status,p_expected_hours:expected,p_approved_overtime_hours:overtime,p_applied_shortage_hours:shortage,p_note:note});}
 export async function createEvent({name,date,type='private',revenueMode='bookings',guests=null,currency='SYP'}){return rpc('create_event',{p_name:name,p_event_type:type,p_event_date:date,p_planned_guest_count:guests?Number(guests):null,p_revenue_mode:revenueMode,p_currency_code:currency,p_default_price_original:null,p_notes:null});}
 function statusFromFunctionError(err){const s=Number(err?.context?.status||err?.status||0);return s;}
-export async function askAssistant(message,history=[]){let lastErr;for(let attempt=1;attempt<=3;attempt++){try{const {data,error}=await need().functions.invoke('assistant',{body:{message,screen_context:'Maria CFO Web',history}});if(error)throw error;if(data?.answer)return data;throw new Error('EMPTY_AI_RESPONSE');}catch(e){lastErr=e;const status=statusFromFunctionError(e);const retry=!status||status===408||status===429||status>=500;if(!retry||attempt===3)break;await sleep(attempt===1?700:1600);}}console.error(lastErr);return {ok:false,answer:'المساعد غير متاح مؤقتًا الآن. حاول مرة أخرى بعد قليل. إذا استمرت المشكلة فغالبًا مزود الذكاء الاصطناعي مشغول أو لم يستجب في الوقت المحدد.',reason:'temporary_ai_unavailable'};}
+export async function askAssistant(message,history=[]){let lastErr;let lastStatus=0;for(let attempt=1;attempt<=3;attempt++){try{const {data,error}=await need().functions.invoke('assistant',{body:{message,screen_context:'Maria CFO Web',history}});if(error)throw error;if(data?.answer)return data;throw new Error('EMPTY_AI_RESPONSE');}catch(e){lastErr=e;lastStatus=statusFromFunctionError(e);const retry=!lastStatus||lastStatus===408||lastStatus===429||lastStatus>=500;if(!retry||attempt===3)break;await sleep(attempt===1?700:1600);}}console.error(lastErr);let reason='تعذر الاتصال بخدمة المساعد بعد ثلاث محاولات.';if(lastStatus===429)reason='تم بلوغ حد الاستخدام المؤقت لمزود الذكاء الاصطناعي بعد ثلاث محاولات.';else if(lastStatus>=500)reason='خدمة الذكاء الاصطناعي لم تستجب بشكل سليم من الخادم بعد ثلاث محاولات.';else if(!lastStatus)reason='تعذر الوصول إلى خدمة المساعد بسبب مشكلة اتصال بعد ثلاث محاولات.';return {ok:false,answer:`المساعد غير متاح مؤقتًا الآن. ${reason} حاول مرة أخرى بعد قليل.`,reason:'temporary_ai_unavailable'};}
