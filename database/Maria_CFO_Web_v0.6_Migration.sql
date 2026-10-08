@@ -1,6 +1,6 @@
 -- =========================================================
--- Maria CFO Web v0.5
--- Cumulative migration for v0.4 + v0.5
+-- Maria CFO Web v0.6
+-- Cumulative migration for v0.4 + v0.5 + v0.6
 -- Safe to run more than once.
 -- =========================================================
 
@@ -370,6 +370,205 @@ $$;
 
 revoke all on function public.delete_menu_recipe_item(uuid) from public;
 grant execute on function public.delete_menu_recipe_item(uuid) to authenticated;
+
+commit;
+
+notify pgrst, 'reload schema';
+
+
+-- =========================================================
+-- Maria CFO Web v0.6 additions
+-- =========================================================
+
+begin;
+
+-- ---------------------------------------------------------
+-- 5) Extra market unit: سحارة
+-- ---------------------------------------------------------
+
+do $$
+declare
+  has_unit_type boolean;
+begin
+  if not exists (select 1 from public.units where upper(code)='SAHARA') then
+    select exists (
+      select 1 from information_schema.columns
+      where table_schema='public' and table_name='units' and column_name='unit_type'
+    ) into has_unit_type;
+
+    if has_unit_type then
+      insert into public.units (code,name,unit_type)
+      select 'SAHARA','سحارة',u.unit_type
+      from public.units u
+      order by case when upper(u.code)='PCS' then 0 else 1 end, u.code
+      limit 1;
+    else
+      insert into public.units (code,name) values ('SAHARA','سحارة');
+    end if;
+  else
+    update public.units set name='سحارة' where upper(code)='SAHARA';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------
+-- 6) Unit catalog management from Settings.
+-- ---------------------------------------------------------
+
+create or replace function public.save_custom_unit_v06(
+  p_unit_id uuid default null,
+  p_name text default null,
+  p_code text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_name text;
+  v_code text;
+  v_has_unit_type boolean;
+begin
+  if not public.is_app_owner() then
+    raise exception 'Access denied';
+  end if;
+
+  v_name := nullif(btrim(p_name), '');
+  if v_name is null then
+    raise exception 'UNIT_NAME_REQUIRED';
+  end if;
+
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema='public' and table_name='units' and column_name='unit_type'
+  ) into v_has_unit_type;
+
+  if p_unit_id is null then
+    v_code := upper(nullif(btrim(p_code), ''));
+    if v_code is null then
+      v_code := 'U_' || upper(substr(replace(gen_random_uuid()::text,'-',''),1,8));
+    end if;
+
+    if exists (select 1 from public.units where lower(name)=lower(v_name) or upper(code)=v_code) then
+      select id into v_id
+      from public.units
+      where lower(name)=lower(v_name) or upper(code)=v_code
+      order by case when lower(name)=lower(v_name) then 0 else 1 end
+      limit 1;
+      return v_id;
+    end if;
+
+    if v_has_unit_type then
+      insert into public.units (code,name,unit_type)
+      select v_code,v_name,u.unit_type
+      from public.units u
+      order by case when upper(u.code)='PCS' then 0 else 1 end, u.code
+      limit 1
+      returning id into v_id;
+
+      if v_id is null then
+        raise exception 'UNIT_TEMPLATE_NOT_FOUND';
+      end if;
+    else
+      insert into public.units (code,name)
+      values (v_code,v_name)
+      returning id into v_id;
+    end if;
+  else
+    update public.units
+    set name=v_name,
+        code=coalesce(upper(nullif(btrim(p_code),'')),code)
+    where id=p_unit_id
+    returning id into v_id;
+
+    if v_id is null then
+      raise exception 'UNIT_NOT_FOUND';
+    end if;
+  end if;
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.save_custom_unit_v06(uuid,text,text) from public;
+grant execute on function public.save_custom_unit_v06(uuid,text,text) to authenticated;
+
+create or replace function public.delete_custom_unit_v06(
+  p_unit_id uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_app_owner() then
+    raise exception 'Access denied';
+  end if;
+
+  begin
+    delete from public.units where id=p_unit_id;
+  exception when foreign_key_violation then
+    raise exception 'UNIT_IN_USE';
+  end;
+
+  return found;
+end;
+$$;
+
+revoke all on function public.delete_custom_unit_v06(uuid) from public;
+grant execute on function public.delete_custom_unit_v06(uuid) to authenticated;
+
+-- ---------------------------------------------------------
+-- 7) Recipe save v0.6.
+--    If the material already exists in the recipe, update it
+--    instead of attempting a duplicate insert.
+-- ---------------------------------------------------------
+
+create or replace function public.save_menu_recipe_item_v06(
+  p_menu_item_id uuid,
+  p_material_id uuid,
+  p_input_unit_id uuid,
+  p_input_quantity numeric,
+  p_recipe_item_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_existing_id uuid;
+begin
+  if not public.is_app_owner() then
+    raise exception 'Access denied';
+  end if;
+
+  if p_recipe_item_id is null then
+    select ri.id
+    into v_existing_id
+    from public.menu_item_recipe_items ri
+    where ri.menu_item_id=p_menu_item_id
+      and ri.material_id=p_material_id
+    order by ri.id
+    limit 1;
+
+    p_recipe_item_id := v_existing_id;
+  end if;
+
+  return public.save_menu_recipe_item(
+    p_menu_item_id,
+    p_material_id,
+    p_input_unit_id,
+    p_input_quantity,
+    p_recipe_item_id
+  );
+end;
+$$;
+
+revoke all on function public.save_menu_recipe_item_v06(uuid,uuid,uuid,numeric,uuid) from public;
+grant execute on function public.save_menu_recipe_item_v06(uuid,uuid,uuid,numeric,uuid) to authenticated;
 
 commit;
 

@@ -1,7 +1,9 @@
 import * as api from '../api.js';
 import { modal, toast, loader, friendlyError } from '../ui.js';
-import { esc, unitLabel, money, num } from '../utils.js';
+import { esc, unitDisplay, money, num } from '../utils.js';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js';
+
+const PAGE_SIZE=10;
 
 const stockOf = (r) => num(
   r.current_stock_base ??
@@ -37,17 +39,25 @@ const priceOf = (r) =>
 
 function materialUnit(row, units) {
   const unit = units.find((u) => String(u.id) === String(row.base_unit_id));
-  return unitLabel(unit?.code || unit?.name || row.base_unit_code || '');
+  return unitDisplay(unit) || row.base_unit_code || '';
 }
 
 function materialCode(row){
   return row.quick_code || row.code || row.__generatedCode || '—';
 }
 
-function unitOptions(units, selected='') {
-  return units
-    .map((u) => `<option value="${esc(u.id)}" ${String(u.id)===String(selected)?'selected':''}>${esc(unitLabel(u.code || u.name))}</option>`)
-    .join('');
+function unitListHtml(units,id){
+  return `<datalist id="${id}">${units.map(u=>`<option value="${esc(unitDisplay(u))}">${esc(u.code||'')}</option>`).join('')}</datalist>`;
+}
+
+function filterRows(rows,query){
+  const q=String(query||'').trim().toLowerCase();
+  if(!q) return rows;
+  return rows.filter(r=>{
+    const name=String(r.name||'').toLowerCase();
+    const code=String(materialCode(r)||'').toLowerCase();
+    return name.includes(q) || code.includes(q);
+  });
 }
 
 export async function renderMaterials(root) {
@@ -57,15 +67,24 @@ export async function renderMaterials(root) {
     rows = await api.ensureMaterialCodes(rows);
     await Promise.all(rows.map(r=>api.ensureStandardMaterialUnits(r,units).catch(()=>null)));
 
+    const state={query:'',page:1};
     root.innerHTML = `
       <div class="page-head">
         <div>
           <h2>المواد والكميات والأسعار</h2>
-          <p>عرّف المادة مرة واحدة، وحدد وحدة المخزون ووحدات الشراء والاستخدام. بعد ذلك تتولى الفواتير والوصفات الحسابات تلقائيًا.</p>
+          <p>عرّف المادة مرة واحدة، وحدد وحدة المخزون. أضف التحويلات فقط عندما تحتاجها في الشراء أو الوصفات.</p>
         </div>
         <button class="btn add">إضافة مادة</button>
       </div>
-      ${rows.length ? table(rows, units) : `
+      ${rows.length ? `
+        <div class="list-toolbar">
+          <div class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="material-search" type="search" placeholder="ابحث باسم المادة أو الكود" autocomplete="off">
+          </div>
+          <div class="list-count" id="material-count"></div>
+        </div>
+        <div id="materials-list"></div>` : `
         <div class="card empty">
           <strong>ابدأ بأول مادة</strong>
           <div>أضف اسم المادة ووحدة المخزون. يمكنك إدخال الرصيد والسعر إن كانا معروفين الآن.</div>
@@ -77,18 +96,53 @@ export async function renderMaterials(root) {
       b.onclick = () => addMaterial(root, units, rows);
     });
 
-    root.querySelectorAll('[data-material-edit]').forEach((b) => {
-      const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
-      if (row) b.onclick = () => editMaterial(root, units, row);
-    });
+    if(!rows.length) return;
 
-    root.querySelectorAll('[data-material-units]').forEach((b) => {
-      const row = rows.find((r) => String(r.id) === b.dataset.materialUnits);
-      if (row) b.onclick = () => manageMaterialUnits(root, units, row);
+    const list=root.querySelector('#materials-list');
+    const count=root.querySelector('#material-count');
+    const search=root.querySelector('#material-search');
+
+    const draw=()=>{
+      const filtered=filterRows(rows,state.query);
+      const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+      state.page=Math.min(state.page,pages);
+      const start=(state.page-1)*PAGE_SIZE;
+      const shown=filtered.slice(start,start+PAGE_SIZE);
+      count.textContent=`${filtered.length} مادة`;
+      list.innerHTML=`
+        ${shown.length ? table(shown, units) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
+        ${filtered.length>PAGE_SIZE ? pagination(state.page,pages) : ''}`;
+
+      list.querySelectorAll('[data-material-edit]').forEach((b) => {
+        const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
+        if (row) b.onclick = () => editMaterial(root, units, row);
+      });
+      list.querySelectorAll('[data-material-units]').forEach((b) => {
+        const row = rows.find((r) => String(r.id) === b.dataset.materialUnits);
+        if (row) b.onclick = () => manageMaterialUnits(root, units, row);
+      });
+      list.querySelector('[data-page-prev]')?.addEventListener('click',()=>{state.page=Math.max(1,state.page-1);draw();});
+      list.querySelector('[data-page-next]')?.addEventListener('click',()=>{state.page=Math.min(pages,state.page+1);draw();});
+    };
+
+    search.addEventListener('input',()=>{
+      state.query=search.value;
+      state.page=1;
+      draw();
     });
+    draw();
   } catch (e) {
     root.innerHTML = `<div class="notice">${friendlyError(e)}</div>`;
   }
+}
+
+function pagination(page,pages){
+  return `
+    <div class="pagination-bar">
+      <button type="button" class="mini-btn" data-page-prev ${page<=1?'disabled':''}>السابق</button>
+      <span>صفحة ${page} من ${pages}</span>
+      <button type="button" class="mini-btn" data-page-next ${page>=pages?'disabled':''}>التالي</button>
+    </div>`;
 }
 
 function table(rows, units) {
@@ -133,11 +187,13 @@ function table(rows, units) {
 }
 
 function addMaterial(root, units, rows) {
+  const listId=`material-base-units-${Date.now()}`;
   const m = modal({
     title: 'إضافة مادة',
-    subtitle: 'اختر وحدة المخزون، وإذا كانت تُشترى بالجملة أضف وحدة الشراء والتحويل.',
+    subtitle: 'أدخل المادة ووحدة المخزون. يمكنك إضافة أي تحويلات لاحقًا من زر «الوحدات والتحويل».',
     wide: true,
     body: `
+      ${unitListHtml(units,listId)}
       <div class="form-grid material-form-grid">
         <div class="field">
           <label>اسم المادة</label>
@@ -148,27 +204,9 @@ function addMaterial(root, units, rows) {
           <input name="material_code" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
         </div>
 
-        <div class="field">
+        <div class="field full">
           <label>وحدة المخزون الأساسية</label>
-          <select name="base_unit" required>
-            <option value="">اختر</option>
-            ${unitOptions(units)}
-          </select>
-        </div>
-        <div class="field">
-          <label>وحدة الشراء <span class="optional-badge">اختياري</span></label>
-          <select name="purchase_unit">
-            <option value="">نفس وحدة المخزون</option>
-            ${unitOptions(units)}
-          </select>
-        </div>
-
-        <div class="field full purchase-conversion-field" hidden>
-          <label data-purchase-conversion-label>تحويل وحدة الشراء</label>
-          <div class="input-with-suffix">
-            <input name="purchase_factor" type="number" min="0.00000001" step="any" autocomplete="off">
-            <span class="input-suffix" data-purchase-conversion-suffix>من وحدة المخزون</span>
-          </div>
+          <input name="base_unit_text" list="${listId}" placeholder="ابحث أو اكتب وحدة جديدة" required autocomplete="off">
         </div>
 
         <div class="field">
@@ -199,9 +237,7 @@ function addMaterial(root, units, rows) {
         const name = String(fd.get('material_name') || '').trim();
         const requestedCode = String(fd.get('material_code') || '').trim();
         const code = requestedCode || await api.nextMaterialCode(rows);
-        const baseUnitId = String(fd.get('base_unit') || '').trim();
-        const purchaseUnitId = String(fd.get('purchase_unit') || '').trim();
-        const purchaseFactorRaw = String(fd.get('purchase_factor') || '').trim();
+        const unitText=String(fd.get('base_unit_text')||'').trim();
         const targetRaw = String(fd.get('target') || '').trim();
         const qtyRaw = String(fd.get('opening_quantity') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
@@ -210,16 +246,18 @@ function addMaterial(root, units, rows) {
           toast('اكتب اسم المادة.', 'error');
           return false;
         }
-        if (!baseUnitId) {
-          toast('اختر وحدة المخزون الأساسية.', 'error');
+        if (!unitText) {
+          toast('اختر أو اكتب وحدة المخزون الأساسية.', 'error');
           return false;
         }
 
-        const hasDifferentPurchaseUnit = purchaseUnitId && purchaseUnitId !== baseUnitId;
-        if (hasDifferentPurchaseUnit && !(Number(purchaseFactorRaw) > 0)) {
-          toast('اكتب علاقة التحويل لوحدة الشراء.', 'error');
-          return false;
+        let baseUnit=api.findUnitByText(unitText,units);
+        if(!baseUnit){
+          baseUnit=await api.resolveUnit(unitText,units);
+          if(baseUnit && !units.some(u=>String(u.id)===String(baseUnit.id))) units.push(baseUnit);
         }
+        const baseUnitId=String(baseUnit?.id||'');
+        if(!baseUnitId) throw new Error('UNIT_REQUIRED');
 
         const basePayloads = [
           {
@@ -249,30 +287,13 @@ function addMaterial(root, units, rows) {
           await api.setMaterialAlertMinimum(created.id, Number(targetRaw), created);
         }
 
-        let purchaseFactor=1;
-        if (hasDifferentPurchaseUnit) {
-          purchaseFactor=Number(purchaseFactorRaw);
-          await api.saveMaterialUnit({
-            materialId:created.id,
-            unitId:purchaseUnitId,
-            quantityInBase:purchaseFactor,
-            isPurchaseUnit:true,
-          });
-        }
-
         await api.ensureStandardMaterialUnits(created,units);
 
-        // The price field is entered for the selected purchase unit.
-        // Store a normalized price per base unit so the cost engine remains deterministic.
-        const normalizedPrice = priceRaw === ''
-          ? null
-          : Number(priceRaw) / purchaseFactor;
-
-        if (qtyRaw !== '' || normalizedPrice !== null) {
+        if (qtyRaw !== '' || priceRaw !== '') {
           await api.saveMaterialInitialState({
             materialId: created.id,
             openingQuantity: qtyRaw === '' ? null : Number(qtyRaw),
-            referenceUnitCost: normalizedPrice,
+            referenceUnitCost: priceRaw === '' ? null : Number(priceRaw),
           });
         }
 
@@ -286,29 +307,15 @@ function addMaterial(root, units, rows) {
     },
   });
 
-  const baseSel=m.form.querySelector('[name="base_unit"]');
-  const purchaseSel=m.form.querySelector('[name="purchase_unit"]');
-  const conversionField=m.form.querySelector('.purchase-conversion-field');
-  const conversionLabel=m.form.querySelector('[data-purchase-conversion-label]');
-  const conversionSuffix=m.form.querySelector('[data-purchase-conversion-suffix]');
+  const unitInput=m.form.querySelector('[name="base_unit_text"]');
   const priceSuffix=m.form.querySelector('[data-price-unit]');
   const baseSuffixes=[...m.form.querySelectorAll('[data-base-unit-label]')];
-
   const refresh=()=>{
-    const baseText=baseSel.value ? baseSel.options[baseSel.selectedIndex]?.textContent?.trim() : 'الوحدة';
-    const purchaseText=purchaseSel.value ? purchaseSel.options[purchaseSel.selectedIndex]?.textContent?.trim() : baseText;
-    const different=purchaseSel.value && purchaseSel.value!==baseSel.value;
-
-    baseSuffixes.forEach(el=>el.textContent=baseText||'الوحدة');
-    priceSuffix.textContent=`SYP / ${purchaseText||'الوحدة'}`;
-    conversionField.hidden=!different;
-    if(different){
-      conversionLabel.textContent=`كل 1 ${purchaseText} يساوي كم ${baseText}؟`;
-      conversionSuffix.textContent=baseText;
-    }
+    const text=String(unitInput.value||'').trim() || 'الوحدة';
+    baseSuffixes.forEach(el=>el.textContent=text);
+    priceSuffix.textContent=`SYP / ${text}`;
   };
-  baseSel.addEventListener('change',refresh);
-  purchaseSel.addEventListener('change',refresh);
+  unitInput.addEventListener('input',refresh);
   refresh();
 }
 
@@ -418,51 +425,40 @@ async function manageMaterialUnits(root, units, material){
   try{
     const choices=await materialUnitChoices(material,units);
     const base=choices.find(x=>x.isBase);
-    const body=()=>`
-      <div class="unit-manager-head">
-        <button type="button" class="btn soft add-purchase-unit">+ وحدة شراء</button>
-        <button type="button" class="btn secondary add-usage-unit">+ وحدة استخدام</button>
-      </div>
-      <div class="table-wrap table-fit recipe-table-wrap">
-        <table class="table compact-table">
-          <thead><tr><th>الوحدة</th><th>الاستخدام</th><th>التحويل إلى ${esc(base?.label||'الوحدة الأساسية')}</th></tr></thead>
-          <tbody>
-            ${choices.map(x=>`
-              <tr>
-                <td><strong>${esc(x.label)}</strong></td>
-                <td>${x.isBase?'أساسية':x.isPurchaseUnit?'شراء':'استخدام / وصفة'}</td>
-                <td>${x.isBase?'1':`1 ${esc(x.label)} = ${esc(x.quantityInBase)} ${esc(base?.label||'وحدة')}`}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
-
     const m=modal({
       title:`وحدات ${material.name}`,
-      subtitle:'يمكن للمادة أن تُشترى بوحدة جملة وتُستخدم في الوصفة بوحدات أصغر.',
+      subtitle:'أضف أي وحدة مرتبطة بهذه المادة، مثل كرتونة أو سحارة أو ملعقة. نفس التحويل يعمل في الشراء والوصفات.',
       wide:true,
       submitText:'إغلاق',
-      body:body(),
+      body:`
+        <div class="unit-manager-head single-action">
+          <button type="button" class="btn soft add-conversion">+ إضافة تحويل</button>
+        </div>
+        <div class="table-wrap table-fit recipe-table-wrap">
+          <table class="table compact-table">
+            <thead><tr><th>الوحدة</th><th>العلاقة مع ${esc(base?.label||'الوحدة الأساسية')}</th></tr></thead>
+            <tbody>
+              ${choices.map(x=>`
+                <tr>
+                  <td><strong>${esc(x.label)}</strong>${x.isBase?' <span class="tag">أساسية</span>':''}</td>
+                  <td>${x.isBase?'1':`1 ${esc(x.label)} = ${esc(x.quantityInBase)} ${esc(base?.label||'وحدة')}`}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`,
       onSubmit:async()=>true,
     });
 
     const reload=async()=>{
       m.close();
-      await manageMaterialUnits(root,units,material);
+      const refreshedUnits=await api.units();
+      await manageMaterialUnits(root,refreshedUnits,material);
       await renderMaterials(root);
     };
 
-    m.form.querySelector('.add-purchase-unit').onclick=()=>openConversionDialog({
+    m.form.querySelector('.add-conversion').onclick=()=>openConversionDialog({
       material,
       units,
-      mode:'purchase',
-      referenceUnitId:material.base_unit_id,
-      onSaved:reload,
-    });
-    m.form.querySelector('.add-usage-unit').onclick=()=>openConversionDialog({
-      material,
-      units,
-      mode:'usage',
       referenceUnitId:material.base_unit_id,
       onSaved:reload,
     });

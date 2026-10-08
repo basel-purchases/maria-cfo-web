@@ -1,17 +1,16 @@
 import * as api from './api.js';
 import { modal, toast, friendlyError } from './ui.js';
-import { esc, unitLabel, num } from './utils.js';
+import { esc, unitDisplay, num } from './utils.js';
 
 function unitById(units,id){
   return units.find(u=>String(u.id)===String(id));
 }
 
 export function labelForUnit(units,id){
-  const u=unitById(units,id);
-  return unitLabel(u?.code || u?.name || '—');
+  return unitDisplay(unitById(units,id));
 }
 
-export async function materialUnitChoices(material,units,{purchaseOnly=false}={}){
+export async function materialUnitChoices(material,units){
   const rows=await api.materialUnits(material.id);
   const out=[];
   const base=unitById(units,material.base_unit_id);
@@ -19,43 +18,36 @@ export async function materialUnitChoices(material,units,{purchaseOnly=false}={}
     out.push({
       unitId:base.id,
       unit:base,
-      label:unitLabel(base.code||base.name),
+      label:unitDisplay(base),
       quantityInBase:1,
       isBase:true,
-      isPurchaseUnit:true,
+      row:null,
     });
   }
 
   for(const row of rows){
-    if(purchaseOnly && row.is_purchase_unit!==true) continue;
     if(out.some(x=>String(x.unitId)===String(row.unit_id))) continue;
     const u=unitById(units,row.unit_id);
     if(!u) continue;
     out.push({
       unitId:u.id,
       unit:u,
-      label:unitLabel(u.code||u.name),
+      label:unitDisplay(u),
       quantityInBase:num(row.quantity_in_base,1),
       isBase:false,
-      isPurchaseUnit:row.is_purchase_unit===true,
       row,
     });
   }
   return out;
 }
 
-function unitOptions(units,selected='',excludeIds=[]){
-  const excluded=new Set(excludeIds.map(String));
-  return units
-    .filter(u=>!excluded.has(String(u.id)))
-    .map(u=>`<option value="${esc(u.id)}" ${String(u.id)===String(selected)?'selected':''}>${esc(unitLabel(u.code||u.name))}</option>`)
-    .join('');
+function datalistOptions(units){
+  return units.map(u=>`<option value="${esc(unitDisplay(u))}">${esc(u.code||'')}</option>`).join('');
 }
 
 export async function openConversionDialog({
   material,
   units,
-  mode='usage',
   referenceUnitId=null,
   onSaved=null,
 }){
@@ -69,22 +61,14 @@ export async function openConversionDialog({
     ? referenceUnitId
     : choices[0].unitId;
 
-  const configuredIds=choices.map(x=>String(x.unitId));
-  const availableNew=units.filter(u=>!configuredIds.includes(String(u.id)));
-  if(!availableNew.length){
-    toast('كل الوحدات المتاحة مضافة لهذه المادة.');
-    return;
-  }
+  const listId=`unit-catalog-${String(material.id).replace(/[^a-z0-9]/gi,'').slice(0,10)}-${Date.now()}`;
 
-  const isPurchase=mode==='purchase';
   const m=modal({
-    title:isPurchase ? 'إضافة وحدة شراء' : 'إضافة وحدة استخدام',
-    subtitle:isPurchase
-      ? 'اربط وحدة الشراء بوحدة معروفة للمادة.'
-      : 'عرّف العلاقة بالطريقة الأسهل لك، ثم استخدم الوحدة مباشرة في الوصفة.',
+    title:'إضافة تحويل وحدة',
+    subtitle:'اختر وحدة مرجعية، ثم ابحث عن الوحدة الأخرى أو اكتب اسم وحدة جديدة لإضافتها تلقائيًا.',
     submitText:'حفظ التحويل',
     body:`
-      <div class="conversion-pair-grid">
+      <div class="conversion-pair-grid" data-conversion-grid>
         <div class="field reference-unit-field">
           <label>الوحدة المرجعية</label>
           <select name="reference_unit" required>
@@ -92,22 +76,20 @@ export async function openConversionDialog({
           </select>
         </div>
         <div class="field new-unit-field">
-          <label>الوحدة الجديدة</label>
-          <select name="new_unit" required>
-            ${unitOptions(availableNew)}
-          </select>
+          <label>الوحدة الأخرى</label>
+          <input name="new_unit_text" list="${listId}" placeholder="اكتب أو ابحث مثل: ملعقة، سحارة..." required autocomplete="off">
+          <datalist id="${listId}">${datalistOptions(units)}</datalist>
         </div>
       </div>
 
-      ${isPurchase ? '' : `
-        <label class="inverse-option">
-          <input type="checkbox" name="inverse_mode" value="1">
-          <span class="inverse-checkmark">✓</span>
-          <span>
-            <strong>معكوس</strong>
-            <small>فعّله إذا كان الأسهل أن تكتب كم تساوي الوحدة الجديدة من الوحدة المرجعية.</small>
-          </span>
-        </label>`}
+      <label class="inverse-option compact-inverse">
+        <input type="checkbox" name="inverse_mode" value="1">
+        <span class="inverse-checkmark">✓</span>
+        <span>
+          <strong>إجراء عكسي</strong>
+          <small>بدّل اتجاه العلاقة إذا كان الأسهل أن تكتب مقدار الوحدة المرجعية داخل الوحدة الأخرى.</small>
+        </span>
+      </label>
 
       <div class="conversion-card">
         <div class="conversion-card-title">علاقة التحويل</div>
@@ -119,10 +101,10 @@ export async function openConversionDialog({
       </div>`,
     onSubmit:async fd=>{
       try{
-        const newUnitId=String(fd.get('new_unit')||'');
         const refId=String(fd.get('reference_unit')||'');
+        const unitText=String(fd.get('new_unit_text')||'').trim();
         const factor=Number(fd.get('factor'));
-        const inverse=!isPurchase && fd.get('inverse_mode')==='1';
+        const inverse=fd.get('inverse_mode')==='1';
         if(!(factor>0)){
           toast('اكتب قيمة تحويل أكبر من صفر.','error');
           return false;
@@ -130,26 +112,31 @@ export async function openConversionDialog({
         const ref=choices.find(x=>String(x.unitId)===refId);
         if(!ref) throw new Error('REFERENCE_UNIT_NOT_FOUND');
 
-        let quantityInBase;
-        if(isPurchase){
-          // 1 new purchase unit = factor reference units.
-          quantityInBase=factor * ref.quantityInBase;
-        }else if(inverse){
-          // 1 new usage unit = factor reference units.
-          quantityInBase=factor * ref.quantityInBase;
-        }else{
-          // 1 reference unit = factor new usage units.
-          quantityInBase=ref.quantityInBase / factor;
+        let newUnit=api.findUnitByText(unitText,units);
+        if(!newUnit){
+          newUnit=await api.resolveUnit(unitText,units);
+          if(newUnit && !units.some(u=>String(u.id)===String(newUnit.id))) units.push(newUnit);
         }
+        if(!newUnit?.id) throw new Error('UNIT_REQUIRED');
+        if(String(newUnit.id)===String(refId)){
+          toast('اختر وحدتين مختلفتين للتحويل.','error');
+          return false;
+        }
+
+        // Default: 1 reference = factor other units.
+        // Inverse: 1 other unit = factor reference units.
+        const quantityInBase=inverse
+          ? factor * ref.quantityInBase
+          : ref.quantityInBase / factor;
 
         await api.saveMaterialUnit({
           materialId:material.id,
-          unitId:newUnitId,
+          unitId:newUnit.id,
           quantityInBase,
-          isPurchaseUnit:isPurchase,
+          isPurchaseUnit:false,
         });
         toast('تم حفظ التحويل.','success');
-        if(onSaved) await onSaved(newUnitId);
+        if(onSaved) await onSaved(newUnit.id,newUnit);
         return true;
       }catch(e){
         toast(friendlyError(e,'تعذر حفظ التحويل.'),'error');
@@ -158,37 +145,32 @@ export async function openConversionDialog({
     },
   });
 
-  const newSel=m.form.querySelector('[name="new_unit"]');
+  const newInput=m.form.querySelector('[name="new_unit_text"]');
   const refSel=m.form.querySelector('[name="reference_unit"]');
   const inverse=m.form.querySelector('[name="inverse_mode"]');
   const sentence=m.form.querySelector('[data-conversion-sentence]');
   const input=m.form.querySelector('[name="factor"]');
   const suffix=m.form.querySelector('[data-factor-suffix]');
+  const grid=m.form.querySelector('[data-conversion-grid]');
 
   const refreshSentence=()=>{
-    const newText=newSel.options[newSel.selectedIndex]?.textContent?.trim() || 'الوحدة الجديدة';
+    const otherText=String(newInput.value||'').trim() || 'الوحدة الأخرى';
     const refText=refSel.options[refSel.selectedIndex]?.textContent?.trim() || 'الوحدة المرجعية';
     const inverseMode=Boolean(inverse?.checked);
-
-    if(isPurchase){
-      sentence.innerHTML=`1 <strong>${esc(newText)}</strong> = <strong>؟</strong> ${esc(refText)}`;
-      suffix.textContent=refText;
-      input.placeholder='مثال: 24';
-      return;
-    }
+    grid?.classList.toggle('is-inverse',inverseMode);
 
     if(inverseMode){
-      sentence.innerHTML=`1 <strong>${esc(newText)}</strong> = <strong>؟</strong> ${esc(refText)}`;
+      sentence.innerHTML=`1 <strong>${esc(otherText)}</strong> = <strong>؟</strong> ${esc(refText)}`;
       suffix.textContent=refText;
       input.placeholder='مثال: 50';
     }else{
-      sentence.innerHTML=`1 <strong>${esc(refText)}</strong> = <strong>؟</strong> ${esc(newText)}`;
-      suffix.textContent=newText;
+      sentence.innerHTML=`1 <strong>${esc(refText)}</strong> = <strong>؟</strong> ${esc(otherText)}`;
+      suffix.textContent=otherText;
       input.placeholder='مثال: 25';
     }
   };
 
-  newSel.addEventListener('change',refreshSentence);
+  newInput.addEventListener('input',refreshSentence);
   refSel.addEventListener('change',refreshSentence);
   inverse?.addEventListener('change',refreshSentence);
   refreshSentence();

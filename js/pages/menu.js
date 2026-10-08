@@ -1,6 +1,6 @@
 import * as api from '../api.js';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js';
-import { esc, money, unitLabel, num } from '../utils.js';
+import { esc, money, unitDisplay, num } from '../utils.js';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js';
 
 function menuPrice(row){
@@ -102,7 +102,7 @@ function addMenu(root){
         await renderMenu(root);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
+        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.6.'),'error');
         return false;
       }
     },
@@ -128,7 +128,7 @@ function editMenu(root,row){
         await renderMenu(root);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر تعديل الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
+        toast(friendlyError(e,'تعذر تعديل الوجبة.'),'error');
         return false;
       }
     },
@@ -144,9 +144,9 @@ async function recipeDialog(root,id,name,mats,units){
     const rowUnitLabel=(x)=>{
       const material=mm[String(x.material_id)];
       const unit=um[String(x.input_unit_id||x.unit_id)];
-      if(unit) return unitLabel(unit.code||unit.name);
+      if(unit) return unitDisplay(unit);
       const base=um[String(material?.base_unit_id)];
-      return unitLabel(base?.code||base?.name||material?.base_unit_code||'—');
+      return unitDisplay(base) || material?.base_unit_code || '—';
     };
 
     const m=modal({
@@ -195,21 +195,35 @@ async function recipeDialog(root,id,name,mats,units){
             <label>الكمية</label>
             <input name="qty" type="number" step="any" min="0.00000001" required autocomplete="off">
           </div>
+        </div>
+        <div class="recipe-save-row">
+          <span>كل مكوّن يُحفظ فور إضافته.</span>
+          <button type="button" class="btn secondary save-recipe-close">حفظ الوصفة وإغلاق</button>
         </div>`,
       onSubmit:async fd=>{
         try{
-          await api.addRecipeItem({
-            menuItemId:id,
-            materialId:fd.get('material'),
-            unitId:fd.get('unit'),
-            quantity:fd.get('qty'),
-          });
-          toast('تمت إضافة المكوّن','success');
+          const materialId=String(fd.get('material')||'');
+          const existing=rows.find(x=>String(x.material_id)===materialId);
+          if(existing){
+            await api.updateRecipeItem(existing.id,{
+              unitId:fd.get('unit'),
+              quantity:fd.get('qty'),
+            });
+            toast('المادة موجودة في الوصفة، تم تحديثها بدل تكرارها.','success');
+          }else{
+            await api.addRecipeItem({
+              menuItemId:id,
+              materialId,
+              unitId:fd.get('unit'),
+              quantity:fd.get('qty'),
+            });
+            toast('تمت إضافة المكوّن','success');
+          }
           m.close();
           await recipeDialog(root,id,name,mats,units);
           return false;
         }catch(e){
-          toast(friendlyError(e,'تعذر إضافة المكوّن. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
+          toast(friendlyError(e,'تعذر حفظ المكوّن. شغّل تحديث قاعدة البيانات v0.6 مرة واحدة ثم حاول مجددًا.'),'error');
           return false;
         }
       },
@@ -230,13 +244,18 @@ async function recipeDialog(root,id,name,mats,units){
     materialSel.addEventListener('change',()=>populateUnits());
     await populateUnits();
 
+    m.form.querySelector('.save-recipe-close').onclick=async()=>{
+      toast('تم حفظ الوصفة.','success');
+      m.close();
+      await renderMenu(root);
+    };
+
     m.form.querySelector('.add-conversion').onclick=async()=>{
       const material=mm[String(materialSel.value)];
       if(!material) return;
       await openConversionDialog({
         material,
         units,
-        mode:'usage',
         referenceUnitId:unitSel.value || material.base_unit_id,
         onSaved:async newUnitId=>{
           await populateUnits(newUnitId);
@@ -314,7 +333,6 @@ async function editRecipeItem({root,menuId,menuName,row,material,mats,units,pare
   m.form.querySelector('.add-conversion').onclick=()=>openConversionDialog({
     material,
     units,
-    mode:'usage',
     referenceUnitId:unitSel.value || material.base_unit_id,
     onSaved:async newUnitId=>{
       const updated=await materialUnitChoices(material,units);

@@ -185,7 +185,7 @@ function addItem(root,id,mats,units){
           <label>وحدة الشراء</label>
           <div class="select-action-row">
             <select name="unit" required></select>
-            <button type="button" class="mini-btn add-purchase-conversion">+ وحدة شراء</button>
+            <button type="button" class="mini-btn add-purchase-conversion">⇄ تحويل وحدة</button>
           </div>
         </div>
         <div class="field">
@@ -219,7 +219,7 @@ function addItem(root,id,mats,units){
         await renderPurchaseDetail(root,id);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر إضافة البند. تأكد من تحويل وحدة الشراء.'),'error');
+        toast(friendlyError(e,'تعذر إضافة البند. تأكد من ربط الوحدة بالمادة من زر تحويل وحدة.'),'error');
         return false;
       }
     },
@@ -232,7 +232,7 @@ function addItem(root,id,mats,units){
   const populateUnits=async(preferred=null)=>{
     const material=mats.find(x=>String(x.id)===String(materialSel.value));
     if(!material) return;
-    const choices=await materialUnitChoices(material,units,{purchaseOnly:true});
+    const choices=await materialUnitChoices(material,units);
     unitSel.innerHTML=choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('');
     if(preferred && choices.some(x=>String(x.unitId)===String(preferred))) unitSel.value=preferred;
     const label=unitSel.options[unitSel.selectedIndex]?.textContent?.trim()||'الوحدة';
@@ -252,7 +252,6 @@ function addItem(root,id,mats,units){
     await openConversionDialog({
       material,
       units,
-      mode:'purchase',
       referenceUnitId:material.base_unit_id,
       onSaved:async newUnitId=>populateUnits(newUnitId),
     });

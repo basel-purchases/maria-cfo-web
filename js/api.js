@@ -1,5 +1,5 @@
 import { supabase, configured } from './supabase.js';
-import { sleep, todayISO } from './utils.js';
+import { sleep, todayISO, unitLabel } from './utils.js';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -185,7 +185,7 @@ export async function saveMaterialInitialState({materialId,openingQuantity=null,
 export async function units(){
   const rows=await list('units',{order:'code',ascending:true,limit:300});
   const preferred=[
-    'PCS','TRAY','CAN','CARTON','BOX','PACK','PACKET','SACK','BAG',
+    'PCS','TRAY','SAHARA','CAN','CARTON','BOX','PACK','PACKET','SACK','BAG',
     'KG','G','L','ML','SACHET','SPOON','TBSP','TSP','SCOOP','CUP','GLASS',
     'BOTTLE','BTL','JAR','PAIL','BUCKET','CRATE','BOWL','SLICE','PORTION',
     'SERVING','BUNCH','BUNDLE','ROLL','SHEET','LOAF','DOZ','DOZEN','UNIT'
@@ -353,16 +353,62 @@ export async function updateMenuItem(id,{name,price=null,foodCost=null,discount=
 
 export const recipeItems=id=>list('menu_item_recipe_items',{order:'id',ascending:true,eq:{menu_item_id:id},limit:200});
 
+async function recipeQuantityBase(materialId,unitId,quantity){
+  const material=await one('materials',materialId);
+  if(!material) throw new Error('MATERIAL_NOT_FOUND');
+  const q=Number(quantity);
+  if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
+  if(String(unitId)===String(material.base_unit_id)) return q;
+  const rows=await materialUnits(materialId);
+  const rel=rows.find(r=>String(r.unit_id)===String(unitId));
+  const factor=Number(rel?.quantity_in_base);
+  if(!(factor>0)) throw new Error('RECIPE_UNIT_NOT_CONFIGURED');
+  return q*factor;
+}
+
+async function saveRecipeItemFallback({menuItemId,materialId,unitId,quantity,recipeItemId=null}){
+  const q=Number(quantity);
+  const qBase=await recipeQuantityBase(materialId,unitId,q);
+  const shared={
+    material_id:materialId,
+    input_unit_id:unitId,
+    input_quantity:q,
+  };
+  const patches=[
+    {...shared,unit_id:unitId,quantity_original:q,quantity_base:qBase},
+    {...shared,unit_id:unitId,quantity:q,quantity_base:qBase},
+    {...shared,unit_id:unitId,quantity_original:q},
+    {...shared,unit_id:unitId,quantity:q},
+    {material_id:materialId,unit_id:unitId,quantity:q},
+    {material_id:materialId,unit_id:unitId,quantity_original:q},
+  ];
+  if(recipeItemId) return updateFirst('menu_item_recipe_items',recipeItemId,patches);
+  return insertFirst('menu_item_recipe_items',patches.map(x=>({menu_item_id:menuItemId,...x})));
+}
+
 export async function addRecipeItem({menuItemId,materialId,unitId,quantity}){
   const q=Number(quantity);
   if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
-  return rpc('save_menu_recipe_item',{
+  const args={
     p_menu_item_id:menuItemId,
     p_material_id:materialId,
     p_input_unit_id:unitId,
     p_input_quantity:q,
     p_recipe_item_id:null,
-  });
+  };
+  let firstError;
+  try{return await rpc('save_menu_recipe_item_v06',args);}catch(e){firstError=e;}
+  try{return await rpc('save_menu_recipe_item',args);}catch(_){ }
+  try{
+    const rows=await recipeItems(menuItemId);
+    const existing=rows.find(r=>String(r.material_id)===String(materialId));
+    return await saveRecipeItemFallback({
+      menuItemId,materialId,unitId,quantity:q,recipeItemId:existing?.id||null,
+    });
+  }catch(e){
+    console.error('Recipe fallback failed',e,'Primary error:',firstError);
+    throw firstError || e;
+  }
 }
 
 export async function updateRecipeItem(id,{unitId,quantity}){
@@ -370,18 +416,67 @@ export async function updateRecipeItem(id,{unitId,quantity}){
   if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
   const row=await one('menu_item_recipe_items',id);
   if(!row) throw new Error('RECIPE_ITEM_NOT_FOUND');
-  return rpc('save_menu_recipe_item',{
+  const args={
     p_menu_item_id:row.menu_item_id,
     p_material_id:row.material_id,
     p_input_unit_id:unitId,
     p_input_quantity:q,
     p_recipe_item_id:id,
+  };
+  try{return await rpc('save_menu_recipe_item_v06',args);}catch(_){ }
+  try{return await rpc('save_menu_recipe_item',args);}catch(__){ }
+  return saveRecipeItemFallback({
+    menuItemId:row.menu_item_id,
+    materialId:row.material_id,
+    unitId,
+    quantity:q,
+    recipeItemId:id,
   });
 }
 
 export async function deleteRecipeItem(id){
   try{return await rpc('delete_menu_recipe_item',{p_recipe_item_id:id});}
   catch(_){return remove('menu_item_recipe_items',id);}
+}
+
+function normalizeUnitText(value){
+  return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+
+export function findUnitByText(value,allUnits=[]){
+  const q=normalizeUnitText(value);
+  if(!q) return null;
+  return allUnits.find(u=>{
+    const name=normalizeUnitText(u.name);
+    const code=normalizeUnitText(u.code);
+    const label=normalizeUnitText(unitLabel(u.code));
+    return q===name || q===code || q===label;
+  }) || null;
+}
+
+export async function saveCustomUnit({id=null,name,code=null}){
+  const cleanName=String(name||'').trim();
+  const cleanCode=String(code||'').trim();
+  if(!cleanName) throw new Error('UNIT_NAME_REQUIRED');
+  return rpc('save_custom_unit_v06',{
+    p_unit_id:id || null,
+    p_name:cleanName,
+    p_code:cleanCode || null,
+  });
+}
+
+export async function resolveUnit(value,allUnits=[]){
+  const clean=String(value||'').trim();
+  if(!clean) throw new Error('UNIT_REQUIRED');
+  const found=findUnitByText(clean,allUnits);
+  if(found) return found;
+  const id=await saveCustomUnit({name:clean});
+  const rows=await units();
+  return rows.find(u=>String(u.id)===String(id)) || findUnitByText(clean,rows) || {id,name:clean,code:clean};
+}
+
+export async function deleteCustomUnit(id){
+  return rpc('delete_custom_unit_v06',{p_unit_id:id});
 }
 
 export const cashboxes=()=>list('cashboxes',{order:'display_order',ascending:true,limit:100});

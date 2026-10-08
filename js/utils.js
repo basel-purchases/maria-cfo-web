@@ -62,6 +62,7 @@ const UNIT_LABELS = {
   PACK:'عبوة',
   PACKET:'باكيت',
   TRAY:'سفط',
+  SAHARA:'سحارة',
   BOX:'صندوق',
   CARTON:'كرتونة',
   BAG:'كيس',
@@ -100,6 +101,17 @@ export const unitLabel = value => {
   if(!raw) return '—';
   return UNIT_LABELS[raw.toUpperCase()] || raw;
 };
+
+export const unitDisplay = unit => {
+  if(!unit) return '—';
+  const code=String(unit.code??'').trim();
+  const mapped=UNIT_LABELS[code.toUpperCase()];
+  if(mapped) return mapped;
+  const name=String(unit.name??'').trim();
+  if(name) return name;
+  return code || '—';
+};
+
 
 export function statusBadge(status='') {
   const map={
