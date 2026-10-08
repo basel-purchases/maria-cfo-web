@@ -620,3 +620,29 @@ a{color:inherit;text-decoration:none}
   .ocr-edit-summary,.ocr-item-row-v11{grid-template-columns:1fr}
   .ocr-pick-cell{grid-column:auto}
 }
+
+/* =========================================================
+   Maria CFO Web v0.12
+   Background AI jobs, notifications and fast order capture.
+   ========================================================= */
+.topbar-actions{display:flex;align-items:center;gap:9px}
+.ai-notify-btn{position:relative;width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--plum);border-radius:13px;font-size:18px}
+.ai-notify-btn:hover{background:var(--rose-soft)}
+.ai-notify-count{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;border:2px solid var(--bg)}
+.ai-jobs-list{display:grid;gap:10px}
+.ai-job-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--line);border-radius:15px;padding:12px;background:#fff}
+.ai-job-row.is-seen{opacity:.66;background:var(--surface-2)}
+.ai-job-main{display:grid;gap:4px;min-width:0}.ai-job-main span{font-size:12px;color:var(--muted);line-height:1.55}
+.ai-job-meta{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ai-job-status{display:inline-flex;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;background:var(--surface-2);border:1px solid var(--line)}
+.ai-job-status.status-completed{background:var(--sage-soft);color:#48674d}.ai-job-status.status-needs_review{background:var(--amber-soft);color:#7d5b20}.ai-job-status.status-failed{background:var(--danger-soft);color:var(--danger)}.ai-job-status.status-processing,.ai-job-status.status-queued{background:var(--rose-soft);color:var(--plum)}
+.ai-inline-card{margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:center;font-size:12px}
+.ai-inline-card span{color:var(--muted);line-height:1.55}.ai-inline-card.processing{background:var(--rose-soft)}.ai-inline-card.ready{background:var(--sage-soft)}
+.ai-order-summary{display:flex;flex-wrap:wrap;gap:10px;margin:-4px 0 18px}
+.ai-summary-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:#fff}.ai-summary-chip strong{font-size:16px;color:var(--plum)}.ai-summary-chip span{font-size:12px;color:var(--muted)}
+.ai-summary-chip.processing{background:var(--rose-soft)}.ai-summary-chip.review{background:var(--amber-soft)}.ai-summary-chip.ready{background:var(--sage-soft)}
+.ai-review-card{border-color:#ead7bd}.ai-review-list{display:grid;gap:8px;margin-top:12px}.ai-review-item{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 12px;color:var(--text);text-align:right}.ai-review-item:hover{background:var(--surface-2)}.ai-review-item strong{color:var(--plum)}
+.order-ocr-items{display:grid;gap:10px;margin-top:14px}.order-ocr-row{display:grid;grid-template-columns:1.15fr 1.25fr .65fr .8fr .8fr;gap:10px;align-items:end;border:1px solid var(--line);border-radius:14px;padding:11px;background:#fff}
+.muted{color:var(--muted)}
+@media(max-width:1050px){.order-ocr-row{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-inline-card{grid-template-columns:1fr}.ai-job-row{align-items:flex-start;flex-direction:column}.ai-job-meta{width:100%;justify-content:space-between}}
+@media(max-width:700px){.order-ocr-row{grid-template-columns:1fr}.page-head-actions{display:grid;width:100%}.page-head-actions .btn{width:100%}.ai-notify-btn{width:39px;height:39px}}

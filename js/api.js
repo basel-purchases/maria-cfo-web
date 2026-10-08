@@ -578,35 +578,71 @@ export const deletePurchaseItem=itemId=>rpc('delete_purchase_invoice_item_v010',
 export const deletePurchaseDraft=id=>rpc('delete_purchase_invoice_draft_v010',{p_invoice_id:id});
 export const voidPurchase=(id,reason=null)=>rpc('void_purchase_invoice_v010',{p_invoice_id:id,p_reason:reason});
 
-export async function analyzePurchaseInvoiceImage({imageBase64,mimeType='image/jpeg',supplierName='',currency='SYP'}){
+export async function enqueueDocumentOcr({jobType='purchase_ocr',imageBase64,mimeType='image/jpeg',fileName='',relatedEntityId=null,context={}}){
   let lastErr;
   let lastStatus=0;
   for(let attempt=1;attempt<=3;attempt++){
     try{
       const {data,error}=await need().functions.invoke('document-ocr',{
         body:{
+          job_type:jobType,
           image_base64:imageBase64,
           mime_type:mimeType,
-          supplier_name:supplierName||'',
-          currency:currency||'SYP',
+          file_name:fileName||'',
+          related_entity_id:relatedEntityId||null,
+          context:context||{},
         },
       });
       if(error) throw error;
-      if(data?.ok===false) throw new Error(data?.message||data?.reason||'OCR_FAILED');
-      if(Array.isArray(data?.items)) return data;
-      throw new Error('OCR_EMPTY_RESPONSE');
+      if(data?.ok===false) throw new Error(data?.message||data?.reason||'OCR_QUEUE_FAILED');
+      if(data?.job_id) return data;
+      throw new Error('OCR_QUEUE_EMPTY_RESPONSE');
     }catch(e){
       lastErr=e;
       lastStatus=statusFromFunctionError(e);
       const retry=!lastStatus || lastStatus===408 || lastStatus===429 || lastStatus>=500;
       if(!retry || attempt===3) break;
-      await sleep(attempt===1?700:1600);
+      await sleep(attempt===1?500:1100);
     }
   }
   console.error(lastErr);
   if(lastStatus===404) throw new Error('DOCUMENT_OCR_NOT_DEPLOYED');
-  throw lastErr||new Error('OCR_FAILED');
+  throw lastErr||new Error('OCR_QUEUE_FAILED');
 }
+
+export async function aiJobs({limit=80}={}){
+  try{return await list('ai_jobs',{order:'created_at',limit});}
+  catch(e){
+    const msg=String(e?.message||e||'').toLowerCase();
+    if(msg.includes('ai_jobs')||msg.includes('relation')||msg.includes('does not exist')) return [];
+    throw e;
+  }
+}
+
+export async function aiJobsForEntity(type,id,{limit=30}={}){
+  if(!type||!id) return [];
+  try{
+    const {data,error}=await need().from('ai_jobs')
+      .select('*')
+      .eq('related_entity_type',type)
+      .eq('related_entity_id',id)
+      .order('created_at',{ascending:false})
+      .limit(limit);
+    if(error) throw error;
+    return data||[];
+  }catch(e){
+    const msg=String(e?.message||e||'').toLowerCase();
+    if(msg.includes('ai_jobs')||msg.includes('relation')||msg.includes('does not exist')) return [];
+    throw e;
+  }
+}
+
+export const markAiJobSeen=id=>rpc('mark_ai_job_seen_v012',{p_job_id:id});
+export const completeAiJob=(id,type,relatedId)=>rpc('complete_ai_job_v012',{
+  p_job_id:id,
+  p_related_entity_type:type,
+  p_related_entity_id:relatedId,
+});
 
 export async function createOrder({cashboxId,currency='SYP',number=null,date=todayISO()}){
   return rpc('create_order',{
@@ -631,7 +667,31 @@ export async function addOrderItem({orderId,menuItemId,quantity,unitPrice,adjust
   });
 }
 
-export const postOrder=id=>rpc('post_order',{p_order_id:id});
+export async function setOrderCashbox(orderId,cashboxId){
+  let last;
+  for(const args of [
+    {p_order_id:orderId,p_cashbox_id:cashboxId},
+    {p_id:orderId,p_cashbox_id:cashboxId},
+  ]){
+    try{return await rpc('set_order_cashbox',args);}catch(e){last=e;}
+  }
+  throw last;
+}
+
+export async function postOrder(id){
+  let last;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{return await rpc('post_order',{p_order_id:id});}
+    catch(e){
+      last=e;
+      const msg=String(e?.message||e||'').toLowerCase();
+      const retry=msg.includes('failed to fetch')||msg.includes('network')||msg.includes('timeout')||msg.includes('502')||msg.includes('503')||msg.includes('504');
+      if(!retry||attempt===2) break;
+      await sleep(500);
+    }
+  }
+  throw last;
+}
 
 export async function recordExpense({cashboxId,amount,title,currency='SYP',categoryId=null,description=null,payee=null,date=todayISO()}){
   return rpc('record_expense',{

@@ -125,15 +125,68 @@ export async function renderExpenses(root){
   }
 }
 
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||'').split(',').pop()||'');
+    reader.onerror=()=>reject(reader.error||new Error('FILE_READ_FAILED'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function enqueueOrderImages(files){
+  const valid=[...files].filter(f=>f.type.startsWith('image/') && f.size<=8*1024*1024);
+  if(!valid.length) throw new Error('NO_VALID_ORDER_IMAGES');
+  let index=0,queued=0,failed=0;
+  const worker=async()=>{
+    while(index<valid.length){
+      const i=index++;
+      const file=valid[i];
+      try{
+        const base64=await fileToBase64(file);
+        await api.enqueueDocumentOcr({
+          jobType:'order_ocr',
+          imageBase64:base64,
+          mimeType:file.type||'image/jpeg',
+          fileName:file.name||`order-${i+1}`,
+          context:{currency:'SYP'},
+        });
+        queued++;
+      }catch(e){
+        failed++;
+        console.error('Order image enqueue failed',file.name,e);
+      }
+    }
+  };
+  await Promise.all(Array.from({length:Math.min(3,valid.length)},()=>worker()));
+  return {queued,failed,total:valid.length};
+}
+
 export async function renderOrders(root){
   root.innerHTML=loader();
   try{
-    const [rows,boxes]=await Promise.all([api.orders(),api.cashboxes()]);
+    const [rows,boxes,jobs]=await Promise.all([api.orders(),api.cashboxes(),api.aiJobs({limit:100}).catch(()=>[])]);
+    const orderJobs=jobs.filter(j=>j.job_type==='order_ocr');
+    const pending=orderJobs.filter(j=>['queued','processing'].includes(j.status));
+    const review=orderJobs.filter(j=>j.status==='needs_review' && !j.seen_at);
+    const ready=orderJobs.filter(j=>j.status==='completed' && !j.seen_at && j.related_entity_id);
+
     root.innerHTML=`
       <div class="page-head">
-        <div><h2>الأوردرات والمبيعات</h2><p>عند نشر الأوردر يُسجل الإيراد ويُستهلك مخزون مكونات الوصفة.</p></div>
-        <button class="btn new">أوردر جديد</button>
+        <div><h2>الأوردرات والمبيعات</h2><p>يمكنك تسجيل الأوردر يدويًا أو رفع مجموعة صور وترك Maria CFO يحللها ويُنشئ المسودات في الخلفية.</p></div>
+        <div class="page-head-actions">
+          <button class="btn secondary batch-orders">رفع صور أوردرات</button>
+          <input type="file" class="batch-order-files" accept="image/*" multiple hidden>
+          <button class="btn new">أوردر جديد</button>
+        </div>
       </div>
+      ${(pending.length||review.length||ready.length)?`<div class="ai-order-summary">
+        ${pending.length?`<div class="ai-summary-chip processing"><strong>${pending.length}</strong><span>صور قيد التحليل</span></div>`:''}
+        ${review.length?`<div class="ai-summary-chip review"><strong>${review.length}</strong><span>نتائج تحتاج مراجعة</span></div>`:''}
+        ${ready.length?`<div class="ai-summary-chip ready"><strong>${ready.length}</strong><span>مسودات أُنشئت من الصور</span></div>`:''}
+      </div>`:''}
+      ${review.length?`<div class="card ai-review-card"><h3>نتائج تحتاج مراجعة</h3><p>لم نسجل بيانات غير مؤكدة. افتح كل نتيجة وصحح المطابقة ثم أنشئ المسودة.</p><div class="ai-review-list">${review.map(j=>`<button type="button" class="ai-review-item" data-review-job="${esc(j.id)}"><span>${esc(j.title||'صورة أوردر')}</span><strong>مراجعة ←</strong></button>`).join('')}</div></div><div style="height:16px"></div>`:''}
+      ${ready.length?`<div class="card"><h3>مسودات جاهزة من الصور</h3><p>تم التعرف على الأصناف وحفظ كل صورة كمسودة مستقلة.</p><div class="ai-review-list">${ready.map(j=>`<button type="button" class="ai-review-item" data-ready-job="${esc(j.id)}"><span>${esc(j.title||'أوردر')}</span><strong>فتح المسودة ←</strong></button>`).join('')}</div></div><div style="height:16px"></div>`:''}
       ${rows.length?`
         <div class="table-wrap table-fit"><table class="table">
           <thead><tr><th>التاريخ</th><th>رقم الأوردر</th><th>الحالة</th><th>الإجمالي</th><th></th></tr></thead>
@@ -145,22 +198,60 @@ export async function renderOrders(root){
               <td>${money(r.net_total_original??r.total_original??0,r.currency_code||'SYP')}</td>
               <td>فتح ←</td>
             </tr>`).join('')}</tbody>
-        </table></div>`:'<div class="card empty"><strong>لا توجد مبيعات بعد</strong></div>'}`;
-    root.querySelector('.new').onclick=()=>newOrder(boxes);
+        </table></div>`:'<div class="card empty"><strong>لا توجد مبيعات بعد</strong><div>يمكنك إنشاء أوردر أو رفع صور أوردرات دفعة واحدة.</div></div>'}`;
+
+    root.querySelector('.new')?.addEventListener('click',()=>newOrder(boxes));
     root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);
+
+    const fileInput=root.querySelector('.batch-order-files');
+    root.querySelector('.batch-orders')?.addEventListener('click',()=>fileInput?.click());
+    fileInput?.addEventListener('change',async()=>{
+      const files=[...(fileInput.files||[])];
+      fileInput.value='';
+      if(!files.length) return;
+      toast(`جاري إرسال ${files.length} صورة إلى قائمة المعالجة...`);
+      try{
+        const res=await enqueueOrderImages(files);
+        if(res.queued) toast(`تم إرسال ${res.queued} صورة. يمكنك متابعة العمل وسنخبرك عند اكتمال كل أوردر.`,'success');
+        if(res.failed) toast(`تعذر إرسال ${res.failed} صورة. يمكنك إعادة رفعها لاحقًا.`,'error');
+        await renderOrders(root);
+      }catch(e){toast(friendlyError(e,'تعذر إرسال صور الأوردرات.'),'error');}
+    });
+
+    root.querySelectorAll('[data-review-job]').forEach(btn=>btn.onclick=()=>{
+      const job=review.find(j=>String(j.id)===String(btn.dataset.reviewJob));
+      if(job) openOrderOcrReview(root,job,boxes);
+    });
+    root.querySelectorAll('[data-ready-job]').forEach(btn=>btn.onclick=async()=>{
+      const job=ready.find(j=>String(j.id)===String(btn.dataset.readyJob));
+      if(!job?.related_entity_id) return;
+      await api.markAiJobSeen(job.id).catch(()=>{});
+      location.hash='#/order/'+job.related_entity_id;
+    });
+
+    const pendingOpen=sessionStorage.getItem('maria_ai_job_to_open');
+    if(pendingOpen){
+      const job=orderJobs.find(j=>String(j.id)===String(pendingOpen));
+      if(job?.job_type==='order_ocr'){
+        sessionStorage.removeItem('maria_ai_job_to_open');
+        if(job.related_entity_id) location.hash='#/order/'+job.related_entity_id;
+        else if(job.result_json) setTimeout(()=>openOrderOcrReview(root,job,boxes),0);
+      }
+    }
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }
 }
 
 function newOrder(boxes){
+  const firstBox=boxes.find(b=>b.is_active!==false)?.id||'';
   modal({
     title:'أوردر جديد',
     body:`
       <div class="form-grid">
         <div class="field"><label>رقم الأوردر <span class="optional-badge">اختياري</span></label><input name="number"></div>
         <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div>
-        <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${b.id}" ${String(b.id)===String(firstBox)?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
         <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
       </div>`,
     submitText:'إنشاء المسودة',
@@ -179,6 +270,103 @@ function newOrder(boxes){
   });
 }
 
+async function openOrderOcrReview(root,job,boxes){
+  const result=job?.result_json||{};
+  const items=Array.isArray(result.items)?result.items:[];
+  if(!items.length){toast('لا توجد أصناف قابلة للمراجعة في هذه النتيجة.','error');return;}
+  const menu=await api.menuItems();
+  const firstBox=boxes.find(b=>b.is_active!==false)?.id||'';
+  const orderDate=result.order_date||todayISO();
+  const currency=['SYP','USD'].includes(String(result.currency||'').toUpperCase())?String(result.currency).toUpperCase():'SYP';
+
+  const m=modal({
+    title:'مراجعة صورة الأوردر',
+    subtitle:'صحح أي صنف أو رقم غير واضح. لن تُنشأ المسودة حتى تعتمد كل البنود.',
+    wide:true,
+    body:`
+      <div class="form-grid compact-grid">
+        <div class="field"><label>رقم الأوردر <span class="optional-badge">اختياري</span></label><input name="number" value="${esc(result.external_order_number||'')}"></div>
+        <div class="field"><label>التاريخ</label><input name="date" type="date" value="${esc(orderDate)}"></div>
+        <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${esc(b.id)}" ${String(b.id)===String(firstBox)?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>العملة</label><select name="currency"><option value="SYP" ${currency==='SYP'?'selected':''}>SYP</option><option value="USD" ${currency==='USD'?'selected':''}>USD</option></select></div>
+      </div>
+      <div class="order-ocr-items">${items.map((x,i)=>{
+        const matched=x.matched_menu_item_id||'';
+        let price=Number(x.resolved_unit_price??x.unit_price??0);
+        if(!(price>0)&&Number(x.line_total)>0&&Number(x.quantity)>0) price=Number(x.line_total)/Number(x.quantity);
+        const total=Number(x.line_total)>0?Number(x.line_total):Number(x.quantity||0)*price;
+        return `<div class="order-ocr-row" data-order-ocr="${i}">
+          <div class="field compact"><label>الاسم المقروء</label><input name="raw_${i}" value="${esc(x.name||'')}"></div>
+          <div class="field compact"><label>الصنف في Maria CFO</label><select name="menu_${i}" required><option value="">اختر</option>${menu.map(mi=>`<option value="${esc(mi.id)}" ${String(mi.id)===String(matched)?'selected':''}>${esc(mi.name)}</option>`).join('')}</select></div>
+          <div class="field compact"><label>الكمية</label><input name="qty_${i}" type="number" step="any" min="0.000001" value="${esc(x.quantity||1)}" required></div>
+          <div class="field compact"><label>سعر الوحدة</label><input name="price_${i}" type="number" step="any" min="0" value="${esc(price||0)}" required></div>
+          <div class="field compact"><label>إجمالي السطر</label><input name="total_${i}" type="number" step="any" min="0" value="${esc(total||0)}"></div>
+        </div>`;
+      }).join('')}</div>`,
+    submitText:'إنشاء مسودة الأوردر',
+    onSubmit:async fd=>{
+      try{
+        for(let i=0;i<items.length;i++){
+          if(!fd.get(`menu_${i}`)) {toast(`اختر الصنف للبند رقم ${i+1}.`,'error');return false;}
+        }
+        const orderId=await api.createOrder({
+          cashboxId:fd.get('box')||null,
+          currency:fd.get('currency')||'SYP',
+          number:String(fd.get('number')||'').trim()||null,
+          date:fd.get('date')||todayISO(),
+        });
+        for(let i=0;i<items.length;i++){
+          const qty=Number(fd.get(`qty_${i}`)||0);
+          let price=Number(fd.get(`price_${i}`)||0);
+          const total=Number(fd.get(`total_${i}`)||0);
+          if(!(price>0)&&total>0&&qty>0) price=total/qty;
+          await api.addOrderItem({
+            orderId,
+            menuItemId:fd.get(`menu_${i}`),
+            quantity:qty,
+            unitPrice:price,
+            adjustmentType:Number(items[i].discount_percent||0)>0?'percent':'none',
+            adjustmentValue:Number(items[i].discount_percent||0),
+          });
+        }
+        await api.completeAiJob(job.id,'order',orderId).catch(()=>{});
+        toast(`تم إنشاء مسودة الأوردر وحفظ ${items.length} أصناف.`,'success');
+        location.hash='#/order/'+orderId;
+        return true;
+      }catch(e){toast(friendlyError(e,'تعذر إنشاء مسودة الأوردر من نتيجة الصورة.'),'error');return false;}
+    },
+  });
+
+  items.forEach((_,i)=>{
+    const row=m.form.querySelector(`[data-order-ocr="${i}"]`);
+    const qty=row?.querySelector(`[name="qty_${i}"]`);
+    const price=row?.querySelector(`[name="price_${i}"]`);
+    const total=row?.querySelector(`[name="total_${i}"]`);
+    const calc=()=>{const q=Number(qty?.value||0),p=Number(price?.value||0);if(total&&q>=0&&p>=0) total.value=Number((q*p).toFixed(4));};
+    qty?.addEventListener('input',calc);
+    price?.addEventListener('input',calc);
+    total?.addEventListener('input',()=>{const q=Number(qty?.value||0),t=Number(total.value||0);if(price&&q>0&&t>=0) price.value=Number((t/q).toFixed(6));});
+  });
+}
+
+function chooseOrderCashbox(boxes){
+  return new Promise(resolve=>{
+    let settled=false;
+    const m=modal({
+      title:'اختر الصندوق',
+      subtitle:'يجب تحديد الصندوق قبل نشر الأوردر لأن الإيراد سيُسجل عليه.',
+      body:`<div class="field"><label>الصندوق</label><select name="box" required>${boxes.map(b=>`<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('')}</select></div>`,
+      submitText:'متابعة النشر',
+      onSubmit:async fd=>{
+        settled=true;
+        resolve(String(fd.get('box')||''));
+        return true;
+      },
+      onClose:()=>{if(!settled) resolve(null);},
+    });
+  });
+}
+
 function itemPrice(x){
   return x.manual_price_original ?? x.manual_price ?? x.price ?? x.suggested_price_rounded ?? x.suggested_price ?? 0;
 }
@@ -186,12 +374,13 @@ function itemPrice(x){
 export async function renderOrderDetail(root,id){
   root.innerHTML=loader();
   try{
-    const [order,items,menu]=await Promise.all([api.one('orders',id),api.orderItems(id),api.menuItems()]);
+    const [order,items,menu,boxes]=await Promise.all([api.one('orders',id),api.orderItems(id),api.menuItems(),api.cashboxes()]);
     const mm=Object.fromEntries(menu.map(x=>[String(x.id),x]));
+    const boxMap=Object.fromEntries(boxes.map(x=>[String(x.id),x]));
     root.innerHTML=`
       <div class="page-head"><div><h2>تفاصيل الأوردر</h2><p>أضف الأصناف ثم انشر العملية.</p></div></div>
       <div class="grid cols-2">
-        <div class="card"><div class="kv"><div class="k">الحالة</div><div>${statusBadge(order.status)}</div><div class="k">العملة</div><div>${esc(order.currency_code||'SYP')}</div></div></div>
+        <div class="card"><div class="kv"><div class="k">الحالة</div><div>${statusBadge(order.status)}</div><div class="k">العملة</div><div>${esc(order.currency_code||'SYP')}</div><div class="k">الصندوق</div><div>${order.cashbox_id?esc(boxMap[String(order.cashbox_id)]?.name||'صندوق'): '<span class="muted">يُحدد عند النشر</span>'}</div></div></div>
         <div class="card"><div class="quick-actions"><button class="btn add" ${order.status!=='draft'?'disabled':''}>إضافة صنف</button><button class="btn soft post" ${order.status!=='draft'||!items.length?'disabled':''}>نشر الأوردر</button></div></div>
       </div>
       <div style="height:16px"></div>
@@ -251,12 +440,29 @@ export async function renderOrderDetail(root,id){
     });
 
     root.querySelector('.post')?.addEventListener('click',async()=>{
-      if(!(await confirmBox('هل تريد نشر الأوردر؟','نشر'))) return;
+      let selectedBox=order.cashbox_id||null;
+      if(!selectedBox){
+        const activeBoxes=boxes.filter(b=>b.is_active!==false);
+        if(!activeBoxes.length){toast('لا يوجد صندوق نشط. عرّف صندوقًا أولًا قبل نشر الأوردر.','error');return;}
+        const chosen=await chooseOrderCashbox(activeBoxes);
+        if(!chosen) return;
+        selectedBox=chosen;
+        try{
+          await api.setOrderCashbox(id,selectedBox);
+          order.cashbox_id=selectedBox;
+        }catch(e){toast(friendlyError(e,'تعذر ربط الأوردر بالصندوق.'),'error');return;}
+      }
+      if(!(await confirmBox('سيتم نشر الأوردر وتسجيل الإيراد واستهلاك مكونات الوصفة.','نشر الأوردر'))) return;
+      const btn=root.querySelector('.post');
+      if(btn){btn.disabled=true;btn.textContent='جاري النشر...';}
       try{
         await api.postOrder(id);
-        toast('تم نشر الأوردر','success');
+        toast('تم نشر الأوردر وتحديث المخزون والإيراد','success');
         await renderOrderDetail(root,id);
-      }catch(e){toast(friendlyError(e),'error');}
+      }catch(e){
+        toast(friendlyError(e,'تعذر نشر الأوردر. تحقق من الصندوق ومكونات الوصفات ثم حاول مرة أخرى.'),'error');
+        if(btn){btn.disabled=false;btn.textContent='نشر الأوردر';}
+      }
     });
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;

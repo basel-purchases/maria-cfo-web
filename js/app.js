@@ -1,7 +1,7 @@
 import { supabase, configured, configurationMessage } from './supabase.js';
 import * as api from './api.js';
 import { esc } from './utils.js';
-import { toast, friendlyError } from './ui.js';
+import { toast, friendlyError, modal } from './ui.js';
 import { renderDashboard } from './pages/dashboard.js';
 import { renderHub } from './pages/hubs.js';
 import { renderMaterials } from './pages/materials.js';
@@ -23,6 +23,9 @@ import { renderSettings } from './pages/settings.js';
 
 const app = document.querySelector('#app');
 let currentSession = null;
+let aiJobTimer = null;
+let aiJobsInitialized = false;
+const aiJobState = new Map();
 
 const nav = [
   ['#/dashboard', 'الرئيسية'],
@@ -96,7 +99,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.11</div>
+        <div class="sidebar-foot">Web v0.12</div>
       </aside>
 
       <main class="main">
@@ -106,6 +109,9 @@ function shell() {
             <div class="title" id="top-title">Maria CFO</div>
           </div>
           <div class="topbar-actions">
+            <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
+              <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
+            </button>
             <button class="back-btn" id="back-btn" type="button" aria-label="رجوع">
               <span aria-hidden="true">←</span>
               <span>رجوع</span>
@@ -120,6 +126,8 @@ function shell() {
     app.querySelector('.sidebar').classList.toggle('open');
   };
 
+  app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
+
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
     if (path === '/dashboard' || path === 'dashboard') return;
@@ -127,7 +135,129 @@ function shell() {
     else location.hash = '#/dashboard';
   };
 
+  startAiJobWatcher();
   route();
+}
+
+
+function aiJobStatusText(job){
+  if(job.status==='queued') return 'بانتظار المعالجة';
+  if(job.status==='processing') return 'جاري التحليل';
+  if(job.status==='completed') return 'جاهز';
+  if(job.status==='needs_review') return 'يحتاج مراجعة';
+  if(job.status==='failed') return 'تعذر';
+  return job.status||'—';
+}
+
+function aiJobKindText(job){
+  if(job.job_type==='purchase_ocr') return 'فاتورة شراء';
+  if(job.job_type==='order_ocr') return 'أوردر';
+  return 'مهمة';
+}
+
+function aiJobOpenLabel(job){
+  if(job.job_type==='purchase_ocr') return 'فتح الفاتورة';
+  if(job.job_type==='order_ocr' && job.related_entity_id) return 'فتح الأوردر';
+  if(job.job_type==='order_ocr') return 'مراجعة النتيجة';
+  return 'فتح';
+}
+
+async function openAiJob(job){
+  if(!job) return;
+  try{
+    if(job.job_type==='purchase_ocr' && job.related_entity_id){
+      sessionStorage.setItem('maria_ai_job_to_open',String(job.id));
+      location.hash='#/purchase/'+job.related_entity_id;
+      return;
+    }
+    if(job.job_type==='order_ocr' && job.related_entity_id){
+      await api.markAiJobSeen(job.id).catch(()=>{});
+      location.hash='#/order/'+job.related_entity_id;
+      return;
+    }
+    if(job.job_type==='order_ocr'){
+      sessionStorage.setItem('maria_ai_job_to_open',String(job.id));
+      location.hash='#/orders';
+      return;
+    }
+    await api.markAiJobSeen(job.id).catch(()=>{});
+  }catch(e){toast(friendlyError(e),'error');}
+}
+
+async function openAiJobsPanel(){
+  let jobs=[];
+  try{jobs=await api.aiJobs({limit:60});}catch(e){toast(friendlyError(e),'error');return;}
+  const m=modal({
+    title:'المعالجة الخلفية',
+    subtitle:'يمكنك متابعة العمل بينما يحلل Maria CFO الصور. النتائج تبقى محفوظة حتى تعود إليها.',
+    wide:true,
+    hideActions:true,
+    body:jobs.length?`<div class="ai-jobs-list">${jobs.map(job=>`
+      <div class="ai-job-row ${job.seen_at?'is-seen':''}">
+        <div class="ai-job-main">
+          <strong>${esc(job.title||aiJobKindText(job))}</strong>
+          <span>${esc(job.public_message||aiJobStatusText(job))}</span>
+        </div>
+        <div class="ai-job-meta">
+          <span class="ai-job-status status-${esc(job.status||'queued')}">${esc(aiJobStatusText(job))}</span>
+          ${job.status==='failed'
+            ? `<button type="button" class="mini-action" data-dismiss-job="${esc(job.id)}">تم</button>`
+            : (job.job_type==='purchase_ocr'&&job.seen_at)
+              ? `<button type="button" class="mini-action" disabled>تمت المراجعة</button>`
+              : `<button type="button" class="mini-action ai-open-job" data-job="${esc(job.id)}">${esc(aiJobOpenLabel(job))}</button>`}
+        </div>
+      </div>`).join('')}</div>`:'<div class="empty"><strong>لا توجد مهام معالجة بعد.</strong></div>',
+  });
+  m.element.querySelectorAll('[data-job]').forEach(btn=>btn.onclick=async()=>{
+    const job=jobs.find(x=>String(x.id)===String(btn.dataset.job));
+    await m.close();
+    await openAiJob(job);
+  });
+  m.element.querySelectorAll('[data-dismiss-job]').forEach(btn=>btn.onclick=async()=>{
+    await api.markAiJobSeen(btn.dataset.dismissJob).catch(()=>{});
+    await m.close();
+    await refreshAiJobs();
+  });
+}
+
+async function refreshAiJobs(){
+  let jobs=[];
+  try{jobs=await api.aiJobs({limit:80});}catch(_){return;}
+  const unread=jobs.filter(j=>!j.seen_at && ['completed','needs_review','failed'].includes(j.status));
+  const badge=app.querySelector('#ai-notify-count');
+  if(badge){
+    badge.textContent=String(unread.length);
+    badge.hidden=unread.length===0;
+  }
+
+  if(!aiJobsInitialized){
+    jobs.forEach(j=>aiJobState.set(String(j.id),j.status));
+    aiJobsInitialized=true;
+    return;
+  }
+
+  for(const job of jobs){
+    const id=String(job.id);
+    const old=aiJobState.get(id);
+    aiJobState.set(id,job.status);
+    if(old && old!==job.status && ['completed','needs_review','failed'].includes(job.status)){
+      if(job.status==='failed') toast(job.public_message||'تعذرت إحدى مهام المعالجة.','error');
+      else toast(job.public_message||'اكتملت إحدى مهام المعالجة.','success');
+
+      const path=(location.hash||'').replace(/^#/,'');
+      const isPurchase=job.job_type==='purchase_ocr' && job.related_entity_id && path===`/purchase/${job.related_entity_id}`;
+      const isOrders=job.job_type==='order_ocr' && (path==='/orders' || path.startsWith('/order/'));
+      if(isPurchase || isOrders) route();
+    }
+  }
+}
+
+function startAiJobWatcher(){
+  if(aiJobTimer) clearInterval(aiJobTimer);
+  refreshAiJobs();
+  aiJobTimer=setInterval(()=>{
+    if(document.visibilityState==='visible') refreshAiJobs();
+  },4000);
 }
 
 function active(hash) {

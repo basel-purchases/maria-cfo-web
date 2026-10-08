@@ -104,12 +104,13 @@ function newPurchase(){
 export async function renderPurchaseDetail(root,id){
   root.innerHTML=loader();
   try{
-    const [invoice,items,mats,units,allSup]=await Promise.all([
+    const [invoice,items,mats,units,allSup,aiJobs]=await Promise.all([
       api.one('purchase_invoices',id),
       api.purchaseItems(id),
       api.materials(),
       api.units(),
       api.suppliers(),
+      api.aiJobsForEntity('purchase_invoice',id).catch(()=>[]),
     ]);
     if(!invoice) throw new Error('INVOICE_NOT_FOUND');
     const mm=Object.fromEntries(mats.map(m=>[String(m.id),m]));
@@ -118,6 +119,9 @@ export async function renderPurchaseDetail(root,id){
     const direct=isDirectSupplier(supplier);
     const draft=invoice.status==='draft';
     const posted=invoice.status==='posted' && !invoice.is_voided;
+    const pendingAi=aiJobs.filter(j=>['queued','processing'].includes(j.status));
+    const readyAi=aiJobs.filter(j=>j.status==='completed' && !j.seen_at && j.result_json);
+    const latestReadyAi=readyAi[0]||null;
 
     root.innerHTML=`
       <div class="page-head">
@@ -152,6 +156,8 @@ export async function renderPurchaseDetail(root,id){
             <button class="btn soft post" ${!draft||!items.length?'disabled':''}>نشر الفاتورة</button>
           </div>
           ${direct?'<small class="action-hint">اقتراحات المورد تظهر فقط عندما تكون الفاتورة مرتبطة بمورد حقيقي.</small>':''}
+          ${pendingAi.length?`<div class="ai-inline-card processing"><strong>جاري تحليل ${pendingAi.length} صورة</strong><span>يمكنك مغادرة الصفحة ومتابعة العمل. سنحفظ النتيجة وننبهك عند اكتمالها.</span></div>`:''}
+          ${latestReadyAi?`<div class="ai-inline-card ready"><strong>نتيجة تحليل جاهزة</strong><span>${esc(latestReadyAi.public_message||'تم تحليل الصورة.')}</span><button type="button" class="mini-action review-ai-result" data-job="${esc(latestReadyAi.id)}">مراجعة النتيجة</button></div>`:''}
         </div>
       </div>
       <div style="height:16px"></div>
@@ -182,9 +188,23 @@ export async function renderPurchaseDetail(root,id){
     ocrFile?.addEventListener('change',async()=>{
       const file=ocrFile.files?.[0];
       if(!file) return;
-      try{await openOcrDialog(root,{file,invoice,items,mats,units,supplier});}
+      try{await queuePurchaseOcr(root,{file,invoice,supplier});}
       finally{ocrFile.value='';}
     });
+
+    root.querySelector('.review-ai-result')?.addEventListener('click',()=>{
+      const job=aiJobs.find(j=>String(j.id)===String(root.querySelector('.review-ai-result')?.dataset.job));
+      if(job?.result_json) openPurchaseOcrReview(root,{result:job.result_json,job,invoice,mats,units,supplier});
+    });
+
+    const pendingOpen=sessionStorage.getItem('maria_ai_job_to_open');
+    if(pendingOpen){
+      const job=aiJobs.find(j=>String(j.id)===String(pendingOpen));
+      if(job?.job_type==='purchase_ocr' && job?.result_json){
+        sessionStorage.removeItem('maria_ai_job_to_open');
+        setTimeout(()=>openPurchaseOcrReview(root,{result:job.result_json,job,invoice,mats,units,supplier}),0);
+      }
+    }
 
     root.querySelectorAll('.edit-item').forEach(b=>b.onclick=()=>{
       const item=items.find(x=>String(x.id)===String(b.dataset.item));
@@ -351,17 +371,30 @@ function bestMaterialMatch(name,mats){
   return mats.find(m=>normalizeName(m.name)===n) || mats.find(m=>normalizeName(m.name).includes(n)||n.includes(normalizeName(m.name))) || null;
 }
 
-async function openOcrDialog(root,{file,invoice,mats,units,supplier}){
+async function queuePurchaseOcr(root,{file,invoice,supplier}){
   if(file.size>8*1024*1024){toast('حجم الصورة كبير. اختر صورة أقل من 8 MB.','error');return;}
-  toast('جاري تحليل صورة الفاتورة...');
   try{
     const base64=await fileToBase64(file);
-    const result=await api.analyzePurchaseInvoiceImage({
+    await api.enqueueDocumentOcr({
+      jobType:'purchase_ocr',
       imageBase64:base64,
       mimeType:file.type||'image/jpeg',
-      supplierName:isDirectSupplier(supplier)?'':supplier?.name||'',
-      currency:invoice.currency_code||'SYP',
+      fileName:file.name||'',
+      relatedEntityId:invoice.id,
+      context:{
+        supplier_name:isDirectSupplier(supplier)?'':supplier?.name||'',
+        currency:invoice.currency_code||'SYP',
+      },
     });
+    toast('تم إرسال الصورة للتحليل. يمكنك متابعة العمل وسنخبرك عند وصول النتيجة.','success');
+    await renderPurchaseDetail(root,invoice.id);
+  }catch(e){
+    toast(friendlyError(e,'تعذر إرسال الصورة للتحليل الآن.'),'error');
+  }
+}
+
+async function openPurchaseOcrReview(root,{result,job=null,invoice,mats,units,supplier}){
+  try{
     const extracted=Array.isArray(result?.items)?result.items:[];
     if(!extracted.length){toast('لم يتم العثور على بنود واضحة في الصورة. جرّب صورة أوضح.','error');return;}
 
@@ -455,6 +488,7 @@ async function openOcrDialog(root,{file,invoice,mats,units,supplier}){
           }else{
             toast(`تم حفظ بيانات الفاتورة وإضافة ${selected.length} بند`,'success');
           }
+          if(job?.id) await api.markAiJobSeen(job.id).catch(()=>{});
           await renderPurchaseDetail(root,invoice.id);
           return true;
         }catch(e){toast(friendlyError(e,'تعذر حفظ بعض البيانات أو البنود المستخرجة.'),'error');return false;}
@@ -530,7 +564,7 @@ async function openOcrDialog(root,{file,invoice,mats,units,supplier}){
     m.form.querySelector('[name="ocr_currency"]')?.addEventListener('change',updateSelectedTotal);
     updateSelectedTotal();
   }catch(e){
-    toast(friendlyError(e,'تعذر تحليل صورة الفاتورة. تأكد من نشر Edge Function باسم document-ocr ثم حاول مرة أخرى.'),'error');
+    toast(friendlyError(e,'تعذر فتح نتيجة تحليل الفاتورة.'),'error');
   }
 }
 
