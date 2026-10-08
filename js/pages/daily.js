@@ -1,8 +1,264 @@
-import * as api from '../api.js';import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js';import { esc,money,dateOnly,statusBadge,todayISO } from '../utils.js';
-function inventoryMinimum(r){const keys=['target_stock_base','target_stock_quantity_base','minimum_stock_base','min_stock_base','minimum_stock_quantity_base','stock_alert_minimum_base'];for(const key of keys){if(r?.[key]!==undefined&&r?.[key]!==null&&r?.[key]!=='')return r[key];}const dynamic=Object.keys(r||{}).find(key=>/(^|_)(target|minimum|min)(_|).*stock|stock.*(target|minimum|min)|alert.*(stock|quantity)/i.test(key));return dynamic?r[dynamic]:null;}
-export async function renderInventory(root){root.innerHTML=loader();try{const rows=await api.materials();root.innerHTML=`<div class="page-head"><div><h2>المخزون والجرد</h2><p>راقب الرصيد النظري لكل مادة. الحد الأدنى للرصيد قبل التنبيه يساعدك على معرفة المواد التي تحتاج متابعة.</p></div></div><div class="table-wrap"><table class="table"><thead><tr><th>المادة</th><th>الرصيد الحالي</th><th>الحد الأدنى للرصيد قبل التنبيه</th><th>آخر شراء</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td><strong>${esc(r.current_stock_base??r.stock_quantity_base??r.current_stock??0)}</strong></td><td>${inventoryMinimum(r)==null?'—':esc(inventoryMinimum(r))}</td><td>${r.latest_purchase_unit_cost_base!=null?money(r.latest_purchase_unit_cost_base):'—'}</td></tr>`).join('')}</tbody></table></div>`;}catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}}
-export async function renderCashboxes(root){root.innerHTML=loader();try{const [boxes,sessions]=await Promise.all([api.cashboxes(),api.cashboxSessions()]);root.innerHTML=`<div class="page-head"><div><h2>الصناديق</h2><p>تعريفات الصناديق تظهر دائمًا. الجلسات والحركة تظهر عندما تبدأ العمليات المالية.</p></div></div><div class="grid cols-3">${boxes.map(b=>`<div class="card"><div class="metric-label">${b.is_general?'الصندوق العام':'صندوق'}</div><div class="metric-value" style="font-size:19px">${esc(b.name)}</div><div class="metric-note">${b.is_active===false?'غير نشط':'جاهز للاستخدام'}</div></div>`).join('')}</div><div style="height:16px"></div><div class="card"><h3>جلسات الصندوق</h3>${sessions.length?`<div class="table-wrap"><table class="table"><thead><tr><th>اليوم</th><th>الصندوق</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead><tbody>${sessions.map(s=>`<tr><td>${dateOnly(s.business_date||s.opened_at)}</td><td>${esc(s.cashbox_name||s.name||'صندوق')}</td><td>${statusBadge(s.status)}</td><td>${money(s.expected_balance_base??s.expected_base??s.net_base??0)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لا توجد جلسات بعد.</div>'}</div>`;}catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}}
-export async function renderExpenses(root){root.innerHTML=loader();try{const [rows,boxes,cats]=await Promise.all([api.expenses(),api.cashboxes(),api.expenseCategories()]);root.innerHTML=`<div class="page-head"><div><h2>المصروفات</h2><p>استخدمها للمصاريف التشغيلية مثل الصيانة والنقل والخدمات، وليس لشراء مواد المخزون.</p></div><button class="btn add">إضافة مصروف</button></div>${rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>التاريخ</th><th>الوصف</th><th>الجهة</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${dateOnly(r.occurred_at)}</td><td>${esc(r.title||r.description||'مصروف')}</td><td>${esc(r.payee||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty"><strong>لا توجد مصروفات بعد</strong></div>'}`;root.querySelector('.add').onclick=()=>modal({title:'إضافة مصروف',body:`<div class="form-grid"><div class="field full"><label>الوصف</label><input name="title" required></div><div class="field"><label>المبلغ</label><input name="amount" type="number" step="any" required></div><div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div><div class="field"><label>الصندوق</label><select name="box" required>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div><div class="field"><label>التصنيف</label><select name="cat"><option value="">بدون</option>${cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>المستفيد - اختياري</label><input name="payee"></div><div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div></div>`,onSubmit:async fd=>{try{await api.recordExpense({cashboxId:fd.get('box'),amount:fd.get('amount'),title:fd.get('title'),currency:fd.get('currency'),categoryId:fd.get('cat')||null,payee:String(fd.get('payee')||'').trim()||null,date:fd.get('date')});toast('تم تسجيل المصروف','success');await renderExpenses(root);return true;}catch(e){toast(friendlyError(e),'error');return false;}}});}catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}}
-export async function renderOrders(root){root.innerHTML=loader();try{const [rows,boxes,menu]=await Promise.all([api.orders(),api.cashboxes(),api.menuItems()]);root.innerHTML=`<div class="page-head"><div><h2>الأوردرات والمبيعات</h2><p>تسجيل المبيعات اليومية. عند النشر يربط النظام الإيراد بالصندوق ويستهلك الوصفة من المخزون.</p></div><button class="btn new">أوردر جديد</button></div>${rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>التاريخ</th><th>رقم الأوردر</th><th>الحالة</th><th>الإجمالي</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr class="clickable" data-id="${r.id}"><td>${dateOnly(r.occurred_at||r.business_date)}</td><td>${esc(r.external_order_number||r.order_number||'—')}</td><td>${statusBadge(r.status)}</td><td>${money(r.net_total_original??r.total_original??0,r.currency_code||'SYP')}</td><td>فتح ←</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty"><strong>لا توجد مبيعات بعد</strong></div>'}`;root.querySelector('.new').onclick=()=>newOrder(boxes);root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);}catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}}
-function newOrder(boxes){modal({title:'أوردر جديد',body:`<div class="form-grid"><div class="field"><label>رقم الأوردر - اختياري</label><input name="number"></div><div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div><div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div><div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div></div>`,submitText:'إنشاء المسودة',onSubmit:async fd=>{try{const id=await api.createOrder({cashboxId:fd.get('box')||null,currency:fd.get('currency'),number:String(fd.get('number')||'').trim()||null,date:fd.get('date')});location.hash='#/order/'+id;return true;}catch(e){toast(friendlyError(e),'error');return false;}}});}
-export async function renderOrderDetail(root,id){root.innerHTML=loader();try{const [order,items,menu]=await Promise.all([api.one('orders',id),api.orderItems(id),api.menuItems()]);const mm=Object.fromEntries(menu.map(x=>[x.id,x]));root.innerHTML=`<div class="page-head"><div><h2>تفاصيل الأوردر</h2><p>أضف الأصناف ثم انشر العملية.</p></div><a class="btn secondary" href="#/orders">رجوع</a></div><div class="grid cols-2"><div class="card"><div class="kv"><div class="k">الحالة</div><div>${statusBadge(order.status)}</div><div class="k">العملة</div><div>${esc(order.currency_code||'SYP')}</div></div></div><div class="card"><div class="quick-actions"><button class="btn add" ${order.status!=='draft'?'disabled':''}>إضافة صنف</button><button class="btn soft post" ${order.status!=='draft'||!items.length?'disabled':''}>نشر الأوردر</button></div></div></div><div style="height:16px"></div><div class="card"><h3>الأصناف</h3>${items.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(mm[x.menu_item_id]?.name||x.raw_item_name||'صنف')}</td><td>${esc(x.quantity||1)}</td><td>${money(x.unit_price_original||0,order.currency_code||'SYP')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لا توجد أصناف بعد.</div>'}</div>`;root.querySelector('.add')?.addEventListener('click',()=>modal({title:'إضافة صنف',body:`<div class="form-grid"><div class="field full"><label>الصنف</label><select name="item">${menu.map(x=>`<option value="${x.id}" data-price="${x.manual_price_original??x.price??0}">${esc(x.name)}</option>`).join('')}</select></div><div class="field"><label>الكمية</label><input name="qty" type="number" step="any" value="1"></div><div class="field"><label>السعر</label><input name="price" type="number" step="any" required></div></div>`,onSubmit:async(fd,form)=>{try{await api.addOrderItem({orderId:id,menuItemId:fd.get('item'),quantity:fd.get('qty')||1,unitPrice:fd.get('price')});toast('تمت إضافة الصنف','success');await renderOrderDetail(root,id);return true;}catch(e){toast(friendlyError(e),'error');return false;}}}));root.querySelector('.post')?.addEventListener('click',async()=>{if(!(await confirmBox('هل تريد نشر الأوردر؟','نشر')))return;try{await api.postOrder(id);toast('تم نشر الأوردر','success');await renderOrderDetail(root,id);}catch(e){toast(friendlyError(e),'error');}});}catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}}
+import * as api from '../api.js';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js';
+import { esc,money,dateOnly,statusBadge,todayISO,num } from '../utils.js';
+
+function inventoryMinimum(r){
+  const keys=[
+    'target_stock_base','target_stock_quantity_base','minimum_stock_base',
+    'min_stock_base','minimum_stock_quantity_base','stock_alert_minimum_base'
+  ];
+  for(const key of keys){
+    if(r?.[key]!==undefined && r?.[key]!==null && r?.[key]!=='') return r[key];
+  }
+  const dynamic=Object.keys(r||{}).find(key=>
+    /(^|_)(target|minimum|min)(_|).*stock|stock.*(target|minimum|min)|alert.*(stock|quantity)/i.test(key)
+  );
+  return dynamic ? r[dynamic] : null;
+}
+
+export async function renderInventory(root){
+  root.innerHTML=loader();
+  try{
+    const rows=await api.materials();
+    root.innerHTML=`
+      <div class="page-head">
+        <div>
+          <h2>المخزون والجرد</h2>
+          <p>راقب الرصيد النظري لكل مادة والحد الأدنى الذي يبدأ عنده التنبيه.</p>
+        </div>
+      </div>
+      <div class="table-wrap table-fit">
+        <table class="table">
+          <thead><tr><th>المادة</th><th>الرصيد الحالي</th><th>الحد الأدنى قبل التنبيه</th><th>آخر شراء</th></tr></thead>
+          <tbody>${rows.map(r=>`
+            <tr>
+              <td>${esc(r.name)}</td>
+              <td><strong>${esc(r.current_stock_base??r.stock_quantity_base??r.current_stock??0)}</strong></td>
+              <td>${inventoryMinimum(r)==null?'—':esc(inventoryMinimum(r))}</td>
+              <td>${r.latest_purchase_unit_cost_base!=null?money(r.latest_purchase_unit_cost_base):'—'}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+  }catch(e){
+    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+  }
+}
+
+export async function renderCashboxes(root){
+  root.innerHTML=loader();
+  try{
+    const [boxes,sessions]=await Promise.all([api.cashboxes(),api.cashboxSessions()]);
+    root.innerHTML=`
+      <div class="page-head"><div><h2>الصناديق</h2><p>تعريفات الصناديق تظهر دائمًا. الجلسات والحركة تظهر عندما تبدأ العمليات المالية.</p></div></div>
+      <div class="grid cols-3">
+        ${boxes.map(b=>`
+          <div class="card">
+            <div class="metric-label">${b.is_general?'الصندوق العام':'صندوق'}</div>
+            <div class="metric-value" style="font-size:19px">${esc(b.name)}</div>
+            <div class="metric-note">${b.is_active===false?'غير نشط':'جاهز للاستخدام'}</div>
+          </div>`).join('')}
+      </div>
+      <div style="height:16px"></div>
+      <div class="card">
+        <h3>جلسات الصندوق</h3>
+        ${sessions.length?`
+          <div class="table-wrap table-fit">
+            <table class="table">
+              <thead><tr><th>اليوم</th><th>الصندوق</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead>
+              <tbody>${sessions.map(s=>`
+                <tr>
+                  <td>${dateOnly(s.business_date||s.opened_at)}</td>
+                  <td>${esc(s.cashbox_name||s.name||'صندوق')}</td>
+                  <td>${statusBadge(s.status)}</td>
+                  <td>${money(s.expected_balance_base??s.expected_base??s.net_base??0)}</td>
+                </tr>`).join('')}</tbody>
+            </table>
+          </div>`:'<div class="empty">لا توجد جلسات بعد.</div>'}
+      </div>`;
+  }catch(e){
+    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+  }
+}
+
+export async function renderExpenses(root){
+  root.innerHTML=loader();
+  try{
+    const [rows,boxes,cats]=await Promise.all([api.expenses(),api.cashboxes(),api.expenseCategories()]);
+    root.innerHTML=`
+      <div class="page-head">
+        <div><h2>المصروفات</h2><p>استخدمها للمصاريف التشغيلية مثل الصيانة والنقل والخدمات، وليس لشراء مواد المخزون.</p></div>
+        <button class="btn add">إضافة مصروف</button>
+      </div>
+      ${rows.length?`
+        <div class="table-wrap table-fit"><table class="table">
+          <thead><tr><th>التاريخ</th><th>الوصف</th><th>الجهة</th></tr></thead>
+          <tbody>${rows.map(r=>`<tr><td>${dateOnly(r.occurred_at)}</td><td>${esc(r.title||r.description||'مصروف')}</td><td>${esc(r.payee||'—')}</td></tr>`).join('')}</tbody>
+        </table></div>`:'<div class="card empty"><strong>لا توجد مصروفات بعد</strong></div>'}`;
+
+    root.querySelector('.add').onclick=()=>modal({
+      title:'إضافة مصروف',
+      body:`
+        <div class="form-grid">
+          <div class="field full"><label>الوصف</label><input name="title" required></div>
+          <div class="field"><label>المبلغ</label><input name="amount" type="number" step="any" required></div>
+          <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+          <div class="field"><label>الصندوق</label><select name="box" required>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+          <div class="field"><label>التصنيف</label><select name="cat"><option value="">بدون</option>${cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+          <div class="field"><label>المستفيد <span class="optional-badge">اختياري</span></label><input name="payee"></div>
+          <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div>
+        </div>`,
+      onSubmit:async fd=>{
+        try{
+          await api.recordExpense({
+            cashboxId:fd.get('box'),amount:fd.get('amount'),title:fd.get('title'),
+            currency:fd.get('currency'),categoryId:fd.get('cat')||null,
+            payee:String(fd.get('payee')||'').trim()||null,date:fd.get('date')
+          });
+          toast('تم تسجيل المصروف','success');
+          await renderExpenses(root);
+          return true;
+        }catch(e){toast(friendlyError(e),'error');return false;}
+      }
+    });
+  }catch(e){
+    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+  }
+}
+
+export async function renderOrders(root){
+  root.innerHTML=loader();
+  try{
+    const [rows,boxes]=await Promise.all([api.orders(),api.cashboxes()]);
+    root.innerHTML=`
+      <div class="page-head">
+        <div><h2>الأوردرات والمبيعات</h2><p>عند نشر الأوردر يُسجل الإيراد ويُستهلك مخزون مكونات الوصفة.</p></div>
+        <button class="btn new">أوردر جديد</button>
+      </div>
+      ${rows.length?`
+        <div class="table-wrap table-fit"><table class="table">
+          <thead><tr><th>التاريخ</th><th>رقم الأوردر</th><th>الحالة</th><th>الإجمالي</th><th></th></tr></thead>
+          <tbody>${rows.map(r=>`
+            <tr class="clickable" data-id="${esc(r.id)}">
+              <td>${dateOnly(r.occurred_at||r.business_date)}</td>
+              <td>${esc(r.external_order_number||r.order_number||'—')}</td>
+              <td>${statusBadge(r.status)}</td>
+              <td>${money(r.net_total_original??r.total_original??0,r.currency_code||'SYP')}</td>
+              <td>فتح ←</td>
+            </tr>`).join('')}</tbody>
+        </table></div>`:'<div class="card empty"><strong>لا توجد مبيعات بعد</strong></div>'}`;
+    root.querySelector('.new').onclick=()=>newOrder(boxes);
+    root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);
+  }catch(e){
+    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+  }
+}
+
+function newOrder(boxes){
+  modal({
+    title:'أوردر جديد',
+    body:`
+      <div class="form-grid">
+        <div class="field"><label>رقم الأوردر <span class="optional-badge">اختياري</span></label><input name="number"></div>
+        <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div>
+        <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+      </div>`,
+    submitText:'إنشاء المسودة',
+    onSubmit:async fd=>{
+      try{
+        const id=await api.createOrder({
+          cashboxId:fd.get('box')||null,
+          currency:fd.get('currency'),
+          number:String(fd.get('number')||'').trim()||null,
+          date:fd.get('date')
+        });
+        location.hash='#/order/'+id;
+        return true;
+      }catch(e){toast(friendlyError(e),'error');return false;}
+    }
+  });
+}
+
+function itemPrice(x){
+  return x.manual_price_original ?? x.manual_price ?? x.price ?? x.suggested_price_rounded ?? x.suggested_price ?? 0;
+}
+
+export async function renderOrderDetail(root,id){
+  root.innerHTML=loader();
+  try{
+    const [order,items,menu]=await Promise.all([api.one('orders',id),api.orderItems(id),api.menuItems()]);
+    const mm=Object.fromEntries(menu.map(x=>[String(x.id),x]));
+    root.innerHTML=`
+      <div class="page-head"><div><h2>تفاصيل الأوردر</h2><p>أضف الأصناف ثم انشر العملية.</p></div></div>
+      <div class="grid cols-2">
+        <div class="card"><div class="kv"><div class="k">الحالة</div><div>${statusBadge(order.status)}</div><div class="k">العملة</div><div>${esc(order.currency_code||'SYP')}</div></div></div>
+        <div class="card"><div class="quick-actions"><button class="btn add" ${order.status!=='draft'?'disabled':''}>إضافة صنف</button><button class="btn soft post" ${order.status!=='draft'||!items.length?'disabled':''}>نشر الأوردر</button></div></div>
+      </div>
+      <div style="height:16px"></div>
+      <div class="card">
+        <h3>الأصناف</h3>
+        ${items.length?`
+          <div class="table-wrap table-fit"><table class="table">
+            <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>التعديل</th></tr></thead>
+            <tbody>${items.map(x=>`
+              <tr>
+                <td>${esc(mm[String(x.menu_item_id)]?.name||x.raw_item_name||'صنف')}</td>
+                <td>${esc(x.quantity||1)}</td>
+                <td>${money(x.unit_price_original||0,order.currency_code||'SYP')}</td>
+                <td>${x.adjustment_type==='percent'?`${esc(x.adjustment_value||0)}% خصم`:x.adjustment_type==='complimentary'?'ضيافة':'—'}</td>
+              </tr>`).join('')}</tbody>
+          </table></div>`:'<div class="empty">لا توجد أصناف بعد.</div>'}
+      </div>`;
+
+    root.querySelector('.add')?.addEventListener('click',()=>{
+      const m=modal({
+        title:'إضافة صنف',
+        body:`
+          <div class="form-grid">
+            <div class="field full"><label>الصنف</label><select name="item">${menu.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+            <div class="field"><label>الكمية</label><input name="qty" type="number" step="any" value="1"></div>
+            <div class="field"><label>السعر</label><input name="price" type="number" step="any" min="0" required></div>
+            <div class="field"><label>الخصم % <span class="optional-badge">اختياري</span></label><input name="discount" type="number" min="0" max="100" step="any"></div>
+          </div>`,
+        onSubmit:async fd=>{
+          try{
+            const discount=num(fd.get('discount'),0);
+            await api.addOrderItem({
+              orderId:id,
+              menuItemId:fd.get('item'),
+              quantity:fd.get('qty')||1,
+              unitPrice:fd.get('price'),
+              adjustmentType:discount>0?'percent':'none',
+              adjustmentValue:discount,
+            });
+            toast('تمت إضافة الصنف','success');
+            await renderOrderDetail(root,id);
+            return true;
+          }catch(e){toast(friendlyError(e),'error');return false;}
+        }
+      });
+
+      const itemSel=m.form.querySelector('[name="item"]');
+      const price=m.form.querySelector('[name="price"]');
+      const discount=m.form.querySelector('[name="discount"]');
+      const refresh=()=>{
+        const item=mm[String(itemSel.value)];
+        price.value=itemPrice(item);
+        discount.value=num(item?.default_discount_percent,0)||'';
+      };
+      itemSel.addEventListener('change',refresh);
+      refresh();
+    });
+
+    root.querySelector('.post')?.addEventListener('click',async()=>{
+      if(!(await confirmBox('هل تريد نشر الأوردر؟','نشر'))) return;
+      try{
+        await api.postOrder(id);
+        toast('تم نشر الأوردر','success');
+        await renderOrderDetail(root,id);
+      }catch(e){toast(friendlyError(e),'error');}
+    });
+  }catch(e){
+    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+  }
+}
