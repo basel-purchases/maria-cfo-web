@@ -386,6 +386,21 @@ async function saveRecipeItemFallback({menuItemId,materialId,unitId,quantity,rec
   return insertFirst('menu_item_recipe_items',patches.map(x=>({menu_item_id:menuItemId,...x})));
 }
 
+async function verifyRecipeSave({menuItemId,materialId,unitId,quantity}){
+  const rows=await recipeItems(menuItemId);
+  const row=rows.find(r=>String(r.material_id)===String(materialId));
+  if(!row) throw new Error('RECIPE_SAVE_VERIFY_FAILED');
+
+  const savedUnit=String(row.input_unit_id||row.unit_id||'');
+  const savedQty=Number(row.input_quantity??row.quantity_original??row.quantity??NaN);
+  const expectedQty=Number(quantity);
+
+  if(String(unitId)!==savedUnit || !Number.isFinite(savedQty) || Math.abs(savedQty-expectedQty)>1e-9){
+    throw new Error('RECIPE_SAVE_VERIFY_FAILED');
+  }
+  return row;
+}
+
 export async function addRecipeItem({menuItemId,materialId,unitId,quantity}){
   const q=Number(quantity);
   if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
@@ -396,19 +411,8 @@ export async function addRecipeItem({menuItemId,materialId,unitId,quantity}){
     p_input_quantity:q,
     p_recipe_item_id:null,
   };
-  let firstError;
-  try{return await rpc('save_menu_recipe_item_v06',args);}catch(e){firstError=e;}
-  try{return await rpc('save_menu_recipe_item',args);}catch(_){ }
-  try{
-    const rows=await recipeItems(menuItemId);
-    const existing=rows.find(r=>String(r.material_id)===String(materialId));
-    return await saveRecipeItemFallback({
-      menuItemId,materialId,unitId,quantity:q,recipeItemId:existing?.id||null,
-    });
-  }catch(e){
-    console.error('Recipe fallback failed',e,'Primary error:',firstError);
-    throw firstError || e;
-  }
+  await rpc('save_menu_recipe_item_v07',args);
+  return verifyRecipeSave({menuItemId,materialId,unitId,quantity:q});
 }
 
 export async function updateRecipeItem(id,{unitId,quantity}){
@@ -423,14 +427,12 @@ export async function updateRecipeItem(id,{unitId,quantity}){
     p_input_quantity:q,
     p_recipe_item_id:id,
   };
-  try{return await rpc('save_menu_recipe_item_v06',args);}catch(_){ }
-  try{return await rpc('save_menu_recipe_item',args);}catch(__){ }
-  return saveRecipeItemFallback({
+  await rpc('save_menu_recipe_item_v07',args);
+  return verifyRecipeSave({
     menuItemId:row.menu_item_id,
     materialId:row.material_id,
     unitId,
     quantity:q,
-    recipeItemId:id,
   });
 }
 

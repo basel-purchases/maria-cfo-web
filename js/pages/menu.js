@@ -102,7 +102,7 @@ function addMenu(root){
         await renderMenu(root);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.6.'),'error');
+        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.7.'),'error');
         return false;
       }
     },
@@ -137,9 +137,9 @@ function editMenu(root,row){
 
 async function recipeDialog(root,id,name,mats,units){
   try{
-    const rows=await api.recipeItems(id);
     const mm=Object.fromEntries(mats.map(x=>[String(x.id),x]));
     const um=Object.fromEntries(units.map(x=>[String(x.id),x]));
+    let rows=[];
 
     const rowUnitLabel=(x)=>{
       const material=mm[String(x.material_id)];
@@ -155,102 +155,162 @@ async function recipeDialog(root,id,name,mats,units){
       wide:true,
       submitText:'إضافة مكوّن',
       body:`
-        ${rows.length?`
-          <div class="table-wrap table-fit recipe-table-wrap">
-            <table class="table compact-table recipe-table">
-              <thead><tr><th>المادة</th><th>الكمية</th><th>الوحدة</th><th>إجراء</th></tr></thead>
-              <tbody>
-                ${rows.map(x=>`
-                  <tr>
-                    <td><strong>${esc(mm[String(x.material_id)]?.name||'مادة')}</strong></td>
-                    <td>${esc(x.input_quantity??x.quantity_original??x.quantity??x.quantity_base??'—')}</td>
-                    <td>${esc(rowUnitLabel(x))}</td>
-                    <td>
-                      <div class="material-actions">
-                        <button type="button" class="mini-btn edit-recipe-item" data-id="${esc(x.id)}">تعديل</button>
-                        <button type="button" class="mini-btn danger-lite delete-recipe-item" data-id="${esc(x.id)}">حذف</button>
-                      </div>
-                    </td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>`:
-          '<div class="notice">لا توجد مكونات بعد.</div>'}
+        <div class="recipe-items-host"></div>
 
         <div class="recipe-entry-row">
           <div class="field">
             <label>المادة</label>
             <select name="material" required>
-              ${mats.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}
+              <option value="">اختر مادة جديدة</option>
             </select>
           </div>
           <div class="field">
             <label>الوحدة</label>
             <div class="select-action-row">
-              <select name="unit" required></select>
-              <button type="button" class="conversion-btn add-conversion"><span aria-hidden="true">⇄</span> تحويل وحدة</button>
+              <select name="unit" required disabled>
+                <option value="">اختر المادة أولًا</option>
+              </select>
+              <button type="button" class="conversion-btn add-conversion" disabled><span aria-hidden="true">⇄</span> تحويل وحدة</button>
             </div>
           </div>
           <div class="field">
             <label>الكمية</label>
-            <input name="qty" type="number" step="any" min="0.00000001" required autocomplete="off">
+            <input name="qty" type="number" step="any" min="0.00000001" required autocomplete="off" disabled>
           </div>
         </div>
         <div class="recipe-save-row">
-          <span>كل مكوّن يُحفظ فور إضافته.</span>
+          <span>كل مكوّن جديد يظهر في الجدول فور حفظه.</span>
           <button type="button" class="btn secondary save-recipe-close">حفظ الوصفة وإغلاق</button>
         </div>`,
       onSubmit:async fd=>{
         try{
-          const materialId=String(fd.get('material')||'');
-          const existing=rows.find(x=>String(x.material_id)===materialId);
-          if(existing){
-            await api.updateRecipeItem(existing.id,{
-              unitId:fd.get('unit'),
-              quantity:fd.get('qty'),
-            });
-            toast('المادة موجودة في الوصفة، تم تحديثها بدل تكرارها.','success');
-          }else{
-            await api.addRecipeItem({
-              menuItemId:id,
-              materialId,
-              unitId:fd.get('unit'),
-              quantity:fd.get('qty'),
-            });
-            toast('تمت إضافة المكوّن','success');
-          }
-          m.close();
-          await recipeDialog(root,id,name,mats,units);
+          const materialId=String(fd.get('material')||'').trim();
+          const unitId=String(fd.get('unit')||'').trim();
+          const quantity=Number(fd.get('qty'));
+          if(!materialId){toast('اختر مادة لإضافتها.','error');return false;}
+          if(!unitId){toast('اختر الوحدة.','error');return false;}
+          if(!(quantity>0)){toast('اكتب كمية أكبر من صفر.','error');return false;}
+
+          await api.addRecipeItem({
+            menuItemId:id,
+            materialId,
+            unitId,
+            quantity,
+          });
+
+          toast('تمت إضافة المكوّن إلى الوصفة.','success');
+          await refreshRecipe();
           return false;
         }catch(e){
-          toast(friendlyError(e,'تعذر حفظ المكوّن. شغّل تحديث قاعدة البيانات v0.6 مرة واحدة ثم حاول مجددًا.'),'error');
+          toast(friendlyError(e,'تعذر حفظ المكوّن. شغّل تحديث قاعدة البيانات v0.7 مرة واحدة ثم حاول مجددًا.'),'error');
           return false;
         }
       },
     });
 
+    const host=m.form.querySelector('.recipe-items-host');
     const materialSel=m.form.querySelector('[name="material"]');
     const unitSel=m.form.querySelector('[name="unit"]');
+    const qtyInput=m.form.querySelector('[name="qty"]');
+    const conversionBtn=m.form.querySelector('.add-conversion');
+    const submitBtn=m.form.querySelector('[type="submit"]');
+
+    const setEntryEnabled=(enabled)=>{
+      unitSel.disabled=!enabled;
+      qtyInput.disabled=!enabled;
+      conversionBtn.disabled=!enabled;
+      if(!enabled){
+        unitSel.innerHTML='<option value="">اختر المادة أولًا</option>';
+        qtyInput.value='';
+      }
+    };
 
     const populateUnits=async(preferred=null)=>{
       const material=mm[String(materialSel.value)];
-      if(!material) return;
+      if(!material){
+        setEntryEnabled(false);
+        return;
+      }
+      setEntryEnabled(true);
       await api.ensureStandardMaterialUnits(material,units).catch(()=>null);
       const choices=await materialUnitChoices(material,units);
-      unitSel.innerHTML=choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('');
+      unitSel.innerHTML=choices.length
+        ? choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('')
+        : '<option value="">لا توجد وحدة مرتبطة</option>';
       if(preferred && choices.some(x=>String(x.unitId)===String(preferred))) unitSel.value=preferred;
     };
 
-    materialSel.addEventListener('change',()=>populateUnits());
-    await populateUnits();
-
-    m.form.querySelector('.save-recipe-close').onclick=async()=>{
-      toast('تم حفظ الوصفة.','success');
-      m.close();
-      await renderMenu(root);
+    const populateMaterials=()=>{
+      const used=new Set(rows.map(x=>String(x.material_id)));
+      const available=mats.filter(x=>!used.has(String(x.id)));
+      materialSel.innerHTML=`<option value="">اختر مادة جديدة</option>${available.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}`;
+      materialSel.disabled=available.length===0;
+      submitBtn.disabled=available.length===0;
+      if(available.length===0){
+        materialSel.innerHTML='<option value="">كل المواد المتاحة موجودة في الوصفة</option>';
+      }
+      setEntryEnabled(false);
     };
 
-    m.form.querySelector('.add-conversion').onclick=async()=>{
+    const renderRows=()=>{
+      host.innerHTML=rows.length?`
+        <div class="table-wrap table-fit recipe-table-wrap">
+          <table class="table compact-table recipe-table">
+            <thead><tr><th>المادة</th><th>الكمية</th><th>الوحدة</th><th>إجراء</th></tr></thead>
+            <tbody>
+              ${rows.map(x=>`
+                <tr>
+                  <td><strong>${esc(mm[String(x.material_id)]?.name||'مادة')}</strong></td>
+                  <td>${esc(x.input_quantity??x.quantity_original??x.quantity??x.quantity_base??'—')}</td>
+                  <td>${esc(rowUnitLabel(x))}</td>
+                  <td>
+                    <div class="material-actions">
+                      <button type="button" class="mini-btn edit-recipe-item" data-id="${esc(x.id)}">تعديل</button>
+                      <button type="button" class="mini-btn danger-lite delete-recipe-item" data-id="${esc(x.id)}">حذف</button>
+                    </div>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`:
+        '<div class="notice">لا توجد مكونات بعد. اختر مادة من الأسفل وأضفها.</div>';
+
+      host.querySelectorAll('.edit-recipe-item').forEach(btn=>{
+        const row=rows.find(x=>String(x.id)===String(btn.dataset.id));
+        if(row) btn.onclick=()=>editRecipeItem({
+          row,
+          material:mm[String(row.material_id)],
+          units,
+          onSaved:refreshRecipe,
+        });
+      });
+
+      host.querySelectorAll('.delete-recipe-item').forEach(btn=>{
+        const row=rows.find(x=>String(x.id)===String(btn.dataset.id));
+        if(!row) return;
+        btn.onclick=async()=>{
+          if(!(await confirmBox('حذف هذا المكوّن من الوصفة؟','حذف'))) return;
+          try{
+            await api.deleteRecipeItem(row.id);
+            toast('تم حذف المكوّن.','success');
+            await refreshRecipe();
+          }catch(e){
+            toast(friendlyError(e,'تعذر حذف المكوّن.'),'error');
+          }
+        };
+      });
+    };
+
+    async function refreshRecipe(){
+      rows=await api.recipeItems(id);
+      renderRows();
+      populateMaterials();
+      qtyInput.value='';
+    }
+
+    materialSel.addEventListener('change',()=>populateUnits());
+
+    conversionBtn.onclick=async()=>{
       const material=mm[String(materialSel.value)];
       if(!material) return;
       await openConversionDialog({
@@ -263,32 +323,18 @@ async function recipeDialog(root,id,name,mats,units){
       });
     };
 
-    m.form.querySelectorAll('.edit-recipe-item').forEach(btn=>{
-      const row=rows.find(x=>String(x.id)===String(btn.dataset.id));
-      if(row) btn.onclick=()=>editRecipeItem({root,menuId:id,menuName:name,row,material:mm[String(row.material_id)],mats,units,parent:m});
-    });
+    m.form.querySelector('.save-recipe-close').onclick=async()=>{
+      m.close();
+      await renderMenu(root);
+    };
 
-    m.form.querySelectorAll('.delete-recipe-item').forEach(btn=>{
-      const row=rows.find(x=>String(x.id)===String(btn.dataset.id));
-      if(!row) return;
-      btn.onclick=async()=>{
-        if(!(await confirmBox('حذف هذا المكوّن من الوصفة؟','حذف'))) return;
-        try{
-          await api.deleteRecipeItem(row.id);
-          toast('تم حذف المكوّن.','success');
-          m.close();
-          await recipeDialog(root,id,name,mats,units);
-        }catch(e){
-          toast(friendlyError(e,'تعذر حذف المكوّن.'),'error');
-        }
-      };
-    });
+    await refreshRecipe();
   }catch(e){
     toast(friendlyError(e,'تعذر فتح الوصفة.'),'error');
   }
 }
 
-async function editRecipeItem({root,menuId,menuName,row,material,mats,units,parent}){
+async function editRecipeItem({row,material,units,onSaved}){
   if(!material) return;
   await api.ensureStandardMaterialUnits(material,units).catch(()=>null);
   const choices=await materialUnitChoices(material,units);
@@ -310,7 +356,7 @@ async function editRecipeItem({root,menuId,menuName,row,material,mats,units,pare
         </div>
         <div class="field">
           <label>الكمية</label>
-          <input name="qty" type="number" min="0.00000001" step="any" value="${esc(currentQty)}" required>
+          <input name="qty" type="number" min="0.00000001" step="any" value="${esc(currentQty)}" required autocomplete="off">
         </div>
       </div>`,
     submitText:'حفظ التعديل',
@@ -319,8 +365,7 @@ async function editRecipeItem({root,menuId,menuName,row,material,mats,units,pare
         await api.updateRecipeItem(row.id,{unitId:fd.get('unit'),quantity:fd.get('qty')});
         toast('تم تعديل المكوّن.','success');
         m.close();
-        parent.close();
-        await recipeDialog(root,menuId,menuName,mats,units);
+        await onSaved();
         return false;
       }catch(e){
         toast(friendlyError(e,'تعذر تعديل المكوّن.'),'error');

@@ -1,6 +1,6 @@
 -- =========================================================
--- Maria CFO Web v0.6
--- Cumulative migration for v0.4 + v0.5 + v0.6
+-- Maria CFO Web v0.7
+-- Cumulative migration for v0.4 + v0.5 + v0.6 + v0.7
 -- Safe to run more than once.
 -- =========================================================
 
@@ -569,6 +569,102 @@ $$;
 
 revoke all on function public.save_menu_recipe_item_v06(uuid,uuid,uuid,numeric,uuid) from public;
 grant execute on function public.save_menu_recipe_item_v06(uuid,uuid,uuid,numeric,uuid) to authenticated;
+
+commit;
+
+notify pgrst, 'reload schema';
+
+
+-- =========================================================
+-- Maria CFO Web v0.7 additions
+-- =========================================================
+
+begin;
+
+-- ---------------------------------------------------------
+-- 8) Strict recipe save v0.7.
+--    Adding is now different from editing:
+--    - a new material creates a new row
+--    - an existing material must be edited explicitly
+--    The function also re-writes and verifies the visible
+--    input unit/quantity so reopening the recipe shows the
+--    exact values entered by the user.
+-- ---------------------------------------------------------
+
+create or replace function public.save_menu_recipe_item_v07(
+  p_menu_item_id uuid,
+  p_material_id uuid,
+  p_input_unit_id uuid,
+  p_input_quantity numeric,
+  p_recipe_item_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_saved jsonb;
+begin
+  if not public.is_app_owner() then
+    raise exception 'Access denied';
+  end if;
+
+  if p_input_quantity is null or p_input_quantity <= 0 then
+    raise exception 'INVALID_RECIPE_QUANTITY';
+  end if;
+
+  if p_recipe_item_id is null then
+    if exists (
+      select 1
+      from public.menu_item_recipe_items ri
+      where ri.menu_item_id = p_menu_item_id
+        and ri.material_id = p_material_id
+    ) then
+      raise exception 'RECIPE_MATERIAL_ALREADY_EXISTS';
+    end if;
+  else
+    if not exists (
+      select 1
+      from public.menu_item_recipe_items ri
+      where ri.id = p_recipe_item_id
+        and ri.menu_item_id = p_menu_item_id
+        and ri.material_id = p_material_id
+    ) then
+      raise exception 'RECIPE_ITEM_NOT_FOUND';
+    end if;
+  end if;
+
+  v_id := public.save_menu_recipe_item(
+    p_menu_item_id,
+    p_material_id,
+    p_input_unit_id,
+    p_input_quantity,
+    p_recipe_item_id
+  );
+
+  -- Keep the exact user-facing values authoritative for UI.
+  update public.menu_item_recipe_items
+  set input_unit_id = p_input_unit_id,
+      input_quantity = p_input_quantity
+  where id = v_id;
+
+  select to_jsonb(ri)
+  into v_saved
+  from public.menu_item_recipe_items ri
+  where ri.id = v_id;
+
+  if v_saved is null then
+    raise exception 'RECIPE_SAVE_VERIFY_FAILED';
+  end if;
+
+  return v_saved;
+end;
+$$;
+
+revoke all on function public.save_menu_recipe_item_v07(uuid,uuid,uuid,numeric,uuid) from public;
+grant execute on function public.save_menu_recipe_item_v07(uuid,uuid,uuid,numeric,uuid) to authenticated;
 
 commit;
 
