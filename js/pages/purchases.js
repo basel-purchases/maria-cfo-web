@@ -1,6 +1,6 @@
 import * as api from '../api.js';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js';
-import { esc,money,dateOnly,statusBadge,unitLabel,todayISO } from '../utils.js';
+import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js';
 
 export async function renderPurchases(root){
@@ -101,7 +101,7 @@ export async function renderPurchaseDetail(root,id){
         </div>
         <div class="card">
           <h3>إدخال الفاتورة</h3>
-          <p>اختر المادة، وستظهر فقط وحدات الشراء المرتبطة بها.</p>
+          <p>اختر المادة والوحدة التي اشتريتها بها. إذا لم تكن المادة موجودة يمكنك إضافتها من نفس الفاتورة.</p>
           <div class="quick-actions">
             <button class="btn add" ${invoice.status!=='draft'?'disabled':''}>إضافة مادة</button>
             <button class="btn secondary reuse" ${invoice.status!=='draft'?'disabled':''}>جلب آخر بنود المورد</button>
@@ -129,7 +129,7 @@ export async function renderPurchaseDetail(root,id){
           '<div class="empty"><strong>لا توجد بنود</strong><div>أضف مواد الفاتورة قبل النشر.</div></div>'}
       </div>`;
 
-    root.querySelector('.add')?.addEventListener('click',()=>addItem(root,id,mats,units));
+    root.querySelector('.add')?.addEventListener('click',()=>addItem(root,id,mats,units,invoice.currency_code||'SYP'));
     root.querySelector('.reuse')?.addEventListener('click',async()=>{
       try{
         const prev=await api.previousSupplierItems(invoice);
@@ -166,26 +166,61 @@ export async function renderPurchaseDetail(root,id){
   }
 }
 
-function addItem(root,id,mats,units){
-  if(!mats.length){
-    toast('أضف مادة أولًا من قسم المواد.','error');
-    return;
-  }
+function normalizeName(value){
+  return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+
+function addItem(root,id,mats,units,currency='SYP'){
+  const unitListId=`purchase-material-base-units-${Date.now()}`;
+  const materialOptions=()=>mats.length
+    ? mats.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}${x.quick_code||x.code?` — ${esc(x.quick_code||x.code)}`:''}</option>`).join('')
+    : '<option value="">أضف مادة جديدة أولًا</option>';
 
   const m=modal({
     title:'إضافة مادة للفاتورة',
+    subtitle:'اختر مادة موجودة أو أضف مادة جديدة من نفس الفاتورة.',
     wide:true,
     body:`
-      <div class="purchase-item-row">
+      <datalist id="${unitListId}">${units.map(u=>`<option value="${esc(unitDisplay(u))}">${esc(u.code||'')}</option>`).join('')}</datalist>
+
+      <div class="purchase-material-picker">
         <div class="field">
           <label>المادة</label>
-          <select name="material" required>${mats.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select>
+          <div class="select-action-row">
+            <select name="material" ${mats.length?'required':''}>${materialOptions()}</select>
+            <button type="button" class="conversion-btn new-material-toggle"><span>＋</span> مادة جديدة</button>
+          </div>
         </div>
+
+        <div class="inline-new-material ${mats.length?'is-hidden':''}" data-new-material-panel>
+          <div class="inline-new-material-head">
+            <strong>إضافة مادة جديدة</strong>
+            <span>سنضيفها ونختارها مباشرة لهذه الفاتورة.</span>
+          </div>
+          <div class="form-grid compact-grid">
+            <div class="field">
+              <label>اسم المادة</label>
+              <input name="new_material_name" autocomplete="off" placeholder="مثال: سكر بني">
+              <small class="field-message" data-duplicate-warning></small>
+            </div>
+            <div class="field">
+              <label>وحدة المخزون</label>
+              <input name="new_material_unit" list="${unitListId}" autocomplete="off" placeholder="كيلوغرام، قطعة، لتر...">
+            </div>
+          </div>
+          <div class="inline-new-material-actions">
+            <button type="button" class="btn soft create-material-inline">إضافة واستخدام</button>
+            ${mats.length?'<button type="button" class="btn secondary cancel-new-material">إخفاء</button>':''}
+          </div>
+        </div>
+      </div>
+
+      <div class="purchase-item-row purchase-item-fields">
         <div class="field">
-          <label>وحدة الشراء</label>
+          <label>الوحدة</label>
           <div class="select-action-row">
             <select name="unit" required></select>
-            <button type="button" class="mini-btn add-purchase-conversion">⇄ تحويل وحدة</button>
+            <button type="button" class="conversion-btn add-purchase-conversion"><span>⇄</span> تحويل وحدة</button>
           </div>
         </div>
         <div class="field">
@@ -196,7 +231,7 @@ function addItem(root,id,mats,units){
           <label>سعر الوحدة</label>
           <div class="input-with-suffix">
             <input name="price" type="number" step="any" min="0" required autocomplete="off">
-            <span class="input-suffix" data-price-suffix>SYP / الوحدة</span>
+            <span class="input-suffix" data-price-suffix>${esc(currency)} / الوحدة</span>
           </div>
         </div>
         <div class="field">
@@ -207,10 +242,20 @@ function addItem(root,id,mats,units){
     submitText:'إضافة البند',
     onSubmit:async fd=>{
       try{
+        const materialId=String(fd.get('material')||'');
+        if(!materialId){
+          toast('اختر مادة أو أضف مادة جديدة أولًا.','error');
+          return false;
+        }
+        const unitId=String(fd.get('unit')||'');
+        if(!unitId){
+          toast('اختر وحدة الشراء أو أضف تحويلًا لها.','error');
+          return false;
+        }
         await api.addPurchaseItem({
           invoiceId:id,
-          materialId:fd.get('material'),
-          purchaseUnitId:fd.get('unit'),
+          materialId,
+          purchaseUnitId:unitId,
           quantity:fd.get('qty'),
           unitPrice:fd.get('price'),
           discount:fd.get('discount')||0,
@@ -219,7 +264,7 @@ function addItem(root,id,mats,units){
         await renderPurchaseDetail(root,id);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر إضافة البند. تأكد من ربط الوحدة بالمادة من زر تحويل وحدة.'),'error');
+        toast(friendlyError(e,'تعذر إضافة البند. تأكد من تشغيل تحديث قاعدة البيانات v0.9 ثم حاول مرة أخرى.'),'error');
         return false;
       }
     },
@@ -228,27 +273,130 @@ function addItem(root,id,mats,units){
   const materialSel=m.form.querySelector('[name="material"]');
   const unitSel=m.form.querySelector('[name="unit"]');
   const priceSuffix=m.form.querySelector('[data-price-suffix]');
+  const panel=m.form.querySelector('[data-new-material-panel]');
+  const toggle=m.form.querySelector('.new-material-toggle');
+  const nameInput=m.form.querySelector('[name="new_material_name"]');
+  const baseUnitInput=m.form.querySelector('[name="new_material_unit"]');
+  const warning=m.form.querySelector('[data-duplicate-warning]');
+  const createBtn=m.form.querySelector('.create-material-inline');
+
+  const findDuplicate=()=>{
+    const wanted=normalizeName(nameInput.value);
+    if(!wanted) return null;
+    return mats.find(x=>normalizeName(x.name)===wanted)||null;
+  };
+
+  const refreshDuplicate=()=>{
+    const duplicate=findDuplicate();
+    if(duplicate){
+      warning.textContent=`هذه المادة موجودة بالفعل (${duplicate.quick_code||duplicate.code||'بدون كود'}). لن ننشئ نسخة مكررة.`;
+      warning.classList.add('error-text');
+    }else{
+      warning.textContent='';
+      warning.classList.remove('error-text');
+    }
+    return duplicate;
+  };
 
   const populateUnits=async(preferred=null)=>{
     const material=mats.find(x=>String(x.id)===String(materialSel.value));
-    if(!material) return;
+    if(!material){
+      unitSel.innerHTML='<option value="">—</option>';
+      priceSuffix.textContent=`${currency} / الوحدة`;
+      return;
+    }
     const choices=await materialUnitChoices(material,units);
     unitSel.innerHTML=choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('');
     if(preferred && choices.some(x=>String(x.unitId)===String(preferred))) unitSel.value=preferred;
     const label=unitSel.options[unitSel.selectedIndex]?.textContent?.trim()||'الوحدة';
-    priceSuffix.textContent=`SYP / ${label}`;
+    priceSuffix.textContent=`${currency} / ${label}`;
   };
+
+  const selectMaterial=async material=>{
+    let option=[...materialSel.options].find(o=>String(o.value)===String(material.id));
+    if(!option){
+      option=document.createElement('option');
+      option.value=material.id;
+      option.textContent=`${material.name}${material.quick_code||material.code?` — ${material.quick_code||material.code}`:''}`;
+      materialSel.appendChild(option);
+    }
+    materialSel.value=material.id;
+    await populateUnits();
+  };
+
+  const hideNewMaterial=()=>{
+    panel.classList.add('is-hidden');
+    toggle.classList.remove('active');
+  };
+  const showNewMaterial=()=>{
+    panel.classList.remove('is-hidden');
+    toggle.classList.add('active');
+    setTimeout(()=>nameInput.focus(),0);
+  };
+
+  toggle.addEventListener('click',()=>{
+    if(panel.classList.contains('is-hidden')) showNewMaterial();
+    else hideNewMaterial();
+  });
+  m.form.querySelector('.cancel-new-material')?.addEventListener('click',hideNewMaterial);
+  nameInput.addEventListener('input',refreshDuplicate);
+
+  createBtn.addEventListener('click',async()=>{
+    const name=String(nameInput.value||'').trim();
+    const unitText=String(baseUnitInput.value||'').trim();
+    if(!name){toast('اكتب اسم المادة.','error');nameInput.focus();return;}
+    if(!unitText){toast('اختر أو اكتب وحدة المخزون.','error');baseUnitInput.focus();return;}
+
+    const duplicate=refreshDuplicate();
+    if(duplicate){
+      await selectMaterial(duplicate);
+      hideNewMaterial();
+      toast('المادة موجودة بالفعل؛ تم اختيارها بدل إنشاء نسخة مكررة.','success');
+      return;
+    }
+
+    createBtn.disabled=true;
+    try{
+      let baseUnit=api.findUnitByText(unitText,units);
+      if(!baseUnit){
+        baseUnit=await api.resolveUnit(unitText,units);
+        if(baseUnit && !units.some(u=>String(u.id)===String(baseUnit.id))) units.push(baseUnit);
+      }
+      if(!baseUnit?.id) throw new Error('UNIT_REQUIRED');
+
+      const code=await api.nextMaterialCode(mats);
+      const created=await api.insertFirst('materials',[
+        {name,quick_code:code,base_unit_id:baseUnit.id},
+        {name,code,base_unit_id:baseUnit.id},
+      ]);
+      await api.ensureStandardMaterialUnits(created,units).catch(()=>null);
+      mats.push(created);
+      await selectMaterial(created);
+      nameInput.value='';
+      baseUnitInput.value='';
+      warning.textContent='';
+      hideNewMaterial();
+      toast(`تمت إضافة ${name} بالكود ${code} وأصبحت جاهزة للفاتورة.`,'success');
+    }catch(e){
+      toast(friendlyError(e,'تعذر إضافة المادة الجديدة.'),'error');
+    }finally{
+      createBtn.disabled=false;
+    }
+  });
 
   materialSel.addEventListener('change',()=>populateUnits());
   unitSel.addEventListener('change',()=>{
     const label=unitSel.options[unitSel.selectedIndex]?.textContent?.trim()||'الوحدة';
-    priceSuffix.textContent=`SYP / ${label}`;
+    priceSuffix.textContent=`${currency} / ${label}`;
   });
   populateUnits();
 
   m.form.querySelector('.add-purchase-conversion').onclick=async()=>{
     const material=mats.find(x=>String(x.id)===String(materialSel.value));
-    if(!material) return;
+    if(!material){
+      toast('اختر مادة أو أضف مادة جديدة أولًا.','error');
+      return;
+    }
     await openConversionDialog({
       material,
       units,
@@ -257,3 +405,4 @@ function addItem(root,id,mats,units){
     });
   };
 }
+

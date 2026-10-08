@@ -450,3 +450,63 @@ a{color:inherit;text-decoration:none}
   .recipe-entry-actions .btn{width:100%}
   .recipe-dialog-footer{position:static;margin:16px 0 0;padding:14px 0 0;background:transparent;backdrop-filter:none}
 }
+
+/* =========================================================
+   Maria CFO Web v0.9
+   Purchase item + inline material creation
+   ========================================================= */
+.purchase-material-picker{
+  margin-bottom:14px;
+}
+.inline-new-material{
+  margin-top:12px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(180deg,#fff 0%,var(--surface-2) 100%);
+  box-shadow:0 8px 22px rgba(91,57,79,.05);
+}
+.inline-new-material.is-hidden{display:none}
+.inline-new-material-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.inline-new-material-head strong{color:var(--plum-dark)}
+.inline-new-material-head span{color:var(--muted);font-size:12px}
+.inline-new-material-actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-start;
+  margin-top:10px;
+}
+.field-message{
+  display:block;
+  min-height:18px;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:12px;
+}
+.field-message.error-text{color:#a23e4b;font-weight:700}
+.new-material-toggle.active{
+  background:var(--blush);
+  border-color:var(--rose);
+}
+.purchase-item-fields{
+  grid-template-columns:1.25fr .7fr 1fr .7fr;
+}
+.select-action-row .conversion-btn{
+  min-height:46px;
+}
+@media(max-width:980px){
+  .purchase-item-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .inline-new-material-head{display:block}
+  .inline-new-material-head span{display:block;margin-top:4px}
+  .purchase-item-fields{grid-template-columns:1fr}
+  .select-action-row{grid-template-columns:1fr}
+  .select-action-row .conversion-btn{width:100%}
+}
