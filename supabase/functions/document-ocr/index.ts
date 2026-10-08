@@ -294,15 +294,13 @@ async function autoCreateOrderDraft(userDb: any, parsed: any, context: any) {
 
   let saved = 0;
   for (const item of mapped) {
-    const add = await userDb.rpc("add_order_item", {
+    const add = await userDb.rpc("add_order_item_v013", {
       p_order_id: orderId,
       p_menu_item_id: item.matched_menu_item_id,
-      p_raw_item_name: item.name,
       p_quantity: Number(item.quantity),
       p_unit_price_original: Number(item.resolved_unit_price || 0),
-      p_adjustment_type: item.discount_percent > 0 ? "percent" : "none",
-      p_adjustment_value: Number(item.discount_percent || 0),
-      p_adjustment_reason_id: null,
+      p_discount_percent: Number(item.discount_percent || 0),
+      p_raw_item_name: item.name,
     });
     if (add.error) {
       return {

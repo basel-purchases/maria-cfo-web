@@ -486,8 +486,97 @@ export async function cashboxSessions(){
   try{return await list('cashbox_session_summary',{order:'business_date',limit:200});}
   catch(_){return list('cashbox_sessions',{order:'business_date',limit:200});}
 }
+
+async function enrichCashboxOverview(entries){
+  const ids=entries.map(x=>x?.session?.id).filter(Boolean);
+  if(!ids.length) return entries;
+  let txs=[]; let openings=[];
+  try{
+    const {data,error}=await need().from('cashbox_transactions').select('*').in('session_id',ids).limit(2500);
+    if(!error) txs=data||[];
+  }catch(_){}
+  try{
+    const {data,error}=await need().from('cashbox_session_openings').select('*').in('session_id',ids).limit(500);
+    if(!error) openings=data||[];
+  }catch(_){}
+  const txNet={};
+  for(const tx of txs){
+    if(tx.is_void===true) continue;
+    const sid=String(tx.session_id||'');
+    const base=Number(tx.amount_base??0);
+    txNet[sid]=(txNet[sid]||0)+(tx.direction==='out'?-base:base);
+  }
+  const openingBase={};
+  for(const op of openings){
+    const sid=String(op.session_id||'');
+    const val=Number(op.opening_balance_base??op.opening_amount_base??op.amount_base??op.balance_base??0);
+    openingBase[sid]=(openingBase[sid]||0)+(Number.isFinite(val)?val:0);
+  }
+  return entries.map(entry=>{
+    const sid=String(entry?.session?.id||'');
+    const computed=(openingBase[sid]||0)+(txNet[sid]||0);
+    return {...entry,summary:{...(entry.summary||{}),_computed_balance_base:computed}};
+  });
+}
+
+export async function cashboxOverview(date=todayISO()){
+  try{
+    await rpc('ensure_cashbox_day_v013',{p_business_date:date});
+    const data=await rpc('get_cashbox_overview_v013',{p_business_date:date});
+    return enrichCashboxOverview(Array.isArray(data)?data:[]);
+  }catch(e){
+    console.warn('v0.13 cashbox overview fallback',e);
+    const [boxes,sessions]=await Promise.all([cashboxes(),cashboxSessions()]);
+    const entries=boxes.map(box=>{
+      const session=sessions.find(x=>String(x.cashbox_id||'')===String(box.id) && String(x.business_date||'').slice(0,10)===String(date));
+      return {cashbox:box,session:session||null,summary:session||{}};
+    });
+    return enrichCashboxOverview(entries);
+  }
+}
+
+export async function recordCashboxAdjustment({cashboxId,direction,amount,currency='SYP',note=null,date=todayISO()}){
+  return rpc('record_cashbox_adjustment_v013',{
+    p_cashbox_id:cashboxId,
+    p_direction:direction,
+    p_amount:Number(amount),
+    p_currency_code:currency,
+    p_note:String(note||'').trim()||null,
+    p_occurred_at:new Date(date+'T12:00:00').toISOString(),
+  });
+}
+
 export const expenses=()=>list('expenses',{order:'occurred_at',limit:500});
 export const expenseCategories=()=>list('expense_categories',{order:'name',ascending:true,limit:100});
+
+export async function expenseDetails(){
+  const [rows,cats,boxes,sessions,transactions]=await Promise.all([
+    expenses(),expenseCategories(),cashboxes(),
+    list('cashbox_sessions',{order:'business_date',limit:1000}).catch(()=>[]),
+    list('cashbox_transactions',{order:'occurred_at',limit:1500}).catch(()=>[]),
+  ]);
+  const catMap=Object.fromEntries(cats.map(x=>[String(x.id),x]));
+  const boxMap=Object.fromEntries(boxes.map(x=>[String(x.id),x]));
+  const sessionMap=Object.fromEntries(sessions.map(x=>[String(x.id),x]));
+  const txMap=Object.fromEntries(transactions.map(x=>[String(x.id),x]));
+  return rows.map(row=>{
+    const tx=txMap[String(row.cashbox_transaction_id)]||null;
+    const session=tx?sessionMap[String(tx.session_id||tx.cashbox_session_id||'')]:null;
+    const cashboxId=tx?.cashbox_id||session?.cashbox_id||null;
+    return {
+      ...row,
+      category_name:catMap[String(row.category_id)]?.name||null,
+      cashbox_id:cashboxId,
+      cashbox_name:boxMap[String(cashboxId)]?.name||null,
+      amount_original:tx?.amount_original??null,
+      currency_code:tx?.currency_code||null,
+      amount_base:tx?.amount_base??null,
+      transaction_type:tx?.transaction_type||null,
+      transaction_description:tx?.description||null,
+      transaction_is_void:tx?.is_void===true,
+    };
+  });
+}
 export const orders=()=>list('orders',{order:'occurred_at',limit:500});
 export const orderItems=id=>list('order_items',{order:'created_at',ascending:true,eq:{order_id:id},limit:300});
 export const employees=()=>list('employees',{order:'name',ascending:true,limit:500});
@@ -654,16 +743,15 @@ export async function createOrder({cashboxId,currency='SYP',number=null,date=tod
   });
 }
 
-export async function addOrderItem({orderId,menuItemId,quantity,unitPrice,adjustmentType='none',adjustmentValue=0}){
-  return rpc('add_order_item',{
+export async function addOrderItem({orderId,menuItemId,quantity,unitPrice,adjustmentType='none',adjustmentValue=0,rawItemName=null}){
+  const discount=adjustmentType==='percent'?Number(adjustmentValue||0):0;
+  return rpc('add_order_item_v013',{
     p_order_id:orderId,
     p_menu_item_id:menuItemId,
-    p_raw_item_name:null,
     p_quantity:Number(quantity),
     p_unit_price_original:Number(unitPrice),
-    p_adjustment_type:adjustmentType,
-    p_adjustment_value:Number(adjustmentValue||0),
-    p_adjustment_reason_id:null,
+    p_discount_percent:discount,
+    p_raw_item_name:rawItemName||null,
   });
 }
 
@@ -681,7 +769,7 @@ export async function setOrderCashbox(orderId,cashboxId){
 export async function postOrder(id){
   let last;
   for(let attempt=1;attempt<=2;attempt++){
-    try{return await rpc('post_order',{p_order_id:id});}
+    try{return await rpc('post_order_v013',{p_order_id:id});}
     catch(e){
       last=e;
       const msg=String(e?.message||e||'').toLowerCase();
@@ -694,13 +782,15 @@ export async function postOrder(id){
 }
 
 export async function recordExpense({cashboxId,amount,title,currency='SYP',categoryId=null,description=null,payee=null,date=todayISO()}){
+  const occurredAt=new Date(date+'T12:00:00').toISOString();
+  try{await rpc('ensure_cashbox_session_v013',{p_cashbox_id:cashboxId,p_at:occurredAt});}catch(e){console.warn('Could not pre-open cashbox session for expense',e);}
   return rpc('record_expense',{
     p_cashbox_id:cashboxId,
     p_amount:Number(amount),
     p_title:title,
     p_currency_code:currency,
     p_category_id:categoryId||null,
-    p_occurred_at:new Date(date+'T12:00:00').toISOString(),
+    p_occurred_at:occurredAt,
     p_payee:payee||null,
     p_description:description||null,
   });

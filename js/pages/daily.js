@@ -44,37 +44,105 @@ export async function renderInventory(root){
   }
 }
 
+function firstNumeric(obj,keys){
+  for(const key of keys){
+    const v=obj?.[key];
+    if(v!==undefined && v!==null && v!=='' && Number.isFinite(Number(v))) return Number(v);
+  }
+  return null;
+}
+
+function expectedCashboxBalance(summary){
+  return firstNumeric(summary,[
+    'expected_balance_base','expected_base','expected_closing_base','expected_closing_balance_base',
+    'current_balance_base','balance_base','net_base','expected_balance','balance','_computed_balance_base'
+  ]);
+}
+
 export async function renderCashboxes(root){
   root.innerHTML=loader();
   try{
-    const [boxes,sessions]=await Promise.all([api.cashboxes(),api.cashboxSessions()]);
+    const overview=await api.cashboxOverview(todayISO());
+    const boxes=overview.map(x=>x.cashbox).filter(Boolean);
     root.innerHTML=`
-      <div class="page-head"><div><h2>الصناديق</h2><p>تعريفات الصناديق تظهر دائمًا. الجلسات والحركة تظهر عندما تبدأ العمليات المالية.</p></div></div>
-      <div class="grid cols-3">
-        ${boxes.map(b=>`
-          <div class="card">
-            <div class="metric-label">${b.is_general?'الصندوق العام':'صندوق'}</div>
-            <div class="metric-value" style="font-size:19px">${esc(b.name)}</div>
-            <div class="metric-note">${b.is_active===false?'غير نشط':'جاهز للاستخدام'}</div>
-          </div>`).join('')}
+      <div class="page-head">
+        <div>
+          <h2>الصناديق</h2>
+          <p>كل صندوق يمثل النقد الفعلي الموجود فيه. المبيعات تزيده تلقائيًا، والمصروفات والدفعات تخفضه تلقائيًا.</p>
+        </div>
+      </div>
+      <div class="notice sage cashbox-help">
+        <strong>كيف أبدأ؟</strong>
+        إذا كان داخل الصندوق مبلغ موجود فعليًا الآن، اضغط «إضافة / سحب رصيد» وسجله مرة واحدة. بعد ذلك تتولى العمليات المالية تحديث الرصيد تلقائيًا.
+      </div>
+      <div class="grid cols-3 cashbox-grid">
+        ${overview.map(entry=>{
+          const b=entry.cashbox||{};
+          const session=entry.session||null;
+          const summary=entry.summary||{};
+          const bal=expectedCashboxBalance(summary);
+          return `
+            <div class="card cashbox-card" data-box="${esc(b.id)}">
+              <div class="cashbox-card-top">
+                <div>
+                  <div class="metric-label">${b.is_general?'الصندوق العام':'صندوق'}</div>
+                  <div class="metric-value cashbox-title">${esc(b.name||'صندوق')}</div>
+                </div>
+                ${session?statusBadge(session.status||'open'):'<span class="badge">اليوم جاهز</span>'}
+              </div>
+              <div class="cashbox-balance-label">الرصيد المتوقع الآن</div>
+              <div class="cashbox-balance">${bal===null?'—':money(bal,'SYP')}</div>
+              <div class="metric-note">${session?`جلسة ${dateOnly(session.business_date||todayISO())}`:'سيتم فتح جلسة اليوم تلقائيًا'}</div>
+              <div class="cashbox-actions"><button class="btn secondary adjust-box" data-id="${esc(b.id)}" data-name="${esc(b.name||'صندوق')}">إضافة / سحب رصيد</button></div>
+            </div>`;
+        }).join('')}
       </div>
       <div style="height:16px"></div>
       <div class="card">
-        <h3>جلسات الصندوق</h3>
-        ${sessions.length?`
-          <div class="table-wrap table-fit">
-            <table class="table">
-              <thead><tr><th>اليوم</th><th>الصندوق</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead>
-              <tbody>${sessions.map(s=>`
-                <tr>
-                  <td>${dateOnly(s.business_date||s.opened_at)}</td>
-                  <td>${esc(s.cashbox_name||s.name||'صندوق')}</td>
-                  <td>${statusBadge(s.status)}</td>
-                  <td>${money(s.expected_balance_base??s.expected_base??s.net_base??0)}</td>
-                </tr>`).join('')}</tbody>
-            </table>
-          </div>`:'<div class="empty">لا توجد جلسات بعد.</div>'}
+        <div class="section-head-inline"><div><h3>جلسات اليوم</h3><p>الجلسة هي سجل يومي للصندوق، وليست مبلغًا منفصلًا.</p></div></div>
+        <div class="table-wrap table-fit">
+          <table class="table">
+            <thead><tr><th>الصندوق</th><th>اليوم</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead>
+            <tbody>${overview.map(entry=>{
+              const b=entry.cashbox||{}; const se=entry.session||{}; const bal=expectedCashboxBalance(entry.summary||{});
+              return `<tr><td><strong>${esc(b.name||'صندوق')}</strong></td><td>${dateOnly(se.business_date||todayISO())}</td><td>${statusBadge(se.status||'open')}</td><td>${bal===null?'—':money(bal,'SYP')}</td></tr>`;
+            }).join('')}</tbody>
+          </table>
+        </div>
       </div>`;
+
+    root.querySelectorAll('.adjust-box').forEach(btn=>btn.addEventListener('click',()=>{
+      const boxId=btn.dataset.id;
+      const boxName=btn.dataset.name||'الصندوق';
+      modal({
+        title:`ضبط رصيد ${boxName}`,
+        subtitle:'استخدمه عند بداية النظام أو عند وجود حركة نقدية يدوية حقيقية. لا تستخدمه بدل تسجيل المبيعات أو المصروفات.',
+        body:`
+          <div class="form-grid">
+            <div class="field"><label>العملية</label><select name="direction"><option value="in">إضافة مبلغ للصندوق</option><option value="out">سحب مبلغ من الصندوق</option></select></div>
+            <div class="field"><label>المبلغ</label><input name="amount" type="number" min="0.000001" step="any" required></div>
+            <div class="field"><label>العملة</label><select name="currency"><option value="SYP">SYP</option><option value="USD">USD</option></select></div>
+            <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
+            <div class="field full"><label>ملاحظة <span class="optional-badge">اختياري</span></label><input name="note" placeholder="مثال: رصيد افتتاحي عند بدء استخدام النظام"></div>
+          </div>`,
+        submitText:'تسجيل الحركة',
+        onSubmit:async fd=>{
+          try{
+            await api.recordCashboxAdjustment({
+              cashboxId:boxId,
+              direction:fd.get('direction'),
+              amount:fd.get('amount'),
+              currency:fd.get('currency'),
+              note:fd.get('note'),
+              date:fd.get('date'),
+            });
+            toast('تم تحديث حركة الصندوق','success');
+            await renderCashboxes(root);
+            return true;
+          }catch(e){toast(friendlyError(e,'تعذر تسجيل حركة الصندوق.'),'error');return false;}
+        }
+      });
+    }));
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }
@@ -83,43 +151,83 @@ export async function renderCashboxes(root){
 export async function renderExpenses(root){
   root.innerHTML=loader();
   try{
-    const [rows,boxes,cats]=await Promise.all([api.expenses(),api.cashboxes(),api.expenseCategories()]);
+    const [rows,boxes,cats]=await Promise.all([api.expenseDetails(),api.cashboxes(),api.expenseCategories()]);
+    const active=rows.filter(r=>!r.transaction_is_void);
+    const totals={SYP:0,USD:0};
+    active.forEach(r=>{const c=String(r.currency_code||'SYP').toUpperCase();if(c in totals) totals[c]+=Number(r.amount_original||0);});
     root.innerHTML=`
       <div class="page-head">
-        <div><h2>المصروفات</h2><p>استخدمها للمصاريف التشغيلية مثل الصيانة والنقل والخدمات، وليس لشراء مواد المخزون.</p></div>
+        <div><h2>المصروفات</h2><p>كل مصروف هنا هو خروج نقدي فعلي من صندوق: صيانة، نقل، خدمات، أدوات، مرافق وغيرها. شراء مواد المخزون يبقى في فواتير الشراء.</p></div>
         <button class="btn add">إضافة مصروف</button>
       </div>
+      <div class="expense-summary">
+        <div class="card"><div class="metric-label">إجمالي المصروفات SYP</div><div class="metric-value">${money(totals.SYP,'SYP')}</div></div>
+        <div class="card"><div class="metric-label">إجمالي المصروفات USD</div><div class="metric-value">${money(totals.USD,'USD')}</div></div>
+        <div class="card"><div class="metric-label">عدد العمليات</div><div class="metric-value">${active.length}</div></div>
+      </div>
+      <div style="height:16px"></div>
       ${rows.length?`
-        <div class="table-wrap table-fit"><table class="table">
-          <thead><tr><th>التاريخ</th><th>الوصف</th><th>الجهة</th></tr></thead>
-          <tbody>${rows.map(r=>`<tr><td>${dateOnly(r.occurred_at)}</td><td>${esc(r.title||r.description||'مصروف')}</td><td>${esc(r.payee||'—')}</td></tr>`).join('')}</tbody>
-        </table></div>`:'<div class="card empty"><strong>لا توجد مصروفات بعد</strong></div>'}`;
+        <div class="table-wrap table-fit"><table class="table expense-table">
+          <thead><tr><th>التاريخ</th><th>المصروف</th><th>التصنيف</th><th>المبلغ</th><th>الصندوق</th><th>الجهة</th><th>تفاصيل</th></tr></thead>
+          <tbody>${rows.map(r=>`<tr class="${r.transaction_is_void?'is-void':''}">
+            <td>${dateOnly(r.occurred_at)}</td>
+            <td><strong>${esc(r.title||'مصروف')}</strong>${r.description?`<small>${esc(r.description)}</small>`:''}</td>
+            <td>${esc(r.category_name||'أخرى')}</td>
+            <td><strong>${r.amount_original==null?'—':money(r.amount_original,r.currency_code||'SYP')}</strong></td>
+            <td>${esc(r.cashbox_name||'—')}</td>
+            <td>${esc(r.payee||'—')}</td>
+            <td><button class="mini-action expense-details" data-id="${esc(r.id)}">عرض</button></td>
+          </tr>`).join('')}</tbody>
+        </table></div>`:'<div class="card empty"><strong>لا توجد مصروفات بعد</strong><div>أضف أول مصروف ليتم تسجيله على الصندوق المختار.</div></div>'}`;
 
     root.querySelector('.add').onclick=()=>modal({
       title:'إضافة مصروف',
+      subtitle:'المبلغ سيُخصم من الصندوق المحدد فور تسجيل العملية.',
       body:`
         <div class="form-grid">
-          <div class="field full"><label>الوصف</label><input name="title" required></div>
-          <div class="field"><label>المبلغ</label><input name="amount" type="number" step="any" required></div>
+          <div class="field full"><label>اسم المصروف</label><input name="title" placeholder="مثال: صيانة البراد" required></div>
+          <div class="field"><label>المبلغ</label><input name="amount" type="number" min="0.000001" step="any" required></div>
           <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
-          <div class="field"><label>الصندوق</label><select name="box" required>${boxes.map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>التصنيف</label><select name="cat"><option value="">بدون</option>${cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>المستفيد <span class="optional-badge">اختياري</span></label><input name="payee"></div>
-          <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div>
+          <div class="field"><label>الصندوق</label><select name="box" required>${boxes.filter(b=>b.is_active!==false).map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
+          <div class="field"><label>التصنيف</label><select name="cat"><option value="">أخرى</option>${cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
+          <div class="field"><label>المدفوع له <span class="optional-badge">اختياري</span></label><input name="payee" placeholder="شركة / شخص"></div>
+          <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
+          <div class="field full"><label>تفاصيل إضافية <span class="optional-badge">اختياري</span></label><textarea name="description" rows="3" placeholder="سبب المصروف أو رقم الإيصال أو أي ملاحظة مفيدة"></textarea></div>
         </div>`,
       onSubmit:async fd=>{
         try{
           await api.recordExpense({
             cashboxId:fd.get('box'),amount:fd.get('amount'),title:fd.get('title'),
             currency:fd.get('currency'),categoryId:fd.get('cat')||null,
-            payee:String(fd.get('payee')||'').trim()||null,date:fd.get('date')
+            payee:String(fd.get('payee')||'').trim()||null,
+            description:String(fd.get('description')||'').trim()||null,
+            date:fd.get('date')
           });
-          toast('تم تسجيل المصروف','success');
+          toast('تم تسجيل المصروف وخصمه من الصندوق','success');
           await renderExpenses(root);
           return true;
         }catch(e){toast(friendlyError(e),'error');return false;}
       }
     });
+
+    root.querySelectorAll('.expense-details').forEach(btn=>btn.addEventListener('click',()=>{
+      const r=rows.find(x=>String(x.id)===String(btn.dataset.id));
+      if(!r) return;
+      modal({
+        title:r.title||'تفاصيل المصروف',
+        body:`<div class="kv expense-detail-kv">
+          <div class="k">التاريخ</div><div>${dateOnly(r.occurred_at)}</div>
+          <div class="k">المبلغ</div><div><strong>${r.amount_original==null?'—':money(r.amount_original,r.currency_code||'SYP')}</strong></div>
+          <div class="k">التصنيف</div><div>${esc(r.category_name||'أخرى')}</div>
+          <div class="k">الصندوق</div><div>${esc(r.cashbox_name||'—')}</div>
+          <div class="k">المدفوع له</div><div>${esc(r.payee||'—')}</div>
+          <div class="k">الوصف</div><div>${esc(r.description||'—')}</div>
+          <div class="k">الحالة</div><div>${r.transaction_is_void?'<span class="badge danger">ملغى</span>':'<span class="badge ok">مسجل</span>'}</div>
+        </div>`,
+        submitText:'إغلاق',
+        onSubmit:async()=>true,
+      });
+    }));
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }

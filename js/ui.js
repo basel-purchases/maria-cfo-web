@@ -12,6 +12,15 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('purchase unit conversion not configured')) return 'تم تعريف الوحدة للمادة، لكن قاعدة البيانات ما زالت على منطق الشراء القديم. شغّل تحديث v0.10 مرة واحدة في Supabase ثم أعد المحاولة.';
   if(msg.includes('document_ocr_not_deployed')||msg.includes('document-ocr')&&msg.includes('not found')) return 'ميزة تحليل صورة الفاتورة لم تُنشر على Supabase بعد. انشر Edge Function باسم document-ocr ثم أعد المحاولة.';
   if(msg.includes('ai_jobs')||msg.includes('ai_jobs_unavailable')||msg.includes('mark_ai_job_seen_v012')) return 'ميزة المعالجة الخلفية تحتاج تشغيل تحديث قاعدة البيانات v0.12 مرة واحدة في Supabase.';
+  if(msg.includes('order_item_compat_failed')||msg.includes('add_order_item_v013')) return 'تعذر حفظ الصنف بسبب عدم توافق خدمة الأوردرات. شغّل تحديث قاعدة البيانات v0.13 ثم أعد المحاولة.';
+  if(msg.includes('order_item_quantity_required')) return 'أدخل كمية أكبر من صفر.';
+  if(msg.includes('order_item_price_invalid')) return 'أدخل سعرًا صحيحًا للصنف.';
+  if(msg.includes('order_not_draft')) return 'هذا الأوردر لم يعد مسودة ولا يمكن تعديل أصنافه.';
+  if(msg.includes('order_has_no_items')) return 'أضف صنفًا واحدًا على الأقل قبل نشر الأوردر.';
+  if(msg.includes('cashbox_session_create_failed')) return 'تعذر فتح جلسة الصندوق لهذا اليوم. شغّل تحديث v0.13 ثم أعد المحاولة.';
+  if(msg.includes('order_post_failed')||msg.includes('order_post_not_confirmed')) return 'تعذر نشر الأوردر من قاعدة البيانات. لم نسجل بيعًا ناقصًا؛ راجع الوصفة والصندوق ثم أعد المحاولة.';
+  if(msg.includes('cashbox_adjustment_amount_required')) return 'أدخل مبلغًا أكبر من صفر.';
+  if(msg.includes('invalid_cashbox_adjustment_direction')) return 'اختر إضافة مبلغ أو سحب مبلغ من الصندوق.';
   if(msg.includes('cashbox')&&(msg.includes('required')||msg.includes('not set')||msg.includes('missing')||msg.includes('null'))) return 'حدد الصندوق قبل نشر الأوردر.';
   if(msg.includes('no_valid_order_images')) return 'اختر صورة أوردر صالحة بحجم أقل من 8 MB.';
   if(msg.includes('ocr_item_needs_review')) return 'هناك بند مستخرج يحتاج ربطه بمادة ووحدة قبل إضافته.';
