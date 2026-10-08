@@ -96,7 +96,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.10</div>
+        <div class="sidebar-foot">Web v0.11</div>
       </aside>
 
       <main class="main">

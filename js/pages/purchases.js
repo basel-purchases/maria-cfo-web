@@ -377,69 +377,163 @@ async function openOcrDialog(root,{file,invoice,mats,units,supplier}){
       rows.push({raw:x,material,choices,preferred});
     }
 
+    const detectedSupplier=String(result.supplier_name||(!isDirectSupplier(supplier)?supplier?.name:'')||'').trim();
+    const detectedCurrency=['SYP','USD'].includes(String(result.currency||'').toUpperCase())?String(result.currency).toUpperCase():(invoice.currency_code||'SYP');
+    const invoiceTotal=Number(result.invoice_total||0);
+
     const m=modal({
       title:'مراجعة تحليل الفاتورة',
-      subtitle:'راجع البنود قبل إضافتها. أي مادة لم نتعرف عليها بوضوح لن تُضاف تلقائيًا.',
+      subtitle:'كل ما قرأه الذكاء الاصطناعي قابل للتعديل قبل الحفظ.',
       wide:true,
       body:`
-        <div class="ocr-summary">
-          ${result.supplier_name?`<span>المورد المقروء: <strong>${esc(result.supplier_name)}</strong></span>`:''}
-          ${result.invoice_number?`<span>رقم الفاتورة: <strong>${esc(result.invoice_number)}</strong></span>`:''}
-          ${result.invoice_date?`<span>التاريخ: <strong>${esc(result.invoice_date)}</strong></span>`:''}
+        <div class="ocr-edit-summary">
+          <div class="field compact"><label>المورد</label><input name="ocr_supplier" autocomplete="off" value="${esc(detectedSupplier)}" placeholder="اختياري"></div>
+          <div class="field compact"><label>رقم الفاتورة</label><input name="ocr_number" autocomplete="off" value="${esc(result.invoice_number||invoice.invoice_number||'')}"></div>
+          <div class="field compact"><label>التاريخ</label><input name="ocr_date" type="date" value="${esc(result.invoice_date||invoice.invoice_date||'')}"></div>
+          <div class="field compact"><label>العملة</label><select name="ocr_currency"><option value="SYP" ${detectedCurrency==='SYP'?'selected':''}>SYP</option><option value="USD" ${detectedCurrency==='USD'?'selected':''}>USD</option></select></div>
+          <div class="field compact"><label>إجمالي الفاتورة المقروء <span class="optional-badge">اختياري</span></label><input name="ocr_invoice_total" type="number" step="any" min="0" value="${invoiceTotal>0?esc(invoiceTotal):''}" placeholder="غير ظاهر"></div>
         </div>
+        <div class="ocr-review-note">راجع اسم المادة والأرقام خصوصًا في الفواتير المكتوبة بخط اليد. يمكن تعديل أي قيمة هنا مباشرة.</div>
         <div class="ocr-items-list">
-          ${rows.map((r,i)=>`
-            <div class="ocr-item-row ${r.material?'':'needs-review'}" data-ocr-row="${i}">
-              <label class="catalog-material-check"><input type="checkbox" name="pick_${i}" ${r.material?'checked':'disabled'}><span><strong>${esc(r.raw.name||r.raw.material_name||'مادة غير معروفة')}</strong><small>${r.material?`مطابقة: ${esc(r.material.name)}`:'تحتاج ربطًا بمادة موجودة أو إضافتها أولًا'}</small></span></label>
-              <div class="field compact"><label>المادة</label><select name="material_${i}"><option value="">اختر</option>${mats.map(mat=>`<option value="${esc(mat.id)}" ${r.material&&String(mat.id)===String(r.material.id)?'selected':''}>${esc(mat.name)}${mat.quick_code||mat.code?` — ${esc(mat.quick_code||mat.code)}`:''}</option>`).join('')}</select></div>
+          ${rows.map((r,i)=>{
+            const qty=Number(r.raw.quantity||0);
+            const price=Number(r.raw.unit_price??r.raw.price??0);
+            const total=Number(r.raw.line_total||0) || ((qty>0&&price>=0)?qty*price:0);
+            return `
+            <div class="ocr-item-row-v11 ${r.material?'':'needs-review'}" data-ocr-row="${i}">
+              <div class="ocr-pick-cell">
+                <label class="catalog-material-check"><input type="checkbox" name="pick_${i}" ${r.material?'checked':'disabled'}><span><strong>اعتماد البند</strong><small>${r.material?`مطابقة حالية: ${esc(r.material.name)}`:'اختر المادة المرتبطة أولًا'}</small></span></label>
+              </div>
+              <div class="field compact"><label>اسم المادة المقروء</label><input name="raw_name_${i}" autocomplete="off" value="${esc(r.raw.name||r.raw.material_name||'')}"></div>
+              <div class="field compact"><label>المادة في Maria CFO</label><select name="material_${i}"><option value="">اختر</option>${mats.map(mat=>`<option value="${esc(mat.id)}" ${r.material&&String(mat.id)===String(r.material.id)?'selected':''}>${esc(mat.name)}${mat.quick_code||mat.code?` — ${esc(mat.quick_code||mat.code)}`:''}</option>`).join('')}</select></div>
               <div class="field compact"><label>الوحدة</label><select name="unit_${i}">${r.choices.map(c=>`<option value="${esc(c.unitId)}" ${r.preferred&&String(c.unitId)===String(r.preferred)?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
-              <div class="field compact"><label>الكمية</label><input name="qty_${i}" type="number" step="any" min="0.000001" value="${esc(r.raw.quantity??1)}"></div>
-              <div class="field compact"><label>السعر</label><input name="price_${i}" type="number" step="any" min="0" value="${esc(r.raw.unit_price??r.raw.price??0)}"></div>
-            </div>`).join('')}
-        </div>`,
-      submitText:'إضافة البنود المحددة',
+              <div class="field compact"><label>الكمية</label><input name="qty_${i}" type="number" step="any" min="0.000001" value="${esc(qty||1)}"></div>
+              <div class="field compact"><label>سعر الوحدة</label><input name="price_${i}" type="number" step="any" min="0" value="${esc(price||0)}"></div>
+              <div class="field compact"><label>إجمالي البند</label><input name="total_${i}" type="number" step="any" min="0" value="${esc(total||0)}"></div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="ocr-total-check"><span>إجمالي البنود المحددة</span><strong data-ocr-selected-total>0</strong></div>`,
+      submitText:'حفظ البيانات وإضافة البنود',
       onSubmit:async fd=>{
         const selected=[];
         rows.forEach((r,i)=>{if(fd.get(`pick_${i}`)) selected.push({r,i});});
         if(!selected.length){toast('حدد بندًا واحدًا على الأقل.');return false;}
         try{
+          const date=String(fd.get('ocr_date')||invoice.invoice_date||'').trim();
+          await api.updatePurchaseDraftFromOcr({
+            invoiceId:invoice.id,
+            supplierName:String(fd.get('ocr_supplier')||''),
+            invoiceNumber:String(fd.get('ocr_number')||''),
+            invoiceDate:date||invoice.invoice_date,
+            currency:String(fd.get('ocr_currency')||invoice.currency_code||'SYP'),
+          });
+
+          let computedTotal=0;
           for(const {i} of selected){
             const materialId=String(fd.get(`material_${i}`)||'');
             const unitId=String(fd.get(`unit_${i}`)||'');
+            const quantity=Number(fd.get(`qty_${i}`)||0);
+            let unitPrice=Number(fd.get(`price_${i}`)||0);
+            const lineTotal=Number(fd.get(`total_${i}`)||0);
             if(!materialId||!unitId) throw new Error('OCR_ITEM_NEEDS_REVIEW');
+            if(!(quantity>0)) throw new Error('OCR_ITEM_NEEDS_REVIEW');
+            if(!(unitPrice>0) && lineTotal>0) unitPrice=lineTotal/quantity;
+            computedTotal+=quantity*unitPrice;
             await api.addPurchaseItem({
               invoiceId:invoice.id,
               materialId,
               purchaseUnitId:unitId,
-              quantity:fd.get(`qty_${i}`),
-              unitPrice:fd.get(`price_${i}`),
+              quantity,
+              unitPrice,
               discount:0,
             });
           }
-          toast(`تمت إضافة ${selected.length} بند بعد المراجعة`,'success');
+          const readTotal=Number(fd.get('ocr_invoice_total')||0);
+          if(readTotal>0 && Math.abs(computedTotal-readTotal)>Math.max(1,readTotal*0.01)){
+            toast('تمت إضافة البنود. إجمالي البنود لا يطابق تمامًا إجمالي الفاتورة المقروء؛ راجعه قبل النشر.');
+          }else{
+            toast(`تم حفظ بيانات الفاتورة وإضافة ${selected.length} بند`,'success');
+          }
           await renderPurchaseDetail(root,invoice.id);
           return true;
-        }catch(e){toast(friendlyError(e,'تعذر إضافة بعض البنود المستخرجة.'),'error');return false;}
+        }catch(e){toast(friendlyError(e,'تعذر حفظ بعض البيانات أو البنود المستخرجة.'),'error');return false;}
       },
     });
 
+    const updateSelectedTotal=()=>{
+      let total=0;
+      rows.forEach((_,i)=>{
+        const row=m.form.querySelector(`[data-ocr-row="${i}"]`);
+        const pick=row?.querySelector(`[name="pick_${i}"]`);
+        if(!pick?.checked) return;
+        const qty=Number(row.querySelector(`[name="qty_${i}"]`)?.value||0);
+        const price=Number(row.querySelector(`[name="price_${i}"]`)?.value||0);
+        const line=Number(row.querySelector(`[name="total_${i}"]`)?.value||0);
+        total+=line>0?line:qty*price;
+      });
+      const target=m.form.querySelector('[data-ocr-selected-total]');
+      if(target) target.textContent=`${Number(total.toFixed(4)).toLocaleString('en-US')} ${m.form.querySelector('[name="ocr_currency"]')?.value||'SYP'}`;
+    };
+
     rows.forEach((r,i)=>{
       const row=m.form.querySelector(`[data-ocr-row="${i}"]`);
+      const nameInput=row?.querySelector(`[name="raw_name_${i}"]`);
       const materialSel=row?.querySelector(`[name="material_${i}"]`);
       const unitSel=row?.querySelector(`[name="unit_${i}"]`);
       const pick=row?.querySelector(`[name="pick_${i}"]`);
-      materialSel?.addEventListener('change',async()=>{
+      const qty=row?.querySelector(`[name="qty_${i}"]`);
+      const price=row?.querySelector(`[name="price_${i}"]`);
+      const line=row?.querySelector(`[name="total_${i}"]`);
+
+      const refreshMaterialState=async()=>{
         const material=mats.find(x=>String(x.id)===String(materialSel.value));
-        if(!material){unitSel.innerHTML='';pick.checked=false;pick.disabled=true;row.classList.add('needs-review');return;}
+        if(!material){
+          unitSel.innerHTML='';
+          pick.checked=false;pick.disabled=true;row.classList.add('needs-review');
+          updateSelectedTotal();
+          return;
+        }
         const choices=await materialUnitChoices(material,units);
         unitSel.innerHTML=choices.map(c=>`<option value="${esc(c.unitId)}">${esc(c.label)}</option>`).join('');
         pick.disabled=false;pick.checked=true;row.classList.remove('needs-review');
+        const rawUnit=String(r.raw.unit||'').trim();
+        if(rawUnit){
+          const u=api.findUnitByText(rawUnit,units);
+          if(u && choices.some(c=>String(c.unitId)===String(u.id))) unitSel.value=String(u.id);
+        }
+        updateSelectedTotal();
+      };
+
+      materialSel?.addEventListener('change',refreshMaterialState);
+      nameInput?.addEventListener('change',async()=>{
+        const matched=bestMaterialMatch(nameInput.value,mats);
+        if(matched){materialSel.value=matched.id;await refreshMaterialState();}
+      });
+      pick?.addEventListener('change',updateSelectedTotal);
+      qty?.addEventListener('input',()=>{
+        const q=Number(qty.value||0),p=Number(price.value||0);
+        if(q>=0&&p>=0) line.value=Number((q*p).toFixed(4));
+        updateSelectedTotal();
+      });
+      price?.addEventListener('input',()=>{
+        const q=Number(qty.value||0),p=Number(price.value||0);
+        if(q>=0&&p>=0) line.value=Number((q*p).toFixed(4));
+        updateSelectedTotal();
+      });
+      line?.addEventListener('input',()=>{
+        const q=Number(qty.value||0),t=Number(line.value||0);
+        if(q>0&&t>=0) price.value=Number((t/q).toFixed(6));
+        updateSelectedTotal();
       });
     });
+    m.form.querySelector('[name="ocr_currency"]')?.addEventListener('change',updateSelectedTotal);
+    updateSelectedTotal();
   }catch(e){
     toast(friendlyError(e,'تعذر تحليل صورة الفاتورة. تأكد من نشر Edge Function باسم document-ocr ثم حاول مرة أخرى.'),'error');
   }
 }
+
 function normalizeName(value){
   return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
 }

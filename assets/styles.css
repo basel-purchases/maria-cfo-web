@@ -452,7 +452,7 @@ a{color:inherit;text-decoration:none}
 }
 
 /* =========================================================
-   Maria CFO Web v0.10
+   Maria CFO Web v0.11
    Purchase item + inline material creation
    ========================================================= */
 .purchase-material-picker{
@@ -512,7 +512,7 @@ a{color:inherit;text-decoration:none}
 }
 
 /* =========================================================
-   Maria CFO Web v0.10
+   Maria CFO Web v0.11
    Purchase history, supplier catalog, OCR and invoice actions
    ========================================================= */
 .btn.danger-btn{background:var(--danger);color:#fff}
@@ -566,4 +566,57 @@ a{color:inherit;text-decoration:none}
   .supplier-catalog-row,.ocr-item-row{grid-template-columns:1fr}
   .catalog-material-check{grid-column:auto}
   .purchase-actions .btn,.page-head-actions .btn{width:100%}
+}
+
+/* =========================================================
+   Maria CFO Web v0.11
+   OCR review: fully editable extraction + cleaner layout
+   ========================================================= */
+.ocr-edit-summary{
+  display:grid;
+  grid-template-columns:1.35fr 1fr 1fr .75fr 1fr;
+  gap:10px;
+  margin-bottom:10px;
+}
+.ocr-review-note{
+  margin-bottom:12px;
+  padding:9px 11px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface-2);
+  color:var(--muted);
+  font-size:12px;
+}
+.ocr-item-row-v11{
+  display:grid;
+  grid-template-columns:minmax(150px,.85fr) minmax(170px,1.15fr) minmax(180px,1.2fr) minmax(130px,.8fr) 100px 120px 120px;
+  gap:10px;
+  align-items:end;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:11px;
+  background:#fff;
+}
+.ocr-item-row-v11.needs-review{border-color:#e0b7bd;background:#fff8f9}
+.ocr-pick-cell{align-self:center}
+.ocr-total-check{
+  margin-top:12px;
+  display:flex;
+  justify-content:flex-start;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:var(--surface-2);
+  border:1px solid var(--line);
+}
+.ocr-total-check strong{color:var(--plum);font-size:15px}
+@media(max-width:1200px){
+  .ocr-edit-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ocr-item-row-v11{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ocr-pick-cell{grid-column:1/-1}
+}
+@media(max-width:700px){
+  .ocr-edit-summary,.ocr-item-row-v11{grid-template-columns:1fr}
+  .ocr-pick-cell{grid-column:auto}
 }

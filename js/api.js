@@ -531,6 +531,19 @@ export async function createPurchase({supplierName='',currency='SYP',invoiceNumb
   return rpc('create_purchase_invoice',args);
 }
 
+export async function updatePurchaseDraftFromOcr({invoiceId,supplierName='',invoiceNumber=null,invoiceDate=null,currency='SYP'}){
+  const supplier=await findOrCreateSupplier(String(supplierName||'').trim());
+  const date=invoiceDate||todayISO();
+  const patch={
+    supplier_id:supplier.id,
+    invoice_number:String(invoiceNumber||'').trim()||null,
+    invoice_date:date,
+    occurred_at:new Date(date+'T12:00:00').toISOString(),
+    currency_code:currency||'SYP',
+  };
+  return update('purchase_invoices',invoiceId,patch);
+}
+
 export async function addPurchaseItem({invoiceId,materialId,purchaseUnitId,quantity,unitPrice,discount=0}){
   return rpc('add_purchase_invoice_item',{
     p_invoice_id:invoiceId,

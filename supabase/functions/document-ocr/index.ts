@@ -72,6 +72,44 @@ function cleanJsonText(value: string) {
     .trim();
 }
 
+function normalizeDigits(value: unknown) {
+  const ar = "٠١٢٣٤٥٦٧٨٩";
+  const fa = "۰۱۲۳۴۵۶۷۸۹";
+  return String(value ?? "")
+    .replace(/[٠-٩]/g, (d) => String(ar.indexOf(d)))
+    .replace(/[۰-۹]/g, (d) => String(fa.indexOf(d)));
+}
+
+function numberValue(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const normalized = normalizeDigits(value)
+    .replace(/\u066c/g, "")
+    .replace(/,/g, "")
+    .replace(/\u066b/g, ".")
+    .replace(/\s+/g, "")
+    .replace(/[^0-9.+-]/g, "");
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeDate(value: unknown) {
+  let s = normalizeDigits(value).trim();
+  if (!s) return null;
+  s = s.replace(/[./\\]/g, "-").replace(/\s+/g, "");
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const [, y, mo, d] = m;
+    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  m = s.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (m) {
+    let [, d, mo, y] = m;
+    if (y.length === 2) y = `20${y}`;
+    return `${y.padStart(4, "0")}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -105,6 +143,9 @@ Deno.serve(async (req) => {
     const prompt = [
       "أنت محلل فواتير شراء لمطعم داخل Maria CFO.",
       "اقرأ صورة الفاتورة فقط ولا تخترع بنودًا غير ظاهرة.",
+      "الفواتير قد تكون عربية ومكتوبة بخط اليد، وقد تستخدم الأرقام العربية الهندية ٠١٢٣٤٥٦٧٨٩ أو الفارسية ۰۱۲۳۴۵۶۷۸۹ أو الأرقام الغربية 0123456789.",
+      "مهم جدًا في الخط العربي اليدوي: الرقم ٢ قد يبدو مثل الرقم 7 الإنكليزي معكوسًا أو كخطاف. إذا كان الشكل هو ٢ أو صورته اليدوية فاقرأه 2 وليس 7. ميّز أيضًا بين ٢ و٣ و٧ بالاعتماد على شكل الرقم وموضعه في العمود والسياق الحسابي.",
+      "راجع كل رقم مرتين قبل الإخراج، خصوصًا الكمية والسعر والإجمالي. إذا وُجد إجمالي السطر فاستخدمه للتحقق من أن الكمية × سعر الوحدة منطقية، لكن لا تخترع رقمًا غير ظاهر.",
       `المورد المتوقع إن وجد: ${supplierName || "غير محدد"}.`,
       `العملة المتوقعة: ${currency}.`,
       "أعد JSON صالحًا فقط بدون Markdown.",
@@ -114,12 +155,15 @@ Deno.serve(async (req) => {
         invoice_number: "string|null",
         invoice_date: "YYYY-MM-DD|null",
         currency: "SYP|USD|null",
+        invoice_total: 0,
         items: [
           { name: "string", quantity: 1, unit: "string|null", unit_price: 0, line_total: 0, confidence: 0.0 },
         ],
       }),
-      "quantity و unit_price أرقام وليسا نصًا.",
-      "إذا كان السعر الظاهر إجمالي السطر فقط ولا يمكن استنتاج سعر الوحدة بثقة، ضع unit_price=0 واترك line_total بالقيمة المقروءة.",
+      "quantity و unit_price و line_total و invoice_total أرقام وليست نصوصًا.",
+      "إذا كان إجمالي السطر ظاهرًا وسعر الوحدة غير ظاهر، ضع line_total بالقيمة المقروءة وunit_price=0.",
+      "إذا كان سعر الوحدة ظاهرًا وإجمالي السطر غير ظاهر، ضع unit_price بالقيمة المقروءة وline_total=0.",
+      "لا تحسب line_total أو invoice_total إلا إذا كان الرقم نفسه ظاهرًا في الفاتورة؛ التطبيق سيحسب القيم الناقصة لاحقًا.",
       "confidence بين 0 و1.",
     ].join("\n");
 
@@ -132,8 +176,8 @@ Deno.serve(async (req) => {
         ],
       }],
       generationConfig: {
-        temperature: 0.05,
-        maxOutputTokens: 1800,
+        temperature: 0.02,
+        maxOutputTokens: 2200,
         responseMimeType: "application/json",
       },
     });
@@ -156,20 +200,21 @@ Deno.serve(async (req) => {
     const items = Array.isArray(parsed?.items) ? parsed.items
       .map((x: any) => ({
         name: String(x?.name ?? "").trim(),
-        quantity: Number(x?.quantity ?? 0),
+        quantity: numberValue(x?.quantity),
         unit: x?.unit == null ? null : String(x.unit).trim(),
-        unit_price: Number(x?.unit_price ?? 0),
-        line_total: Number(x?.line_total ?? 0),
-        confidence: Number(x?.confidence ?? 0),
+        unit_price: numberValue(x?.unit_price),
+        line_total: numberValue(x?.line_total),
+        confidence: Math.max(0, Math.min(1, numberValue(x?.confidence))),
       }))
       .filter((x: any) => x.name && x.quantity > 0) : [];
 
     return json({
       ok: true,
-      supplier_name: parsed?.supplier_name ?? null,
-      invoice_number: parsed?.invoice_number ?? null,
-      invoice_date: parsed?.invoice_date ?? null,
+      supplier_name: parsed?.supplier_name == null ? null : String(parsed.supplier_name).trim(),
+      invoice_number: parsed?.invoice_number == null ? null : normalizeDigits(parsed.invoice_number).trim(),
+      invoice_date: normalizeDate(parsed?.invoice_date),
       currency: parsed?.currency ?? currency,
+      invoice_total: numberValue(parsed?.invoice_total),
       items,
       model: MODEL,
     });
