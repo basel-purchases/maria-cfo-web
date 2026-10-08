@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.13.2';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.13.2';
-import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.13.2';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.13.2';
+import * as api from '../api.js?v=0.14.0';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.14.0';
+import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.14.0';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.14.0';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';

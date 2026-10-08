@@ -1,6 +1,6 @@
-import { supabase, configured } from './supabase.js?v=0.13.2';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.13.2';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.13.2';
+import { supabase, configured } from './supabase.js?v=0.14.0';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.14.0';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.14.0';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -80,11 +80,7 @@ export async function rpc(name,args={}){
 }
 
 export async function dashboard(){
-  try{return await rpc('get_home_dashboard',{p_date:todayISO()});}
-  catch(_){
-    try{return await rpc('get_home_dashboard',{p_business_date:todayISO()});}
-    catch(__){return await rpc('get_home_dashboard',{});}
-  }
+  return rpc('get_home_dashboard',{p_business_date:todayISO()});
 }
 
 export async function notifications(){
@@ -592,11 +588,7 @@ export const events=()=>list('events',{order:'event_date',limit:300});
 export const eventBookings=id=>list('event_bookings',{order:'created_at',ascending:true,eq:{event_id:id},limit:300});
 
 export async function statistics(start,end){
-  try{return await rpc('get_financial_statistics',{p_start:start,p_end:end});}
-  catch(_){
-    try{return await rpc('get_financial_statistics',{p_from:start,p_to:end});}
-    catch(__){return rpc('get_financial_statistics',{p_start_date:start,p_end_date:end});}
-  }
+  return rpc('get_financial_statistics',{p_start_date:start,p_end_date:end});
 }
 
 function norm(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');}
@@ -845,4 +837,51 @@ export async function askAssistant(message,history=[]){
     answer:`المساعد غير متاح مؤقتًا الآن. ${reason} حاول مرة أخرى بعد قليل.`,
     reason:'temporary_ai_unavailable',
   };
+}
+
+// v0.14: all salary outflows go through approved payroll + its protected RPC.
+export async function payrollSettings(){
+  const values=await list('app_settings',{limit:1});
+  return values[0]||{};
+}
+export async function setPayrollCashbox(cashboxId){
+  return rpc('set_payroll_cashbox_v014',{p_cashbox_id:cashboxId});
+}
+export async function dailyWageDues(){
+  return rpc('get_daily_wage_dues_v014',{});
+}
+export async function payDailyWage(employeeId,workDate){
+  return rpc('pay_daily_wage_v014',{p_employee_id:employeeId,p_work_date:workDate});
+}
+export async function approvedSalaryBalances(){
+  const [balances,runs,items]=await Promise.all([
+    list('payroll_item_balances',{limit:1000}),
+    list('payroll_runs',{order:'period_end',limit:500}),
+    list('payroll_items',{limit:1000}),
+  ]);
+  const runMap=new Map(runs.map(r=>[r.id,r]));
+  const itemMap=new Map(items.map(i=>[i.id,i]));
+  return balances.map(b=>({...b,run:runMap.get(b.payroll_run_id)||null,
+    pay_type:itemMap.get(b.payroll_item_id)?.pay_type_snapshot||null}))
+    .filter(b=>b.run&&['approved','closed'].includes(b.run.status)&&Number(b.remaining_original)>0.001);
+}
+export async function payApprovedSalary(payrollItemId,amount=null){
+  return rpc('pay_approved_salary_v014',{p_payroll_item_id:payrollItemId,p_amount:amount});
+}
+export async function payrollPaymentHistory(){
+  return list('payroll_payments',{order:'occurred_at',limit:300});
+}
+export async function createMonthlyPayroll(year,month){
+  return rpc('create_monthly_payroll_v014',{p_year:Number(year),p_month:Number(month)});
+}
+export async function recalculateMonthlyPayroll(runId){
+  return rpc('recalculate_monthly_payroll_v014',{p_payroll_run_id:runId});
+}
+export async function approveMonthlyPayroll(runId){
+  return rpc('approve_payroll_run',{p_payroll_run_id:runId});
+}
+export async function statisticsTimeSeries(start,end,granularity='day'){
+  return rpc('get_statistics_time_series',{
+    p_start_date:start,p_end_date:end,p_granularity:granularity,
+  });
 }

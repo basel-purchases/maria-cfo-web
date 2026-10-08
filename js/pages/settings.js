@@ -1,13 +1,14 @@
-import * as api from '../api.js?v=0.13.2';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.13.2';
-import { esc, unitDisplay } from '../utils.js?v=0.13.2';
+import * as api from '../api.js?v=0.14.0';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.14.0';
+import { esc, unitDisplay } from '../utils.js?v=0.14.0';
 
 export async function renderSettings(root) {
   root.innerHTML = loader();
   try {
-    const [settingsRows, units] = await Promise.all([
+    const [settingsRows, units, cashboxes] = await Promise.all([
       api.list('app_settings', { limit: 1 }),
       api.units(),
+      api.cashboxes(),
     ]);
     const s = settingsRows[0] || {};
     root.innerHTML = `
@@ -20,6 +21,7 @@ export async function renderSettings(root) {
       <div class="settings-tabs" role="tablist">
         <button type="button" class="settings-tab active" data-settings-tab="general">عام</button>
         <button type="button" class="settings-tab" data-settings-tab="units">الوحدات</button>
+        <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
       </div>
 
       <div data-settings-pane="general">
@@ -48,6 +50,23 @@ export async function renderSettings(root) {
           <div class="quick-actions"><button class="btn secondary" id="settings-logout">تسجيل الخروج</button></div>
         </div>
       </div>
+      </div>
+
+      <div data-settings-pane="payroll" hidden>
+        <div class="card settings-payroll-box">
+          <h3>صندوق دفع الرواتب</h3>
+          <p>اختر صندوقًا نشطًا واحدًا. تُصرف رواتب الموظفين منه عبر حركة مالية موثقة، ولا تُخصم الرواتب من صندوق آخر تلقائيًا.</p>
+          <div class="form-grid" style="margin-top:18px">
+            <div class="field"><label>الصندوق الافتراضي للرواتب</label>
+              <select id="payroll-cashbox">
+                <option value="">— اختر الصندوق —</option>
+                ${cashboxes.filter(b=>b.is_active!==false).map(b=>`<option value="${esc(b.id)}" ${b.id===s.payroll_cashbox_id?'selected':''}>${esc(b.name)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="quick-actions"><button class="btn" id="save-payroll-cashbox">حفظ صندوق الرواتب</button><a class="btn secondary" href="#/payroll">عرض المستحقات</a></div>
+          <p class="metric-note">لا تغيّر هذه الإعدادات الصندوق المسجّل في الدفعات التاريخية.</p>
+        </div>
       </div>
 
       <div data-settings-pane="units" hidden>
@@ -79,6 +98,15 @@ export async function renderSettings(root) {
         panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
       };
     });
+
+    root.querySelector('#save-payroll-cashbox').onclick = async () => {
+      const id=root.querySelector('#payroll-cashbox').value;
+      if(!id){toast('اختر صندوقًا لدفع الرواتب.','error');return;}
+      try {
+        await api.setPayrollCashbox(id);
+        toast('تم حفظ صندوق الرواتب.','success');
+      } catch(e){toast(friendlyError(e),'error');}
+    };
 
     root.querySelector('#fx-save').onclick = async () => {
       try {
