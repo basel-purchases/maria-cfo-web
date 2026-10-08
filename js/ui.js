@@ -18,5 +18,33 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('function')&&msg.includes('not found')) return 'هذه الخدمة لم تُحدّث على الخادم بعد.';
   return fallback;
 }
-export function modal({title,subtitle='',body='',submitText='حفظ',onSubmit,wide=false}){ const back=document.createElement('div');back.className='modal-backdrop';back.innerHTML=`<div class="modal ${wide?'wide':''}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button">×</button></div><form class="modal-form" autocomplete="off">${body}<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">إلغاء</button></div></form></div>`; document.body.appendChild(back); const close=()=>back.remove(); back.querySelector('.x-btn').onclick=close; back.querySelector('.cancel').onclick=close; back.addEventListener('click',e=>{if(e.target===back)close()}); const form=back.querySelector('form'); form.addEventListener('submit',async e=>{e.preventDefault(); const btn=form.querySelector('[type=submit]');btn.disabled=true;try{const ok=await onSubmit(new FormData(form),form); if(ok!==false)close();}finally{if(document.body.contains(btn))btn.disabled=false;}}); return {close,element:back,form}; }
+export function modal({title,subtitle='',body='',submitText='حفظ',onSubmit=async()=>true,wide=false,hideActions=false,onClose=null}){
+  const back=document.createElement('div');
+  back.className='modal-backdrop';
+  back.innerHTML=`<div class="modal ${wide?'wide':''}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button">×</button></div><form class="modal-form" autocomplete="off">${body}${hideActions?'':`<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">إلغاء</button></div>`}</form></div>`;
+  document.body.appendChild(back);
+  let closed=false;
+  const close=async()=>{
+    if(closed) return;
+    closed=true;
+    back.remove();
+    if(onClose){ try{ await onClose(); }catch(e){ console.error(e); } }
+  };
+  back.querySelector('.x-btn').onclick=close;
+  back.querySelector('.cancel')?.addEventListener('click',close);
+  back.addEventListener('click',e=>{if(e.target===back) close();});
+  const form=back.querySelector('form');
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const btn=form.querySelector('[type=submit]');
+    if(btn) btn.disabled=true;
+    try{
+      const ok=await onSubmit(new FormData(form),form);
+      if(ok!==false) await close();
+    }finally{
+      if(btn && document.body.contains(btn)) btn.disabled=false;
+    }
+  });
+  return {close,element:back,form};
+}
 export function confirmBox(message, yes='نعم'){ return new Promise(resolve=>{const m=modal({title:'تأكيد',body:`<div class="notice rose">${esc(message)}</div>`,submitText:yes,onSubmit:async()=>{resolve(true);return true;}}); const old=m.close;m.close=()=>{resolve(false);old()}; m.element.querySelector('.x-btn').onclick=m.close;m.element.querySelector('.cancel').onclick=m.close;}); }
