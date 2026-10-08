@@ -355,21 +355,34 @@ export const recipeItems=id=>list('menu_item_recipe_items',{order:'id',ascending
 
 export async function addRecipeItem({menuItemId,materialId,unitId,quantity}){
   const q=Number(quantity);
-  return insertFirst('menu_item_recipe_items',[
-    {menu_item_id:menuItemId,material_id:materialId,quantity:q,unit_id:unitId},
-    {menu_item_id:menuItemId,material_id:materialId,quantity_original:q,unit_id:unitId},
-  ]);
+  if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
+  return rpc('save_menu_recipe_item',{
+    p_menu_item_id:menuItemId,
+    p_material_id:materialId,
+    p_input_unit_id:unitId,
+    p_input_quantity:q,
+    p_recipe_item_id:null,
+  });
 }
 
 export async function updateRecipeItem(id,{unitId,quantity}){
   const q=Number(quantity);
-  return updateFirst('menu_item_recipe_items',id,[
-    {quantity:q,unit_id:unitId},
-    {quantity_original:q,unit_id:unitId},
-  ]);
+  if(!(q>0)) throw new Error('INVALID_RECIPE_QUANTITY');
+  const row=await one('menu_item_recipe_items',id);
+  if(!row) throw new Error('RECIPE_ITEM_NOT_FOUND');
+  return rpc('save_menu_recipe_item',{
+    p_menu_item_id:row.menu_item_id,
+    p_material_id:row.material_id,
+    p_input_unit_id:unitId,
+    p_input_quantity:q,
+    p_recipe_item_id:id,
+  });
 }
 
-export const deleteRecipeItem=id=>remove('menu_item_recipe_items',id);
+export async function deleteRecipeItem(id){
+  try{return await rpc('delete_menu_recipe_item',{p_recipe_item_id:id});}
+  catch(_){return remove('menu_item_recipe_items',id);}
+}
 
 export const cashboxes=()=>list('cashboxes',{order:'display_order',ascending:true,limit:100});
 export async function cashboxSessions(){

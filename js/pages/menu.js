@@ -102,7 +102,7 @@ function addMenu(root){
         await renderMenu(root);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.4.'),'error');
+        toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
         return false;
       }
     },
@@ -128,7 +128,7 @@ function editMenu(root,row){
         await renderMenu(root);
         return true;
       }catch(e){
-        toast(friendlyError(e,'تعذر تعديل الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.4.'),'error');
+        toast(friendlyError(e,'تعذر تعديل الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
         return false;
       }
     },
@@ -143,7 +143,7 @@ async function recipeDialog(root,id,name,mats,units){
 
     const rowUnitLabel=(x)=>{
       const material=mm[String(x.material_id)];
-      const unit=um[String(x.unit_id)];
+      const unit=um[String(x.input_unit_id||x.unit_id)];
       if(unit) return unitLabel(unit.code||unit.name);
       const base=um[String(material?.base_unit_id)];
       return unitLabel(base?.code||base?.name||material?.base_unit_code||'—');
@@ -163,7 +163,7 @@ async function recipeDialog(root,id,name,mats,units){
                 ${rows.map(x=>`
                   <tr>
                     <td><strong>${esc(mm[String(x.material_id)]?.name||'مادة')}</strong></td>
-                    <td>${esc(x.quantity??x.quantity_original??x.quantity_base??'—')}</td>
+                    <td>${esc(x.input_quantity??x.quantity_original??x.quantity??x.quantity_base??'—')}</td>
                     <td>${esc(rowUnitLabel(x))}</td>
                     <td>
                       <div class="material-actions">
@@ -188,7 +188,7 @@ async function recipeDialog(root,id,name,mats,units){
             <label>الوحدة</label>
             <div class="select-action-row">
               <select name="unit" required></select>
-              <button type="button" class="mini-btn add-conversion">+ تحويل</button>
+              <button type="button" class="conversion-btn add-conversion"><span aria-hidden="true">⇄</span> تحويل وحدة</button>
             </div>
           </div>
           <div class="field">
@@ -209,7 +209,7 @@ async function recipeDialog(root,id,name,mats,units){
           await recipeDialog(root,id,name,mats,units);
           return false;
         }catch(e){
-          toast(friendlyError(e,'تعذر إضافة المكوّن. استخدم زر «+ تحويل» إذا كانت الوحدة غير مربوطة بالمادة.'),'error');
+          toast(friendlyError(e,'تعذر إضافة المكوّن. تأكد من تشغيل تحديث قاعدة البيانات v0.5.'),'error');
           return false;
         }
       },
@@ -273,8 +273,8 @@ async function editRecipeItem({root,menuId,menuName,row,material,mats,units,pare
   if(!material) return;
   await api.ensureStandardMaterialUnits(material,units).catch(()=>null);
   const choices=await materialUnitChoices(material,units);
-  const currentUnit=String(row.unit_id||material.base_unit_id||'');
-  const currentQty=row.quantity??row.quantity_original??row.quantity_base??'';
+  const currentUnit=String(row.input_unit_id||row.unit_id||material.base_unit_id||'');
+  const currentQty=row.input_quantity??row.quantity_original??row.quantity??row.quantity_base??'';
 
   const m=modal({
     title:`تعديل ${material.name}`,
@@ -286,7 +286,7 @@ async function editRecipeItem({root,menuId,menuName,row,material,mats,units,pare
             <select name="unit" required>
               ${choices.map(x=>`<option value="${esc(x.unitId)}" ${String(x.unitId)===currentUnit?'selected':''}>${esc(x.label)}</option>`).join('')}
             </select>
-            <button type="button" class="mini-btn add-conversion">+ تحويل</button>
+            <button type="button" class="conversion-btn add-conversion"><span aria-hidden="true">⇄</span> تحويل وحدة</button>
           </div>
         </div>
         <div class="field">

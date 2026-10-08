@@ -81,26 +81,40 @@ export async function openConversionDialog({
     title:isPurchase ? 'إضافة وحدة شراء' : 'إضافة وحدة استخدام',
     subtitle:isPurchase
       ? 'اربط وحدة الشراء بوحدة معروفة للمادة.'
-      : 'أضف وحدة أصغر أو بديلة لاستخدامها مباشرة في الوصفة.',
+      : 'عرّف العلاقة بالطريقة الأسهل لك، ثم استخدم الوحدة مباشرة في الوصفة.',
     submitText:'حفظ التحويل',
     body:`
-      <div class="form-grid">
-        <div class="field">
-          <label>الوحدة الجديدة</label>
-          <select name="new_unit" required>
-            ${unitOptions(availableNew)}
-          </select>
-        </div>
-        <div class="field">
+      <div class="conversion-pair-grid">
+        <div class="field reference-unit-field">
           <label>الوحدة المرجعية</label>
           <select name="reference_unit" required>
             ${choices.map(x=>`<option value="${esc(x.unitId)}" ${String(x.unitId)===String(reference)?'selected':''}>${esc(x.label)}</option>`).join('')}
           </select>
         </div>
-        <div class="field full conversion-sentence-field">
-          <label>علاقة التحويل</label>
-          <div class="conversion-sentence" data-conversion-sentence></div>
+        <div class="field new-unit-field">
+          <label>الوحدة الجديدة</label>
+          <select name="new_unit" required>
+            ${unitOptions(availableNew)}
+          </select>
+        </div>
+      </div>
+
+      ${isPurchase ? '' : `
+        <label class="inverse-option">
+          <input type="checkbox" name="inverse_mode" value="1">
+          <span class="inverse-checkmark">✓</span>
+          <span>
+            <strong>معكوس</strong>
+            <small>فعّله إذا كان الأسهل أن تكتب كم تساوي الوحدة الجديدة من الوحدة المرجعية.</small>
+          </span>
+        </label>`}
+
+      <div class="conversion-card">
+        <div class="conversion-card-title">علاقة التحويل</div>
+        <div class="conversion-sentence" data-conversion-sentence></div>
+        <div class="conversion-value-row">
           <input name="factor" type="number" min="0.00000001" step="any" required autocomplete="off">
+          <span class="conversion-value-suffix" data-factor-suffix></span>
         </div>
       </div>`,
     onSubmit:async fd=>{
@@ -108,6 +122,7 @@ export async function openConversionDialog({
         const newUnitId=String(fd.get('new_unit')||'');
         const refId=String(fd.get('reference_unit')||'');
         const factor=Number(fd.get('factor'));
+        const inverse=!isPurchase && fd.get('inverse_mode')==='1';
         if(!(factor>0)){
           toast('اكتب قيمة تحويل أكبر من صفر.','error');
           return false;
@@ -115,11 +130,17 @@ export async function openConversionDialog({
         const ref=choices.find(x=>String(x.unitId)===refId);
         if(!ref) throw new Error('REFERENCE_UNIT_NOT_FOUND');
 
-        // Purchase mode: 1 new purchase unit = factor reference units.
-        // Usage mode: 1 reference unit = factor new usage units.
-        const quantityInBase=isPurchase
-          ? factor * ref.quantityInBase
-          : ref.quantityInBase / factor;
+        let quantityInBase;
+        if(isPurchase){
+          // 1 new purchase unit = factor reference units.
+          quantityInBase=factor * ref.quantityInBase;
+        }else if(inverse){
+          // 1 new usage unit = factor reference units.
+          quantityInBase=factor * ref.quantityInBase;
+        }else{
+          // 1 reference unit = factor new usage units.
+          quantityInBase=ref.quantityInBase / factor;
+        }
 
         await api.saveMaterialUnit({
           materialId:material.id,
@@ -139,20 +160,36 @@ export async function openConversionDialog({
 
   const newSel=m.form.querySelector('[name="new_unit"]');
   const refSel=m.form.querySelector('[name="reference_unit"]');
+  const inverse=m.form.querySelector('[name="inverse_mode"]');
   const sentence=m.form.querySelector('[data-conversion-sentence]');
   const input=m.form.querySelector('[name="factor"]');
+  const suffix=m.form.querySelector('[data-factor-suffix]');
 
   const refreshSentence=()=>{
     const newText=newSel.options[newSel.selectedIndex]?.textContent?.trim() || 'الوحدة الجديدة';
     const refText=refSel.options[refSel.selectedIndex]?.textContent?.trim() || 'الوحدة المرجعية';
-    sentence.innerHTML=isPurchase
-      ? `1 <strong>${esc(newText)}</strong> = <span class="conversion-input-slot">القيمة أدناه</span> <strong>${esc(refText)}</strong>`
-      : `1 <strong>${esc(refText)}</strong> = <span class="conversion-input-slot">القيمة أدناه</span> <strong>${esc(newText)}</strong>`;
-    input.placeholder=isPurchase
-      ? `مثال: إذا كانت الكرتونة تحوي 24 ${refText} اكتب 24`
-      : `مثال: إذا كان 1 ${refText} يساوي 50 ${newText} اكتب 50`;
+    const inverseMode=Boolean(inverse?.checked);
+
+    if(isPurchase){
+      sentence.innerHTML=`1 <strong>${esc(newText)}</strong> = <strong>؟</strong> ${esc(refText)}`;
+      suffix.textContent=refText;
+      input.placeholder='مثال: 24';
+      return;
+    }
+
+    if(inverseMode){
+      sentence.innerHTML=`1 <strong>${esc(newText)}</strong> = <strong>؟</strong> ${esc(refText)}`;
+      suffix.textContent=refText;
+      input.placeholder='مثال: 50';
+    }else{
+      sentence.innerHTML=`1 <strong>${esc(refText)}</strong> = <strong>؟</strong> ${esc(newText)}`;
+      suffix.textContent=newText;
+      input.placeholder='مثال: 25';
+    }
   };
+
   newSel.addEventListener('change',refreshSentence);
   refSel.addEventListener('change',refreshSentence);
+  inverse?.addEventListener('change',refreshSentence);
   refreshSentence();
 }
