@@ -1,25 +1,25 @@
-import { supabase, configured, configurationMessage } from './supabase.js';
-import * as api from './api.js';
-import { esc } from './utils.js';
-import { toast, friendlyError, modal } from './ui.js';
-import { renderDashboard } from './pages/dashboard.js';
-import { renderHub } from './pages/hubs.js';
-import { renderMaterials } from './pages/materials.js';
-import { renderSuppliers } from './pages/suppliers.js';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js';
-import { renderMenu } from './pages/menu.js';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.13.2';
+import * as api from './api.js?v=0.13.2';
+import { esc } from './utils.js?v=0.13.2';
+import { toast, friendlyError, modal } from './ui.js?v=0.13.2';
+import { renderDashboard } from './pages/dashboard.js?v=0.13.2';
+import { renderHub } from './pages/hubs.js?v=0.13.2';
+import { renderMaterials } from './pages/materials.js?v=0.13.2';
+import { renderSuppliers } from './pages/suppliers.js?v=0.13.2';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.13.2';
+import { renderMenu } from './pages/menu.js?v=0.13.2';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js';
-import { renderEvents } from './pages/events.js';
-import { renderReports } from './pages/reports.js';
-import { renderAssistant } from './pages/assistant.js';
-import { renderSettings } from './pages/settings.js';
+} from './pages/daily.js?v=0.13.2';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.13.2';
+import { renderEvents } from './pages/events.js?v=0.13.2';
+import { renderReports } from './pages/reports.js?v=0.13.2';
+import { renderAssistant } from './pages/assistant.js?v=0.13.2';
+import { renderSettings } from './pages/settings.js?v=0.13.2';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -99,7 +99,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.13</div>
+        <div class="sidebar-foot">Web v0.13.2</div>
       </aside>
 
       <main class="main">

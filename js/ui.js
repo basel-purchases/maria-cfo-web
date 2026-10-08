@@ -1,9 +1,10 @@
-import { esc } from './utils.js';
+import { esc } from './utils.js?v=0.13.2';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }
 export function friendlyError(error, fallback='تعذر إكمال العملية الآن. حاول مرة أخرى.'){
   console.error(error);
+  if(error?.name === 'MariaValidationError') return String(error.message);
   const msg=String(error?.message||error||'').toLowerCase();
   if(msg.includes('failed to fetch')||msg.includes('network')||msg.includes('socket')) return 'تعذر الاتصال بالخدمة. تحقق من الإنترنت ثم حاول مرة أخرى.';
   if(msg.includes('401')||msg.includes('jwt')||msg.includes('session')) return 'انتهت جلسة الدخول. سجّل الدخول من جديد.';
@@ -12,6 +13,10 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('purchase unit conversion not configured')) return 'تم تعريف الوحدة للمادة، لكن قاعدة البيانات ما زالت على منطق الشراء القديم. شغّل تحديث v0.10 مرة واحدة في Supabase ثم أعد المحاولة.';
   if(msg.includes('document_ocr_not_deployed')||msg.includes('document-ocr')&&msg.includes('not found')) return 'ميزة تحليل صورة الفاتورة لم تُنشر على Supabase بعد. انشر Edge Function باسم document-ocr ثم أعد المحاولة.';
   if(msg.includes('ai_jobs')||msg.includes('ai_jobs_unavailable')||msg.includes('mark_ai_job_seen_v012')) return 'ميزة المعالجة الخلفية تحتاج تشغيل تحديث قاعدة البيانات v0.12 مرة واحدة في Supabase.';
+  if(msg.includes('employee_pay_rate_required')) return 'لم يتم حفظ أجر الموظف في الحقل الصحيح. حدث الصفحة إلى Web v0.13.2 ثم جرّب مجددًا.';
+  if(msg.includes('wage_rate_original')&&msg.includes('employees')) return 'هذه نسخة قديمة من نموذج الموظف. حدّث الموقع إلى Web v0.13.2.';
+  if(msg.includes('applied shortage hours cannot exceed calculated shortage hours')) return 'النقص المطبق أكبر من النقص المحسوب. عدّل الساعات أو سجل خصمًا إداريًا من قسم الرواتب.';
+  if(msg.includes('could not find the function')&&msg.includes('create_event')) return 'استدعاء إنشاء الحفلة غير متوافق مع قاعدة البيانات. تأكد من تشغيل Web v0.13.2 بعد تحديث الصفحة.';
   if(msg.includes('order_item_compat_failed')||msg.includes('add_order_item_v013')) return 'تعذر حفظ الصنف بسبب عدم توافق خدمة الأوردرات. شغّل تحديث قاعدة البيانات v0.13 ثم أعد المحاولة.';
   if(msg.includes('order_item_quantity_required')) return 'أدخل كمية أكبر من صفر.';
   if(msg.includes('order_item_price_invalid')) return 'أدخل سعرًا صحيحًا للصنف.';

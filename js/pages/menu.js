@@ -1,7 +1,7 @@
-import * as api from '../api.js';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js';
-import { esc, money, unitDisplay, num } from '../utils.js';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js';
+import * as api from '../api.js?v=0.13.2';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.13.2';
+import { esc, money, unitDisplay, num } from '../utils.js?v=0.13.2';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.13.2';
 
 function menuPrice(row){
   return row.manual_price_original ?? row.manual_price ?? row.price ?? row.suggested_price_rounded ?? row.suggested_price ?? null;

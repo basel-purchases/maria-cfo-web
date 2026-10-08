@@ -1,5 +1,6 @@
-import { supabase, configured } from './supabase.js';
-import { sleep, todayISO, unitLabel } from './utils.js';
+import { supabase, configured } from './supabase.js?v=0.13.2';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.13.2';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.13.2';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -580,6 +581,11 @@ export async function expenseDetails(){
 export const orders=()=>list('orders',{order:'occurred_at',limit:500});
 export const orderItems=id=>list('order_items',{order:'created_at',ascending:true,eq:{order_id:id},limit:300});
 export const employees=()=>list('employees',{order:'name',ascending:true,limit:500});
+
+export async function createEmployee(input){
+  // Never retry with an incomplete employee record: DB requires a rate for pay_type.
+  return insert('employees', buildEmployeePayload(input));
+}
 export const attendance=date=>list('employee_attendance',{order:'created_at',ascending:true,eq:{work_date:date},limit:500});
 export const payrollRuns=()=>list('payroll_run_summary',{order:'period_end',limit:100}).catch(()=>list('payroll_runs',{order:'period_end',limit:100}));
 export const events=()=>list('events',{order:'event_date',limit:300});
@@ -798,30 +804,12 @@ export async function recordExpense({cashboxId,amount,title,currency='SYP',categ
 
 export async function initializeAttendance(date){return rpc('initialize_daily_attendance',{p_work_date:date});}
 
-export async function setAttendance({employeeId,date,worked,status='full',expected=null,overtime=null,shortage=null,note=null}){
-  return rpc('set_employee_attendance',{
-    p_employee_id:employeeId,
-    p_work_date:date,
-    p_worked_hours:Number(worked||0),
-    p_status:status,
-    p_expected_hours:expected,
-    p_approved_overtime_hours:overtime,
-    p_applied_shortage_hours:shortage,
-    p_note:note,
-  });
+export async function setAttendance(input){
+  return rpc('set_employee_attendance', buildAttendanceArgs(input));
 }
 
-export async function createEvent({name,date,type='private',revenueMode='bookings',guests=null,currency='SYP'}){
-  return rpc('create_event',{
-    p_name:name,
-    p_event_type:type,
-    p_event_date:date,
-    p_planned_guest_count:guests?Number(guests):null,
-    p_revenue_mode:revenueMode,
-    p_currency_code:currency,
-    p_default_price:null,
-    p_notes:null,
-  });
+export async function createEvent(input){
+  return rpc('create_event', buildEventArgs(input));
 }
 
 function statusFromFunctionError(err){

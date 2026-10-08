@@ -1,6 +1,6 @@
-import * as api from '../api.js';
-import { loader, friendlyError } from '../ui.js';
-import { money, pick, esc, dateOnly } from '../utils.js';
+import * as api from '../api.js?v=0.13.2';
+import { loader, friendlyError } from '../ui.js?v=0.13.2';
+import { money, pick, esc, dateOnly } from '../utils.js?v=0.13.2';
 export async function renderDashboard(root){root.innerHTML=loader();try{const [d,notes,mats,menu,emps,boxes,evts]=await Promise.all([api.dashboard().catch(()=>({})),api.notifications().catch(()=>[]),api.materials().catch(()=>[]),api.menuItems().catch(()=>[]),api.employees().catch(()=>[]),api.cashboxes().catch(()=>[]),api.events().catch(()=>[])]);const sales=pick(d,['sales_today_base','today_sales_base','revenue_today_base','revenue_base','sales_base'],0);const result=pick(d,['net_result_today_base','today_net_result_base','net_result_base','net_base','result_base'],0);const exp=pick(d,['expenses_today_base','today_expenses_base','expenses_base'],0);const orders=pick(d,['orders_today','today_order_count','order_count','orders_count'],0);const unread=notes.filter(n=>!n.read_at&&!n.is_read&&n.status!=='read').length;const upcoming=evts.filter(e=>new Date(e.event_date)>=new Date(new Date().toDateString())).sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date)))[0];root.innerHTML=`
 <div class="page-head"><div><h2>صباح العمل</h2><p>هذه الصفحة تعرض ما تحتاج معرفته بسرعة فقط. التفاصيل في أقسامها، ولن نضع Food Cost العام هنا.</p></div></div>
 <div class="quick-actions"><a class="btn" href="#/purchases">فاتورة شراء</a><a class="btn secondary" href="#/expenses">مصروف</a><a class="btn secondary" href="#/orders">أوردر</a><a class="btn soft" href="#/assistant">اسأل المساعد</a></div>

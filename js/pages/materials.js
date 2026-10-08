@@ -1,7 +1,7 @@
-import * as api from '../api.js';
-import { modal, toast, loader, friendlyError } from '../ui.js';
-import { esc, unitDisplay, money, num } from '../utils.js';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js';
+import * as api from '../api.js?v=0.13.2';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.13.2';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.13.2';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.13.2';
 
 const PAGE_SIZE=10;
 
