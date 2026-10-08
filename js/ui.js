@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=0.14.0';
+import { esc } from './utils.js?v=0.17';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }
@@ -28,10 +28,10 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('daily_payroll_requires_daily_or_hourly')) return 'الدفع اليومي مخصص للموظف اليومي أو الساعي. الشهري عبر مسير شهري.';
   if(msg.includes('work_date_outside_employment')||msg.includes('invalid_wage_work_date')) return 'تاريخ الدوام خارج فترة عمل الموظف أو بعد اليوم الحالي.';
   if(msg.includes('payroll must be approved before payment')) return 'اعتمد مسير الراتب قبل تسجيل الدفع.';
-  if(msg.includes('employee_pay_rate_required')) return 'لم يتم حفظ أجر الموظف في الحقل الصحيح. حدث الصفحة إلى Web v0.14.0 ثم جرّب مجددًا.';
-  if(msg.includes('wage_rate_original')&&msg.includes('employees')) return 'هذه نسخة قديمة من نموذج الموظف. حدّث الموقع إلى Web v0.14.0.';
+  if(msg.includes('employee_pay_rate_required')) return 'لم يتم حفظ أجر الموظف في الحقل الصحيح. حدث الصفحة إلى Web v0.17 ثم جرّب مجددًا.';
+  if(msg.includes('wage_rate_original')&&msg.includes('employees')) return 'هذه نسخة قديمة من نموذج الموظف. حدّث الموقع إلى Web v0.17.';
   if(msg.includes('applied shortage hours cannot exceed calculated shortage hours')) return 'النقص المطبق أكبر من النقص المحسوب. عدّل الساعات أو سجل خصمًا إداريًا من قسم الرواتب.';
-  if(msg.includes('could not find the function')&&msg.includes('create_event')) return 'استدعاء إنشاء الحفلة غير متوافق مع قاعدة البيانات. تأكد من تشغيل Web v0.14.0 بعد تحديث الصفحة.';
+  if(msg.includes('could not find the function')&&msg.includes('create_event')) return 'استدعاء إنشاء الحفلة غير متوافق مع قاعدة البيانات. تأكد من تشغيل Web v0.17 بعد تحديث الصفحة.';
   if(msg.includes('order_item_compat_failed')||msg.includes('add_order_item_v013')) return 'تعذر حفظ الصنف بسبب عدم توافق خدمة الأوردرات. شغّل تحديث قاعدة البيانات v0.13 ثم أعد المحاولة.';
   if(msg.includes('order_item_quantity_required')) return 'أدخل كمية أكبر من صفر.';
   if(msg.includes('order_item_price_invalid')) return 'أدخل سعرًا صحيحًا للصنف.';

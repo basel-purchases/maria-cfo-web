@@ -1,6 +1,6 @@
-import { supabase, configured } from './supabase.js?v=0.14.0';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.14.0';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.14.0';
+import { supabase, configured } from './supabase.js?v=0.17';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.17';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.17';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -804,40 +804,37 @@ export async function createEvent(input){
   return rpc('create_event', buildEventArgs(input));
 }
 
-function statusFromFunctionError(err){
-  return Number(err?.context?.status || err?.status || 0);
-}
-
-export async function askAssistant(message,history=[]){
-  let lastErr;
-  let lastStatus=0;
-  for(let attempt=1;attempt<=3;attempt++){
-    try{
-      const {data,error}=await need().functions.invoke('assistant',{
-        body:{message,screen_context:'Maria CFO Web',history},
-      });
-      if(error) throw error;
-      if(data?.answer) return data;
-      throw new Error('EMPTY_AI_RESPONSE');
-    }catch(e){
-      lastErr=e;
-      lastStatus=statusFromFunctionError(e);
-      const retry=!lastStatus || lastStatus===408 || lastStatus===429 || lastStatus>=500;
-      if(!retry || attempt===3) break;
-      await sleep(attempt===1?700:1600);
+// v0.17 -- one authenticated request per user action. Do not blindly retry a write:
+// the server might have committed it before a lost HTTP response.
+export async function assistantRequest(payload={}){
+  try{
+    const {data,error}=await need().functions.invoke('assistant',{body:payload});
+    if(error){
+      let details='';
+      const status=Number(error?.context?.status||error?.status||0);
+      try{const response=error.context;if(typeof response?.json==='function'){
+        const body=await response.json(); details=String(body?.answer||body?.error||'');
+      }}catch(_){}
+      if(details) return {ok:false,answer:details,reason:'edge_function_error',diagnostic:{status}};
+      return {ok:false,
+        answer: status===401?'انتهت جلسة الدخول؛ أعد تسجيل الدخول.':
+          status===404?'دالة assistant غير منشورة في Supabase. انشر محتوى supabase/functions/assistant.':
+          status===502||status===503||status===504?'تعذر تشغيل Edge Function حاليًا. راجع Logs للدالة assistant في Supabase وتأكد من إعداد الأسرار ونشر الإصدار v0.17.':
+          'تعذر الاتصال بدالة assistant في Supabase. راجع حالة الدالة وإعدادات الاتصال.',
+        reason:'edge_unavailable',diagnostic:{status:status||null}};
     }
+    return data&&typeof data==='object'?data:{ok:false,answer:'أعادت خدمة المساعد استجابة غير متوقعة.',reason:'invalid_response'};
+  }catch(e){
+    return {ok:false,answer:'فقد الاتصال بالخادم. تحقق من الشبكة وحالة Supabase ثم أعد المحاولة؛ لا تكرر عملية كتابة ربما نجحت قبل انقطاع الاتصال.',reason:'network_unavailable'};
   }
-  console.error(lastErr);
-  let reason='تعذر الاتصال بخدمة المساعد بعد ثلاث محاولات.';
-  if(lastStatus===429) reason='تم بلوغ حد الاستخدام المؤقت لمزود الذكاء الاصطناعي بعد ثلاث محاولات.';
-  else if(lastStatus>=500) reason='خدمة الذكاء الاصطناعي لم تستجب بشكل سليم من الخادم بعد ثلاث محاولات.';
-  else if(!lastStatus) reason='تعذر الوصول إلى خدمة المساعد بسبب مشكلة اتصال بعد ثلاث محاولات.';
-  return {
-    ok:false,
-    answer:`المساعد غير متاح مؤقتًا الآن. ${reason} حاول مرة أخرى بعد قليل.`,
-    reason:'temporary_ai_unavailable',
-  };
 }
+export async function askAssistant(message,history=[],extra={}){
+  return assistantRequest({message,history,...extra});
+}
+export async function assistantHealth(){return assistantRequest({action:'health'});}
+export async function assistantProbe(){return assistantRequest({action:'probe'});}
+export async function confirmAssistantAction(id){return assistantRequest({action:'confirm',proposal_id:id});}
+export async function reviewAssistantDocument(document,cashboxId=null){return assistantRequest({action:'review_document',document,cashbox_id:cashboxId});}
 
 // v0.14: all salary outflows go through approved payroll + its protected RPC.
 export async function payrollSettings(){
@@ -848,10 +845,10 @@ export async function setPayrollCashbox(cashboxId){
   return rpc('set_payroll_cashbox_v014',{p_cashbox_id:cashboxId});
 }
 export async function dailyWageDues(){
-  return rpc('get_daily_wage_dues_v014',{});
+  return rpc('get_daily_wage_dues_v017',{});
 }
 export async function payDailyWage(employeeId,workDate){
-  return rpc('pay_daily_wage_v014',{p_employee_id:employeeId,p_work_date:workDate});
+  return rpc('pay_daily_wage_v017',{p_employee_id:employeeId,p_work_date:workDate});
 }
 export async function approvedSalaryBalances(){
   const [balances,runs,items]=await Promise.all([

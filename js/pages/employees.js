@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.14.0';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.14.0';
-import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.14.0';
-import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.14.0';
+import * as api from '../api.js?v=0.17';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.17';
+import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.17';
+import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.17';
 
-import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.14.0';
+import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.17';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة'};
 const ATTENDANCE_LABELS = {
   full: 'دوام كامل', partial: 'دوام جزئي', absent: 'غياب',
@@ -147,7 +147,7 @@ function openAttendanceModal(root, day, row, name) {
         <input name="ot" type="number" min="0" step="any" value="${esc(row.approved_overtime_hours ?? 0)}">
       </div>
       <div class="field"><label>النقص المطبق</label>
-        <input name="short" type="number" min="0" step="any" value="${esc(row.applied_shortage_hours ?? 0)}">
+        <input name="short" type="number" min="0" step="any" value="${esc(row.applied_shortage_hours ?? '')}" placeholder="اتركه فارغًا لحساب النقص تلقائيًا">
         <small class="hint" data-shortage-hint></small>
       </div>
       <div class="field full"><label>ملاحظة (اختياري)</label><input name="note" value="${esc(row.note || '')}"></div>
@@ -223,7 +223,8 @@ export async function renderPayroll(root) {
     const boxMap=new Map(boxes.map(b=>[b.id,b.name]));
     const chosenBox=boxes.find(b=>b.id===settings.payroll_cashbox_id);
     const dueItems=dues.filter(d=>Number(d.estimated_due_original)>0.001);
-    const zeroDue=dues.length-dueItems.length;
+    const zeroDue=dues.filter(d=>Number(d.estimated_due_original)<=0.001);
+    const dueWarnings=dues.filter(d=>d.review_note);
     const monthlyRuns=runs.filter(r=>!String(runMap.get(r.payroll_run_id)?.note||'').startsWith('MARIA_DAILY_V014:'));
     const schemaError=duesResult.status==='rejected'?friendlyError(duesResult.reason,'لم تُفعّل خدمات الرواتب اليومية بعد.'):'',
       balancesError=balancesResult.status==='rejected'?friendlyError(balancesResult.reason,'تعذّر تحميل المستحقات المعتمدة.'):'',
@@ -243,7 +244,8 @@ export async function renderPayroll(root) {
       ${dueItems.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>اليوم</th><th>الساعات</th><th>المبلغ التقديري</th><th>الصرف</th></tr></thead><tbody>
       ${dueItems.map(d=>`<tr><td>${employeeName(d.employee_name,d.pay_type)}</td><td>${dateOnly(d.work_date)}</td><td>${esc(d.worked_hours)} / ${esc(d.expected_hours)}</td><td><strong>${money(d.estimated_due_original,d.currency_code)}</strong></td><td><button class="btn pay-daily" data-employee="${esc(d.employee_id)}" data-date="${esc(d.work_date)}" ${!chosenBox?'disabled':''}>دفع</button></td></tr>`).join('')}
       </tbody></table></div>`:'<div class="empty"><strong>لا توجد أجور يومية أو ساعية تنتظر الصرف</strong><div>بعد تسجيل الدوام تظهر الأجور غير المسددة هنا.</div></div>'}
-      ${zeroDue?`<p class="metric-note">${zeroDue} سجل دوام دون مبلغ مستحق حاليًا (مثل غياب غير مدفوع أو يوم راحة).</p>`:''}</section>
+      ${zeroDue.length?`<p class="metric-note">${zeroDue.length} سجل دوام دون مبلغ مستحق حاليًا (مثل غياب غير مدفوع أو صفر ساعات).</p>`:''}
+      ${dueWarnings.length?`<div class="notice"><strong>أيام تحتاج مراجعة</strong><div>${dueWarnings.map(d=>`${esc(d.employee_name)} (${dateOnly(d.work_date)}): ${esc(d.review_note)}`).join('<hr>')}</div><a href="#/attendance" class="text-link">مراجعة الدوام</a></div>`:''}</section>
       <section class="card finance-section"><div class="finance-section-head"><div><h3>أرصدة الرواتب المعتمدة</h3><p>المدفوع جزئيًا يبقى ظاهرًا حتى يسدد بالكامل.</p></div></div>
       ${balances.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>الفترة</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th></th></tr></thead><tbody>${balances.map(b=>`<tr>
       <td>${employeeName(b.employee_name,b.pay_type||employeeMap.get(b.employee_id)?.pay_type)}</td>

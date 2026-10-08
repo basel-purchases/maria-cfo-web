@@ -1,6 +1,6 @@
-import * as api from '../api.js?v=0.14.0';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.14.0';
-import { esc, unitDisplay } from '../utils.js?v=0.14.0';
+import * as api from '../api.js?v=0.17';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.17';
+import { esc, unitDisplay } from '../utils.js?v=0.17';
 
 export async function renderSettings(root) {
   root.innerHTML = loader();

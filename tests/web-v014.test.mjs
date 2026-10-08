@@ -50,9 +50,14 @@ test('financial RPC uses exact verified parameter names',()=>{
   assert.match(api,/get_statistics_time_series'/);
 });
 test('all new payroll handlers use protected RPCs',()=>{
-  for(const name of ['pay_daily_wage_v014','pay_approved_salary_v014','set_payroll_cashbox_v014','get_daily_wage_dues_v014']){
+  for(const name of ['pay_approved_salary_v014','set_payroll_cashbox_v014']){
     assert.match(api,new RegExp(name));
     assert.match(sql,new RegExp('FUNCTION public\\.'+name));
+  }
+  const migration17=readFileSync(join(base,'database/Maria_CFO_Web_v0.17_Migration.sql'),'utf8');
+  for(const name of ['get_daily_wage_dues_v017','pay_daily_wage_v017']){
+    assert.match(api,new RegExp(name));
+    assert.match(migration17,new RegExp('FUNCTION public\\.'+name));
   }
   assert.match(sql,/public\.record_payroll_payment\(/);
   assert.match(sql,/PAYROLL_PERIOD_ALREADY_SETTLED/);
@@ -74,13 +79,13 @@ test('all relative JS imports exist and are versioned',()=>{
         for(const m of text.matchAll(rx)){
           const relative=m[1].split('?')[0];
           assert.ok(existsSync(resolve(dir,relative)),`${abs} missing ${relative}`);
-          assert.match(m[1],/\?v=0\.14\.0$/);
+          assert.match(m[1],/\?v=0\.17$/);
         }
       }
     }
   }
   check(root);
-  assert.match(index,/v=0\.14\.0/);
+  assert.match(index,/v=0\.17/);
 });
 test('project ZIP contents do not need Git or config changes',()=>{
   assert.equal(existsSync(join(base,'config.js')),false);
