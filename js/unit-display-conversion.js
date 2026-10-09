@@ -1,6 +1,8 @@
 // v0.19: Presentation-only metric conversions. Inventory base units and historic
 // quantity_in_base always remain unchanged in PostgreSQL.
-import { unitDisplay } from './utils.js?v=0.19';
+import { unitDisplay } from './utils.js?v=0.20';
+
+const PACKAGE_CODES=new Set(['CARTON','BOX','PACK','PACKET','TRAY','BAG','SACK','CRATE']);
 
 const METRIC = Object.freeze({
   KG:{code:'G',factor:1000}, G:{code:'KG',factor:0.001},
@@ -41,8 +43,36 @@ export function toBase(displayQuantity,choice){
   return Number((n/factor).toPrecision(13));
 }
 
-export function prettyRelation(unit,baseUnit,amountInBase,allUnits=[],formatAmount=n=>String(n)){
+export function invertedRelationIsClear(baseUnit,quantityInBase){
+  const n=Number(quantityInBase),code=String(baseUnit?.code||'').toUpperCase();
+  if(!PACKAGE_CODES.has(code)||!(n>0&&n<1))return false;
+  const ratio=1/n,rounded=Math.round(ratio);
+  return ratio>=2 && Math.abs(ratio-rounded)<=Math.max(0.003,rounded*0.00002);
+}
+
+export function relationAmountFromBase(quantityInBase,choice,inverted=false){
+  const direct=fromBase(quantityInBase,choice);
+  if(!inverted||!(direct>0))return direct;
+  const inverse=1/direct,rounded=Math.round(inverse);
+  return inverse>1 && Math.abs(inverse-rounded)<Math.max(0.003,rounded*0.00002)
+    ? rounded : Number(inverse.toPrecision(12));
+}
+
+export function relationBaseFromAmount(amount,choice,inverted=false){
+  const n=Number(amount);
+  return toBase(inverted?1/n:n,choice);
+}
+
+export function prettyRelation(unit,baseUnit,amountInBase,allUnits=[],formatAmount=n=>String(n),inverse='auto'){
   const choice=preferredChoice(baseUnit,allUnits,amountInBase);
   if(!choice) return null;
-  return `1 ${unitDisplay(unit)} = ${formatAmount(fromBase(amountInBase,choice))} ${choice.label}`;
+  const inverted=inverse==='auto'?invertedRelationIsClear(baseUnit,amountInBase):Boolean(inverse);
+  const formatted=relationAmountFromBase(amountInBase,choice,inverted);
+  if(inverted){
+    const amount=Number(formatted);
+    const display=Math.abs(amount-Math.round(amount))<0.003?Math.round(amount):amount;
+    return `1 ${choice.label} = ${formatAmount(display)} ${unitDisplay(unit)}`;
+  }
+  return `1 ${unitDisplay(unit)} = ${formatAmount(formatted)} ${choice.label}`;
 }
+

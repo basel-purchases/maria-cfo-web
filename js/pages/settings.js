@@ -1,13 +1,13 @@
-import * as api from '../api.js?v=0.19';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.19';
-import { esc, unitDisplay } from '../utils.js?v=0.19';
-import { conversionChoices,preferredChoice,fromBase,toBase } from '../unit-display-conversion.js?v=0.19';
+import * as api from '../api.js?v=0.20';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.20';
+import { esc, unitDisplay } from '../utils.js?v=0.20';
+import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.20';
 import {
   buildUnitCatalog,
   formatUnitAmount,
   normalizedUnitName,
   validateNamedUnitDraft,
-} from '../unit-catalog.js?v=0.19';
+} from '../unit-catalog.js?v=0.20';
 
 const TYPE_LABELS={
   dedicated:'وحدة خاصة بمادة', material:'تحويل مادة',
@@ -218,6 +218,8 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
         <select name="display_unit" data-display-unit aria-label="وحدة القياس المرجعية"></select>
         <small>يمكنك التبديل بين غرام/كيلوغرام أو مل/لتر؛ سيحوّل الموقع القيمة تلقائيًا إلى وحدة مخزون المادة.</small>
       </div>
+      <div class="field full named-unit-inverse-toggle"><label class="named-unit-inverse-label"><input type="checkbox" name="inverted_relation" data-inverse> اعكس العلاقة: أدخل عدد الوحدات الصغيرة في وحدة المخزون (مثل 1 كرتونة = 24 ظرف)</label>
+      <small>يغيّر طريقة الإدخال والعرض فقط، ولا يضرب التحويل أو يقلب كميته المخزنة مرتين.</small></div>
       <div class="field full"><div class="named-unit-preview" data-relation-preview></div></div>
       <div class="field full"><p class="metric-note">مثال: «ملعقة سكر» بقيمة 5 ومادة «سكر» وحدتها الأساسية «غرام» تعني أن 1 ملعقة سكر = 5 غرام من السكر. لا تتغير قيود البيع والمشتريات السابقة.</p></div>
     </div>`,
@@ -228,7 +230,8 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
           id:unit?.id||null,
           name:fd.get('unit_name'),
           materialId:fd.get('material_id'),
-          quantityInBase:toBase(fd.get('amount'),selectedChoice()),
+          quantityInBase:existing && !amountDirty ? Number(existing.quantity_in_base)
+            :relationBaseFromAmount(fd.get('amount'),selectedChoice(),inverseEl.checked),
         };
         const error=validateNamedUnitDraft({
           name:payload.name, materialId:payload.materialId,
@@ -248,6 +251,8 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
   const nameEl=form.querySelector('[name="unit_name"]');
   const preview=form.querySelector('[data-relation-preview]');
   const displayEl=form.querySelector('[data-display-unit]');
+  const inverseEl=form.querySelector('[data-inverse]');
+  let amountDirty=false;
   let activeChoices=[];
   let previousChoice=null;
   const selectedChoice=()=>activeChoices.find(c=>String(c.unit.id)===String(displayEl.value))||activeChoices[0];
@@ -257,10 +262,11 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
     const name=String(nameEl.value||'الوحدة').trim();
     const choice=selectedChoice();
     const amount=formatUnitAmount(amountEl.value);
-    const stored=choice?toBase(amountEl.value,choice):NaN;
+    const stored=choice?relationBaseFromAmount(amountEl.value,choice,inverseEl.checked):NaN;
     preview.textContent=mat
-      ? `1 ${name} = ${amount} ${choice?.label||unitDisplay(base)} من ${mat.name}`
-        +(Number.isFinite(stored)&&choice?.factor!==1?` (وتساوي ${formatUnitAmount(stored)} ${unitDisplay(base)} في المخزون)`:'')
+      ? (inverseEl.checked?`1 ${choice?.label||unitDisplay(base)} = ${amount} ${name} من ${mat.name}`
+        :`1 ${name} = ${amount} ${choice?.label||unitDisplay(base)} من ${mat.name}`)
+        +(Number.isFinite(stored)&&choice?.factor!==1?` (تعادل ${formatUnitAmount(stored)} ${unitDisplay(base)} لكل ${name} في المخزون)`:'')
       : 'اختر المادة لتظهر علاقة الوحدة وقيمتها.';
   };
   const refreshUnits=()=>{
@@ -273,21 +279,31 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
     displayEl.innerHTML=activeChoices.map(c=>`<option value="${esc(c.unit.id)}">${esc(c.label)}</option>`).join('');
     displayEl.value=String(recommended?.unit.id||'');
     previousChoice=selectedChoice();
+    inverseEl.checked=!!(existing && invertedRelationIsClear(base,existing.quantity_in_base));
     if(existing && String(existing.material_id)===String(mat?.id)){
-      amountEl.value=String(fromBase(existing.quantity_in_base,previousChoice));
+      amountEl.value=String(relationAmountFromBase(existing.quantity_in_base,previousChoice,inverseEl.checked));
     }
     refreshPreview();
   };
   displayEl.addEventListener('change',()=>{
     const next=selectedChoice();
     if(amountEl.value!=='' && previousChoice && next){
-      const baseQty=toBase(amountEl.value,previousChoice);
-      amountEl.value=String(fromBase(baseQty,next));
+      const baseQty=relationBaseFromAmount(amountEl.value,previousChoice,inverseEl.checked);
+      amountEl.value=String(relationAmountFromBase(baseQty,next,inverseEl.checked));
     }
     previousChoice=next;
     refreshPreview();
   });
-  [amountEl,nameEl].forEach(el=>el?.addEventListener('input',refreshPreview));
+  inverseEl.addEventListener('change',()=>{
+    const choice=selectedChoice();
+    if(choice && amountEl.value!==''){
+      const baseQty=relationBaseFromAmount(amountEl.value,choice,!inverseEl.checked);
+      amountEl.value=String(relationAmountFromBase(baseQty,choice,inverseEl.checked));
+    }
+    refreshPreview();
+  });
+  amountEl.addEventListener('input',()=>{amountDirty=true;refreshPreview();});
+  nameEl.addEventListener('input',refreshPreview);
   materialEl?.addEventListener('change',refreshUnits);
   refreshUnits();
 }

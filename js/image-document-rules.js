@@ -81,3 +81,20 @@ export function localStatus(doc,validation){
   if(!doc.text&&!doc.items?.length)return 'غير معالج';
   return validation?.ready?'جاهز للنشر':'يحتاج استكمال';
 }
+
+// Explicit, user-triggered conversion only. Do not turn random OCR noise into rows.
+// Known catalog items or credible Arabic lines containing both quantity and price
+// are offered for review; missing prices/quantities remain unfilled.
+export function reviewedOcrItemCandidates(text,catalog=[],limit=50){
+  const rows=parseOcrLines(text,100);
+  return rows.filter(row=>{
+    if(exactCatalogId(row.name,catalog))return true;
+    const name=String(row.name||'');
+    const ar=(name.match(/[\u0621-\u064A]/g)||[]).length;
+    const latin=(name.match(/[A-Za-z]/g)||[]).length;
+    const numbers=Number(row.quantity)>0&&Number(row.unit_price)>0;
+    return numbers && ar>=2 && latin<=ar && name.length<=65 &&
+      !/\b(?:date|total|invoice|ce|qr|case|txt|www|http)\b/i.test(name);
+  });
+  // Filter deliberately: if no trusted pattern, user enters rows manually.
+}

@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.19';
-import { esc, unitDisplay, todayISO } from '../utils.js?v=0.19';
-import { toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.19';
-import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.19';
-import { recognizeLocalImage } from '../image-local-ocr.js?v=0.19';
-import { parseOcrLines,autofillExactCatalog,validateImageDocument,localStatus } from '../image-document-rules.js?v=0.19';
+import * as api from '../api.js?v=0.20';
+import { esc, unitDisplay, todayISO } from '../utils.js?v=0.20';
+import { toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.20';
+import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.20';
+import { recognizeLocalImage } from '../image-local-ocr.js?v=0.20';
+import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus } from '../image-document-rules.js?v=0.20';
 
 const VALID_IMAGE_TYPES=new Set(['image/png','image/jpeg','image/webp']);
 const MAX_IMAGE_BYTES=12*1024*1024;
@@ -19,6 +19,7 @@ export async function renderImages(root){
   let records=[];
   let currentId=null;
   let processing=false;
+  let cropMode=false;
   const selected=new Set();
   let previewUrls=[];
   let catalog={menu:[],materials:[],units:[],materialLinks:[],cashboxes:[]};
@@ -54,8 +55,8 @@ export async function renderImages(root){
       <div class="card image-toolbar">
         <div class="image-toolbar-buttons">
           <label class="btn" for="images-pick">إضافة صور</label><input id="images-pick" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
-          <button class="btn secondary" type="button" data-bulk-ocr="normal" ${processing?'disabled':''}>استخراج عادي ${selected.size?'للمحددة':'للجميع'}</button>
-          <button class="btn secondary" type="button" data-bulk-ocr="accurate" ${processing?'disabled':''}>استخراج دقيق ${selected.size?'للمحددة':'للجميع'}</button>
+          <button class="btn secondary" type="button" data-bulk-ocr="normal" ${processing?'disabled':''}>استخراج عادي ${selected.size?'للمحددة':'للجميع'} <span class="ocr-progress-pill" hidden aria-live="off"></span></button>
+          <button class="btn secondary" type="button" data-bulk-ocr="accurate" ${processing?'disabled':''}>استخراج دقيق ${selected.size?'للمحددة':'للجميع'} <span class="ocr-progress-pill" hidden aria-live="off"></span></button>
           <button class="btn" type="button" data-bulk-post ${processing||!eligible?'disabled':''}>نشر الجاهزة (${eligible})</button>
         </div>
         <div class="metric-note">عند تحديد صور تُطبق الإجراءات عليها فقط، وإلا فتطبق على جميع غير المنشورة. غير المكتملة تبقى هنا للمراجعة.</div>
@@ -98,13 +99,16 @@ export async function renderImages(root){
         <td><input data-field="quantity" type="number" step="any" min="0.00001" value="${esc(item.quantity??'')}" placeholder="الكمية"></td>
         <td><input data-field="unit_price" type="number" step="any" min="0.00001" value="${esc(item.unit_price??'')}" placeholder="السعر"></td>
         <td><input data-field="discount" type="number" step="any" min="0" ${doc.type==='order'?'max="100"':''} value="${esc(item.discount??'0')}" aria-label="${doc.type==='order'?'خصم نسبة مئوية':'خصم إجمالي السطر'}"></td>
-        <td><button type="button" class="mini-btn danger-lite" data-remove-item="${i}" aria-label="حذف السطر">حذف</button></td>
+        <td><button type="button" class="mini-btn danger-lite" data-remove-item="${i}" aria-label="حذف السطر">حذف البند</button></td>
       </tr>`).join('');
     return `<div class="card image-detail-card">
       <div class="section-head-inline"><div><h3>${esc(doc.file_name)}</h3><span class="image-status ${statusClass[status]||'grey'}">${esc(status)}</span></div><button type="button" class="mini-btn danger-lite" data-delete-image ${processing?'disabled':''}>حذف الصورة المحلية</button></div>
       ${doc.status==='uncertain'?`<div class="notice rose">${esc(doc.error||'تعذر التأكد من آخر عملية. راجع المستند في البرنامج قبل تكرار الإنشاء أو النشر.')} ${doc.server_id?`<a href="#/${doc.type==='purchase'?'purchase':'order'}/${esc(doc.server_id)}">افتح المستند الموجود</a>`:''}</div>`:''}
       <div class="image-document-grid">
-        <div class="image-preview-pane"><div class="image-preview-frame"><img src="${objectUrl(doc.file)}" alt="صورة المستند الأصلية" draggable="false"></div><p class="metric-note">الصورة على اليمين، ويمكن تكبيرها من المتصفح. احتفظ بالأصل حتى تنتهي من المراجعة.</p></div>
+        <div class="image-preview-pane"><div class="image-preview-frame"><div class="image-crop-surface ${cropMode?'is-cropping':''}" data-crop-surface><img src="${objectUrl(doc.file)}" alt="صورة المستند الأصلية" draggable="false"><div class="image-crop-selection" data-crop-selection ${doc.crop?`style="left:${doc.crop.x*100}%;top:${doc.crop.y*100}%;width:${doc.crop.w*100}%;height:${doc.crop.h*100}%"`: 'hidden'}></div></div></div>
+          <div class="image-crop-actions"><button type="button" class="mini-btn" data-toggle-crop ${locked?'disabled':''}>${cropMode?'اسحب مستطيلًا على الصورة':'تحديد منطقة القراءة'}</button>
+          ${doc.crop?`<button type="button" class="mini-btn" data-reset-crop ${locked?'disabled':''}>إلغاء الاقتصاص</button>`:''}</div>
+          <p class="metric-note">${doc.crop?'يُستخرج النص من المنطقة المحددة فقط؛ الصورة الأصلية محفوظة دون تغيير.':'للفواتير ذات الفراغات والخطوط الكثيرة: حدّد المنطقة المكتوبة بالماوس أو اللمس قبل الاستخراج.'}</p></div>
         <div class="image-editor-pane">
           <fieldset ${locked?'disabled':''}>
             <div class="form-grid">
@@ -115,10 +119,11 @@ export async function renderImages(root){
               ${doc.type==='purchase'?`<div class="field full"><label>اسم المورد (اختياري)</label><input data-doc="supplier" value="${esc(doc.supplier||'')}"></div>`:
                 `<div class="field full"><label>صندوق الأوردر (إلزامي للنشر)</label><select data-doc="cashbox_id">${catalogOptions(catalog.cashboxes.filter(c=>c.is_active!==false),doc.cashbox_id,'— اختر الصندوق —')}</select></div>`}
             </div>
-            <div class="image-ocr-actions"><button type="button" class="btn secondary" data-ocr="normal">استخراج عادي</button><button type="button" class="btn secondary" data-ocr="accurate">استخراج دقيق</button><small>المطبوع أسرع. الدقيق يعيد القراءة بعد تحسين الصورة؛ الخط اليدوي يحتاج تصحيحًا بشريًا.</small></div>
+            <div class="image-ocr-actions"><button type="button" class="btn secondary" data-ocr="normal">استخراج عادي <span class="ocr-progress-pill" hidden></span></button><button type="button" class="btn secondary" data-ocr="accurate">استخراج دقيق <span class="ocr-progress-pill" hidden></span></button><small>هذان الزران يستخرجان النص فقط، ولا ينشئان بنودًا. الاستخراج الدقيق يجرب أكثر من معالجة محلية؛ الخط العربي اليدوي غير مضمون.</small></div>
+            ${doc.ocr_confidence!==null&&doc.ocr_confidence!==undefined?`<div class="image-ocr-confidence ${Number(doc.ocr_confidence)<53?'is-uncertain':''}">مؤشر تعرف المحرك: ${esc(Math.round(Number(doc.ocr_confidence)||0))}% (ليس ضمان دقة النص). ${Number(doc.ocr_confidence)<53?'النص ضعيف الثقة: راجعه حرفيًا، ولا تعتمد عليه في القيم المالية.':''}</div>`:''}
             <div class="field"><label>النص المستخرج — قابل للتعديل</label><textarea data-doc="text" rows="6" placeholder="يمكنك إدخال النص بنفسك إذا تعذرت القراءة">${esc(doc.text||'')}</textarea></div>
-            <button class="mini-btn" type="button" data-reparse>استخراج البنود من النص أعلاه</button>
-            <div class="image-items-wrap"><h4>الأصناف والحقول</h4><p class="metric-note">اربط كل بند بمادة أو وجبة معروفة، وراجع الكمية والسعر. لا نخمن القيم المفقودة.</p>
+            <button class="mini-btn" type="button" data-reparse>تحويل النص المراجع إلى بنود (باختياري)</button>
+            <div class="image-items-wrap"><div class="image-items-head"><h4>الأصناف والحقول (${(doc.items||[]).length})</h4><button class="mini-btn danger-lite" type="button" data-clear-items ${(doc.items||[]).length?'':'disabled'}>حذف جميع البنود</button></div><p class="metric-note">لا تُضاف البنود بالاستخراج تلقائيًا. حوّل النص إلى بنود فقط بعد تصحيحه، أو أضف بندًا يدويًا. يمكن حذف أي بند.</p>
               <div class="table-wrap"><table class="table image-items-table"><thead><tr><th>النص</th><th>${doc.type==='purchase'?'مادة':'وجبة'}</th>${doc.type==='purchase'?'<th>الوحدة</th>':''}<th>الكمية</th><th>سعر الوحدة</th><th>${doc.type==='purchase'?'خصم بالسعر':'خصم %'}</th><th>إجراء</th></tr></thead><tbody>${htmlRows||`<tr><td colspan="${doc.type==='purchase'?7:6}">لم تُضف بنودًا بعد.</td></tr>`}</tbody></table></div>
               <button type="button" class="btn secondary" data-add-item>إضافة بند يدوي</button>
             </div>
@@ -152,33 +157,47 @@ export async function renderImages(root){
   }
   async function saveCurrent(){syncEditor();const doc=getCurrent();if(doc)await saveLocalImage(doc);}
   const updateProgress=text=>{const el=root.querySelector('#image-progress');if(el)el.textContent=text;};
+  function updateOcrPercentage(mode,pct,label){
+    const number=Math.max(0,Math.min(100,Math.round(Number(pct)||0)));
+    root.querySelectorAll('[data-ocr],[data-bulk-ocr]').forEach(btn=>{
+      const pill=btn.querySelector('.ocr-progress-pill');if(!pill)return;
+      const matches=(btn.dataset.ocr||btn.dataset.bulkOcr)===mode;
+      pill.hidden=!matches;
+      if(matches)pill.textContent=`${number}%`;
+      btn.disabled=processing;
+    });
+    updateProgress(`${label} — ${number}%`);
+  }
 
-  async function extractOne(doc,mode){
+
+  async function extractOne(doc,mode,index=0,count=1){
     if(['draft','published','uncertain'].includes(doc.status))return 'تجاوز مستندًا أُضيف للبرنامج بالفعل.';
-    const previous=doc.items?.length||0;
-    if(previous && !(await confirmBox(`إعادة الاستخراج ستستبدل ${previous} بندًا مُعدّلًا محليًا في «${doc.file_name}». هل تريد المتابعة؟`,'إعادة الاستخراج')))return 'لم تتغير البيانات.';
-    const result=await recognizeLocalImage(doc.file,{mode,onProgress:(step,percent)=>updateProgress(`${doc.file_name}: ${step} ${percent||0}%`)});
-    doc.text=result.text;
-    const parsed=parseOcrLines(result.text);
-    const list=doc.type==='purchase'?catalog.materials:catalog.menu;
-    doc.items=autofillExactCatalog(parsed,list).map(row=>({
-      ...row, unit_id:doc.type==='purchase'
-        ? (catalog.materials.find(m=>String(m.id)===String(row.catalog_id))?.base_unit_id||''):'',
-    }));
+    if(doc.text?.trim() && !(await confirmBox(`سوف يُستبدل النص المستخرج سابقًا من «${doc.file_name}». البنود المعدّلة لن تُمس. هل تتابع؟`,'استبدال النص فقط')))return 'لم يتغير النص.';
+    const result=await recognizeLocalImage(doc.file,{mode,crop:doc.crop,onProgress:(step,percent)=>{
+      const overall=(index*100+percent)/count;
+      updateOcrPercentage(mode,overall,`${doc.file_name}: ${step}`);
+    }});
+    // CRITICAL: OCR only writes text. No implicit parse or item creation.
+    doc.text=result.text||'';
     doc.ocr_mode=mode;doc.ocr_confidence=result.confidence;
-    doc.status='review';doc.error=null;
+    doc.status='review';doc.error=result.quality?.uncertain?'نتيجة استخراج غير موثوقة: راجع النص الأصلي قبل إنشاء البنود.':null;
     await saveLocalImage(doc);
-    return parsed.length?`استُخرج ${parsed.length} سطرًا. راجع المطابقة والكميات والأسعار.`:'تمت القراءة، لكن تعذّر تحديد بنود كاملة. عدّل النص أو أضفها يدويًا.';
+    return result.quality?.uncertain?'استُخرج النص فقط، لكنه منخفض الثقة؛ راجعه ثم أضف البنود يدويًا.':'استُخرج النص فقط. راجعه ثم اضغط تحويل النص إلى بنود إن رغبت.';
   }
   async function extractMany(docs,mode){
     if(processing)return;
+    if(!docs.length){toast('أضف صورة أولًا أو اختر صورًا للمعالجة.','error');return;}
     processing=true;
     let done=0,failed=0;
+    updateOcrPercentage(mode,0,`تجهيز ${docs.length} صورة`);
     for(const doc of docs){
-      try{updateProgress(`معالجة ${++done} من ${docs.length}: ${doc.file_name}`);await extractOne(doc,mode);}
+      try{await extractOne(doc,mode,done,docs.length);}
       catch(error){failed++;doc.error=String(error.message||error);await saveLocalImage(doc).catch(()=>{});toast(`تعذّر استخراج ${doc.file_name}: ${error.message||error}`,'error');}
+      done++;
+      updateOcrPercentage(mode,done*100/docs.length,`عولجت ${done} من ${docs.length} صور`);
     }
-    processing=false;refresh();updateProgress(`انتهت معالجة ${done} صورة؛ تعذّر استخراج ${failed}. راجع النتائج قبل النشر.`);
+    processing=false;
+    refresh();updateProgress(`انتهت قراءة ${done} صورة؛ تعذّر استخراج ${failed}. لم تُنشأ أي بنود تلقائيًا.`);
   }
   async function createDraft(doc){
     const check=validateImageDocument(doc,catalog);
@@ -259,7 +278,7 @@ export async function renderImages(root){
     root.querySelectorAll('[data-open-image]').forEach(el=>el.addEventListener('click',async e=>{
       if(e.target.closest('[data-select-image]'))return;
       try{await saveCurrent();}catch(error){toast('لم تحفظ تعديلات الصورة الحالية، راجع مساحة التخزين.','error');return;}
-      currentId=el.dataset.openImage;refresh();
+      currentId=el.dataset.openImage;cropMode=false;refresh();
     }));
     root.querySelectorAll('[data-select-image]').forEach(input=>input.addEventListener('change',e=>{
       e.stopPropagation();if(input.checked)selected.add(input.dataset.selectImage);else selected.delete(input.dataset.selectImage);
@@ -270,6 +289,45 @@ export async function renderImages(root){
       catch(error){toast(error.message||'تعذر حفظ البيانات','error');}
     });
     root.querySelector('[data-bulk-post]')?.addEventListener('click',async()=>{await saveCurrent();await publishChosen(targets());});
+    root.querySelector('[data-toggle-crop]')?.addEventListener('click',async()=>{
+      try{await saveCurrent();cropMode=!cropMode;refresh();}
+      catch(error){toast('تعذر حفظ التعديلات قبل تحديد المنطقة.','error');}
+    });
+    root.querySelector('[data-reset-crop]')?.addEventListener('click',async()=>{
+      await saveCurrent();const doc=getCurrent();if(!doc)return;doc.crop=null;cropMode=false;
+      await saveLocalImage(doc);refresh();
+    });
+    const cropSurface=root.querySelector('[data-crop-surface]');
+    if(cropSurface && cropMode){
+      let start=null;
+      const selection=cropSurface.querySelector('[data-crop-selection]');
+      const coords=e=>{
+        const r=cropSurface.querySelector('img').getBoundingClientRect();
+        return {x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))};
+      };
+      cropSurface.addEventListener('pointerdown',e=>{
+        if(processing)return;
+        start=coords(e);cropSurface.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      cropSurface.addEventListener('pointermove',e=>{
+        if(!start)return;
+        const now=coords(e);
+        const x=Math.min(start.x,now.x),y=Math.min(start.y,now.y);
+        const w=Math.abs(now.x-start.x),h=Math.abs(now.y-start.y);
+        selection.hidden=false;
+        Object.assign(selection.style,{left:`${x*100}%`,top:`${y*100}%`,width:`${w*100}%`,height:`${h*100}%`});
+      });
+      cropSurface.addEventListener('pointerup',async e=>{
+        if(!start)return;
+        const now=coords(e),x=Math.min(start.x,now.x),y=Math.min(start.y,now.y);
+        const w=Math.abs(now.x-start.x),h=Math.abs(now.y-start.y);start=null;
+        if(w<0.035||h<0.035){toast('حدد منطقة أكبر حتى يمكن قراءتها.','error');return;}
+        const doc=getCurrent();if(!doc)return;doc.crop={x,y,w,h};cropMode=false;
+        try{await saveLocalImage(doc);refresh();}
+        catch(error){toast('تعذر حفظ منطقة القراءة محليًا.','error');}
+      });
+    }
     root.querySelectorAll('[data-ocr]').forEach(btn=>btn.onclick=async()=>{
       try{await saveCurrent();await extractMany(getCurrent()?[getCurrent()]:[],btn.dataset.ocr);}catch(error){toast(error.message||'تعذر استخراج الصورة','error');}
     });
@@ -291,14 +349,20 @@ export async function renderImages(root){
     root.querySelector('[data-reparse]')?.addEventListener('click',async()=>{
       syncEditor();const doc=getCurrent();
       if(doc.items?.length && !(await confirmBox('ستُستبدل البنود الحالية بنتيجة النص المعدّل. هل تتابع؟','استبدال البنود')))return;
-      const rows=parseOcrLines(doc.text);
       const list=doc.type==='purchase'?catalog.materials:catalog.menu;
+      const rows=reviewedOcrItemCandidates(doc.text,list);
       doc.items=autofillExactCatalog(rows,list).map(row=>({...row,unit_id:doc.type==='purchase'?(catalog.materials.find(m=>String(m.id)===String(row.catalog_id))?.base_unit_id||''):''}));
       doc.status='review';await saveLocalImage(doc);refresh();
+      if(!rows.length)toast('لم أجد بنودًا واضحة أو متطابقة. صحح النص أولًا أو أضفها يدويًا؛ لن أحوّل النص المشوش إلى فواتير.','error');
     });
     root.querySelector('[data-add-item]')?.addEventListener('click',async()=>{
       syncEditor();const doc=getCurrent();doc.items.push({id:crypto.randomUUID(),name:'',quantity:'',unit_price:'',discount:'0',catalog_id:'',unit_id:''});
       doc.status='review';await saveLocalImage(doc);refresh();
+    });
+    root.querySelector('[data-clear-items]')?.addEventListener('click',async()=>{
+      syncEditor();const doc=getCurrent();if(!doc?.items?.length)return;
+      if(!(await confirmBox(`سيتم حذف ${doc.items.length} بندًا محليًا من الصورة الحالية فقط. النص والصورة سيبقيان محفوظين. هل توافق؟`,'حذف جميع البنود')))return;
+      doc.items=[];doc.status='review';await saveLocalImage(doc);refresh();
     });
     root.querySelectorAll('[data-remove-item]').forEach(btn=>btn.onclick=async()=>{
       syncEditor();const doc=getCurrent();doc.items.splice(Number(btn.dataset.removeItem),1);

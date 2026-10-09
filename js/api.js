@@ -1,7 +1,7 @@
-import { supabase, configured } from './supabase.js?v=0.19';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.19';
-import { isVagueContextualName } from './unit-catalog.js?v=0.19';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.19';
+import { supabase, configured } from './supabase.js?v=0.20';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.20';
+import { isVagueContextualName } from './unit-catalog.js?v=0.20';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.20';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');

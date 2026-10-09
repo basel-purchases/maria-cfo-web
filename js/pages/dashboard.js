@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.19';
-import { loader, friendlyError } from '../ui.js?v=0.19';
-import { money, pick, esc, dateOnly, todayISO } from '../utils.js?v=0.19';
-import { financialCard, qualityMessages, financialRowTable, finalProfitValue } from '../finance-ui.js?v=0.19';
+import * as api from '../api.js?v=0.20';
+import { loader, friendlyError } from '../ui.js?v=0.20';
+import { money, pick, esc, dateOnly, todayISO } from '../utils.js?v=0.20';
+import { financialCard, qualityMessages, financialRowTable, finalProfitValue } from '../finance-ui.js?v=0.20';
 
 const ok=(r,fallback)=>r.status==='fulfilled'?r.value:fallback;
 function setupStep(title,subtitle,ready,href,optional=false){return `<a class="setup-row ${ready?'ready':''}" href="${href}"><div class="setup-status">${ready?'✓':'!'}</div><div><strong>${esc(title)}${optional?' — اختياري':''}</strong><small>${esc(subtitle)}</small></div></a>`;}

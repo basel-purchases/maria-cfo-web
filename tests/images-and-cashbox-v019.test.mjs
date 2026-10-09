@@ -100,7 +100,7 @@ test('local pictures are not sent to Supabase; saving drafts uses existing prote
 test('two OCR modes available, both default to Arabic and English',()=>{
   const ocr=readFileSync(resolve(root,'js/image-local-ocr.js'),'utf8');
   assert.match(ocr,/\['ara','eng'\]/);
-  assert.match(ocr,/mode!=='accurate'/);
+  assert.match(ocr,/if\(mode==='accurate'\)/);
   assert.match(ocr,/processedImage\(/);
   assert.match(ocr,/worker\.recognize/);
   assert.ok(recognitionScore({text:'شاي 2 1000',confidence:80})>recognitionScore({text:'',confidence:0}));

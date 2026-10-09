@@ -1,7 +1,7 @@
 // Maria CFO v0.19: one descriptive label for each material-specific quantity.
 // Data is read from the original units, material_units and unit_conversions.
-import { unitDisplay } from './utils.js?v=0.19';
-import { prettyRelation } from './unit-display-conversion.js?v=0.19';
+import { unitDisplay } from './utils.js?v=0.20';
+import { prettyRelation } from './unit-display-conversion.js?v=0.20';
 
 const GENERAL_CODES = new Set(['KG','G','L','ML','PCS','PC','UNIT','DOZ','DOZEN']);
 export const CONTEXTUAL_UNIT_CODES = new Set([
@@ -46,7 +46,8 @@ export function validateNamedUnitDraft({name, materialId, amount, unitId=null, u
   const key=normalizedUnitName(cleanName);
   if(!key) return 'اكتب اسمًا واضحًا للوحدة، مثل «ملعقة سكر».';
   if(cleanName.length>120) return 'اسم الوحدة طويل جدًا.';
-  if(isVagueContextualName(cleanName)) return 'اسم الوحدة عام وقد يسبب التباسًا. اكتب اسم المادة معه مثل «ملعقة سكر» أو «ملعقة سمنة».';
+  const unchangedLegacyName=Boolean(unitId) && units.some(u=>String(u.id)===String(unitId) && normalizedUnitName(unitDisplay(u))===key);
+  if(isVagueContextualName(cleanName) && !unchangedLegacyName) return 'اسم الوحدة عام وقد يسبب التباسًا. اكتب اسم المادة معه مثل «ملعقة سكر» أو «ملعقة سمنة».';
   if(!materialId) return 'اختر المادة التي تنتمي إليها الوحدة.';
   if(!(Number(amount)>=0.00000001) || !Number.isFinite(Number(amount))) return 'اكتب قيمة صحيحة أكبر من صفر للوحدة.';
   if(units.some(u=>String(u.id)!==String(unitId||'') &&

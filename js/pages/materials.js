@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=0.19';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.19';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.19';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.19';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.19';
+import * as api from '../api.js?v=0.20';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.20';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.20';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.20';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.20';
+import { formatSmartStock } from '../material-stock-display.js?v=0.20';
 
 const PAGE_SIZE=10;
 
@@ -67,6 +68,9 @@ export async function renderMaterials(root) {
     let [rows, units] = await Promise.all([api.materials(), api.units()]);
     rows = await api.ensureMaterialCodes(rows);
     await Promise.all(rows.map(r=>api.ensureStandardMaterialUnits(r,units).catch(()=>null)));
+    let materialLinks=[];
+    try{materialLinks=await api.allMaterialUnitLinks();}
+    catch(error){console.warn('Material relationships unavailable for display.',error);}
 
     const state={query:'',page:1};
     root.innerHTML = `
@@ -111,7 +115,7 @@ export async function renderMaterials(root) {
       const shown=filtered.slice(start,start+PAGE_SIZE);
       count.textContent=`${filtered.length} مادة`;
       list.innerHTML=`
-        ${shown.length ? table(shown, units) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
+        ${shown.length ? table(shown, units, materialLinks) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
         ${filtered.length>PAGE_SIZE ? pagination(state.page,pages) : ''}`;
 
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
@@ -146,7 +150,7 @@ function pagination(page,pages){
     </div>`;
 }
 
-function table(rows, units) {
+function table(rows, units, materialLinks=[]) {
   return `
     <div class="table-wrap table-fit">
       <table class="table materials-table">
@@ -166,13 +170,15 @@ function table(rows, units) {
             const unit = materialUnit(r, units);
             const target = targetOf(r);
             const price = priceOf(r);
+            const shownStock=formatSmartStock(r,units,materialLinks,stockOf(r));
+            const shownTarget=target==null?null:formatSmartStock(r,units,materialLinks,target);
             return `
               <tr>
                 <td><strong>${esc(r.name)}</strong></td>
                 <td>${esc(unit || '—')}</td>
                 <td><span class="code-chip">${esc(materialCode(r))}</span></td>
-                <td><strong>${esc(stockOf(r))} ${esc(unit || '')}</strong></td>
-                <td>${target == null ? '—' : `${esc(target)} ${esc(unit || '')}`}</td>
+                <td><strong class="smart-stock-main" title="${esc(shownStock.original)}">${esc(shownStock.text)}</strong>${shownStock.converted?`<small class="smart-stock-sub">الأساس: ${esc(shownStock.original)}<span> · ${esc(shownStock.relationship)}</span></small>`:''}</td>
+                <td>${target == null ? '—' : `<span title="${esc(shownTarget.original)}">${esc(shownTarget.text)}</span>`}</td>
                 <td>${price != null ? `${money(price)} / ${esc(unit || 'وحدة')}` : '—'}</td>
                 <td>
                   <div class="material-actions">
