@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.21';
-import { esc, unitDisplay, todayISO } from '../utils.js?v=0.21';
-import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.21';
-import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.21';
-import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.21';
-import {usageSummary} from '../image-cloud-rules.js?v=0.21';
-import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.21';
+import * as api from '../api.js?v=0.22';
+import { esc, unitDisplay, todayISO } from '../utils.js?v=0.22';
+import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.22';
+import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.22';
+import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.22';
+import {usageSummary} from '../image-cloud-rules.js?v=0.22';
+import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.22';
 
 const T={
   fast:'\u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0633\u0631\u064a\u0639 - Engine 1',
@@ -151,7 +151,7 @@ export async function renderImages(root){
     const names=doc.type==='purchase'?catalog.materials:catalog.menu;
     const htmlRows=(doc.items||[]).map((item,i)=>`
       <tr data-image-item="${i}" aria-label="${esc(item.catalog_query||item.name||'')}">
-        <td><input data-field="name" value="${esc(item.name||'')}" placeholder="الاسم كما في الصورة" aria-label="اسم البند ${i+1}"><small class="muted-small">${esc(item.raw_line||'')}</small></td>
+        <td><input data-field="name" value="${esc(item.name||'')}" placeholder="الاسم كما في الصورة" aria-label="اسم البند ${i+1}"><small class="muted-small">${esc(item.raw_line||'')}</small>${item.review_note?`<small class="image-item-review-note" role="note">${esc(item.review_note)}</small>`:''}</td>
         <td class="image-catalog-cell">
           <input type="search" data-field="catalog_query" list="image-catalog-${doc.type}" autocomplete="off" value="${esc(item.catalog_query??(names.find(n=>String(n.id)===String(item.catalog_id))?.name||item.name||''))}" placeholder="${T.search}" aria-label="${T.search}">
           <input type="hidden" data-field="catalog_id" value="${esc(item.catalog_id||'')}">
@@ -524,7 +524,8 @@ export async function renderImages(root){
       const rows=reviewedOcrItemCandidates(doc.text,list);
       doc.items=autofillExactCatalog(rows,list).map(row=>({...row,unit_id:doc.type==='purchase'?(catalog.materials.find(m=>String(m.id)===String(row.catalog_id))?.base_unit_id||''):''}));
       doc.status='review';await saveLocalImage(doc);refresh();
-      if(!rows.length)toast('لم أجد بنودًا واضحة أو متطابقة. صحح النص أولًا أو أضفها يدويًا؛ لن أحوّل النص المشوش إلى فواتير.','error');
+      if(!rows.length)toast('\u0644\u0627 \u064a\u0645\u0643\u0646 \u062a\u0623\u0643\u064a\u062f \u0635\u0641\u0648\u0641 \u0627\u0644\u0646\u0635 \u0641\u064a \u062c\u062f\u0648\u0644 \u0645\u062a\u0637\u0627\u0628\u0642\u061b \u0635\u062d\u062d \u0627\u0644\u0646\u0635 \u0623\u0648 \u0623\u0636\u0641 \u0627\u0644\u0628\u0646\u0648\u062f \u064a\u062f\u0648\u064a\u064b\u0627.','error');
+      else {const flagged=rows.filter(row=>row.review_note).length;toast(`\u062a\u0645 \u062a\u062c\u0647\u064a\u0632 ${rows.length} \u0628\u0646\u0648\u062f \u0644\u0644\u0645\u0631\u0627\u062c\u0639\u0629${flagged?`\u060c ${flagged} \u062a\u062d\u062a\u0627\u062c \u062a\u062f\u0642\u064a\u0642\u064b\u0627 \u0625\u0636\u0627\u0641\u064a\u064b\u0627`:''}.`,'success');}
     });
     root.querySelector('[data-add-item]')?.addEventListener('click',async()=>{
       syncEditor();const doc=getCurrent();doc.items.push({id:crypto.randomUUID(),name:'',quantity:'',unit_price:'',discount:'0',catalog_id:'',unit_id:''});

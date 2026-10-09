@@ -1,13 +1,13 @@
-import * as api from '../api.js?v=0.21';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.21';
-import { esc, unitDisplay } from '../utils.js?v=0.21';
-import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.21';
+import * as api from '../api.js?v=0.22';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.22';
+import { esc, unitDisplay } from '../utils.js?v=0.22';
+import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.22';
 import {
   buildUnitCatalog,
   formatUnitAmount,
   normalizedUnitName,
   validateNamedUnitDraft,
-} from '../unit-catalog.js?v=0.21';
+} from '../unit-catalog.js?v=0.22';
 
 const TYPE_LABELS={
   dedicated:'وحدة خاصة بمادة', material:'تحويل مادة',

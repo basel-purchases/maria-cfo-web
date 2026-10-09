@@ -1,17 +1,21 @@
 // OCR.space through the authenticated Supabase Edge Function.
 // No OCR API key is ever shipped to the browser. Images are NOT stored in Supabase.
-import {supabase} from './supabase.js?v=0.21';
+import {supabase} from './supabase.js?v=0.22';
 
-import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=0.21';
+import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=0.22';
 async function edge(body){
   if(!supabase)throw new Error('SUPABASE_NOT_CONFIGURED');
   const {data,error}=await supabase.functions.invoke('ocr-space',{body});
   if(error){
     let message=error.message||'OCR_FUNCTION_ERROR';
     try{const remote=await error.context?.json?.();message=remote?.error||message;}catch(_){}
+    if(message==='OCR_ENGINE1_ARABIC_UNAVAILABLE_USE_ENGINE3')message='\u0645\u062d\u0631\u0643 OCR \u0627\u0644\u0633\u0631\u064a\u0639 \u0644\u0645 \u064a\u0642\u0628\u0644 \u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u062d\u0627\u0644\u064a\u064b\u0627. \u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0645\u062d\u0631\u0643 \u0627\u0644\u0642\u0648\u064a Engine 3.';
     throw new Error(message);
   }
-  if(!data?.ok)throw new Error(String(data?.error||'OCR_FUNCTION_ERROR'));
+  if(!data?.ok){
+    if(data?.error==='OCR_ENGINE1_ARABIC_UNAVAILABLE_USE_ENGINE3')throw new Error('\u0645\u062d\u0631\u0643 OCR \u0627\u0644\u0633\u0631\u064a\u0639 \u0644\u0645 \u064a\u0642\u0628\u0644 \u0627\u0644\u0639\u0631\u0628\u064a\u0629 \u062d\u0627\u0644\u064a\u064b\u0627. \u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0645\u062d\u0631\u0643 \u0627\u0644\u0642\u0648\u064a Engine 3.');
+    throw new Error(String(data?.error||'OCR_FUNCTION_ERROR'));
+  }
   return data;
 }
 export async function fetchOcrUsage(){

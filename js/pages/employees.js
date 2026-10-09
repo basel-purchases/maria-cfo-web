@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.21';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.21';
-import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.21';
-import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.21';
+import * as api from '../api.js?v=0.22';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.22';
+import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.22';
+import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.22';
 
-import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.21';
+import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.22';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة'};
 const ATTENDANCE_LABELS = {
   full: 'دوام كامل', partial: 'دوام جزئي', absent: 'غياب',

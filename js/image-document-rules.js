@@ -1,3 +1,4 @@
+import { parseColumnarOcrItems } from "./image-column-parser.js?v=0.22";
 // Deterministic extraction hints and validation; AI does not invent required values.
 const LETTERS=/[\p{L}]/u;
 export function normalizeArabicNumbers(value){
@@ -92,6 +93,8 @@ export function localStatus(doc,validation){
 // Known catalog items or credible Arabic lines containing both quantity and price
 // are offered for review; missing prices/quantities remain unfilled.
 export function reviewedOcrItemCandidates(text,catalog=[],limit=50){
+  const columnar=parseColumnarOcrItems(text,limit);
+  if(columnar.rows.length)return columnar.rows.map(row=>({...row,id:crypto.randomUUID()}));
   const rows=parseOcrLines(text,100);
   return rows.filter(row=>{
     if(exactCatalogId(row.name,catalog))return true;

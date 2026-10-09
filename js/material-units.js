@@ -1,7 +1,7 @@
-import * as api from './api.js?v=0.21';
-import { modal, toast, friendlyError } from './ui.js?v=0.21';
-import { esc, unitDisplay, num } from './utils.js?v=0.21';
-import { isContextualUnit, isProtectedUnit, isVagueContextualName, normalizedUnitName } from './unit-catalog.js?v=0.21';
+import * as api from './api.js?v=0.22';
+import { modal, toast, friendlyError } from './ui.js?v=0.22';
+import { esc, unitDisplay, num } from './utils.js?v=0.22';
+import { isContextualUnit, isProtectedUnit, isVagueContextualName, normalizedUnitName } from './unit-catalog.js?v=0.22';
 
 function unitById(units,id){
   return units.find(u=>String(u.id)===String(id));

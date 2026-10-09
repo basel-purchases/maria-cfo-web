@@ -1,3 +1,12 @@
+## Web v0.22 - OCR text-to-items correction
+
+- New conservative parsing for Engine 3 receipts whose text contains a name column followed by numeric columns.
+- No automatic creation of items during OCR. Button for manual conversion remains mandatory.
+- Derived unit prices and inconsistent totals receive review notices.
+- Engine 1 E201/Arabic error is mapped to a human-readable notice in OCR Edge Function.
+- No new database migration and no financial ledger changes.
+- Local regression tests for columnar receipts and mismatched alignment.
+
 ## Web v0.21 - OCR.space and Images UX
 
 - New `ocr-space` authenticated Supabase Edge Function; secret `OCR_SPACE_API_KEY` stays on the server.

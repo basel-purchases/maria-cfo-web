@@ -72,6 +72,7 @@ Deno.serve(async request=>{
       if(result?.IsErroredOnProcessing||Number(result?.OCRExitCode)===3||Number(result?.OCRExitCode)===4){
         const message=Array.isArray(result?.ErrorMessage)?result.ErrorMessage.join('; '):String(result?.ErrorMessage||result?.ErrorDetails||'OCR_PROCESSING_ERROR');
         // Never return credentials or the original request in provider errors.
+        if(engine===1 && /E201|language.+invalid/i.test(message))return err('OCR_ENGINE1_ARABIC_UNAVAILABLE_USE_ENGINE3',422);
         return err(message.slice(0,250),422);
       }
       const text=Array.isArray(result?.ParsedResults)?result.ParsedResults.map((part:{ParsedText?:string})=>part?.ParsedText||'').join('\n').trim():'';

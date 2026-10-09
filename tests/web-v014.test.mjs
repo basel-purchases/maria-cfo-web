@@ -79,13 +79,13 @@ test('all relative JS imports exist and are versioned',()=>{
         for(const m of text.matchAll(rx)){
           const relative=m[1].split('?')[0];
           assert.ok(existsSync(resolve(dir,relative)),`${abs} missing ${relative}`);
-          assert.match(m[1],/\?v=0\.21$/);
+          assert.match(m[1],/\?v=0\.22$/);
         }
       }
     }
   }
   check(root);
-  assert.match(index,/v=0\.21/);
+  assert.match(index,/v=0\.22/);
 });
 test('project ZIP contents do not need Git or config changes',()=>{
   assert.equal(existsSync(join(base,'config.js')),false);
