@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=0.17';
+import { esc } from './utils.js?v=0.18';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }
@@ -51,7 +51,18 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('recipe_save_verify_failed')) return 'لم يتم تأكيد حفظ المكوّن في قاعدة البيانات. لم نعرض نجاحًا وهميًا؛ أعد المحاولة بعد تحديث v0.7.';
   if(msg.includes('recipe_quantity_column_not_found')) return 'قاعدة البيانات تحتاج تحديث Maria CFO Web v0.7 قبل حفظ مكونات الوصفة.';
   if(msg.includes('save_menu_recipe_item_v07')&&msg.includes('not found')) return 'شغّل تحديث قاعدة البيانات v0.7 مرة واحدة في Supabase ثم أعد المحاولة.';
-  if(msg.includes('unit_in_use')) return 'لا يمكن حذف هذه الوحدة لأنها مستخدمة حاليًا.';
+  if(msg.includes('unit_name_too_generic')) return 'اسم الوحدة عام وقد يسبب الالتباس. اكتب اسم المادة معه مثل «ملعقة سكر». ';
+  if(msg.includes('unit_name_exists')) return 'اسم الوحدة مكرر. استخدم اسمًا خاصًا بالمادة مثل «ملعقة سكر» أو «ملعقة سمنة».';
+  if(msg.includes('unit_code_exists')) return 'كود الوحدة موجود بالفعل. جرّب اسمًا مختلفًا.';
+  if(msg.includes('unit_belongs_to_other_material')) return 'الوحدة مرتبطة بمادة أخرى. أنشئ اسمًا جديدًا يوضح المادة، مثل «ملعقة سمنة».';
+  if(msg.includes('unit_has_multiple_materials')) return 'هذه وحدة قديمة مرتبطة بأكثر من مادة. راجع التحويلات الحالية قبل حذفها أو تعديلها.';
+  if(msg.includes('unit_has_global_conversions')) return 'هذه الوحدة لها تحويل عام يؤثر في عدة مواد، فلا يمكن تحويلها إلى وحدة خاصة تلقائيًا.';
+  if(msg.includes('unit_system_readonly')) return 'الوحدات القياسية محمية. أنشئ وحدة جديدة باسم خاص بالمادة بدل تعديلها.';
+  if(msg.includes('unit_base_factor_must_be_one')) return 'قيمة الوحدة الأساسية للمادة يجب أن تساوي 1.';
+  if(msg.includes('unit_material_not_found')) return 'المادة المرتبطة لم تعد موجودة. حدّث الصفحة ثم جرّب مجددًا.';
+  if(msg.includes('unit_relation_required')) return 'اختر المادة وأدخل قيمة الوحدة بالنسبة لوحدة مخزونها الأساسية.';
+  if(msg.includes('invalid_material_unit_conversion')) return 'يجب أن تكون قيمة التحويل عددًا موجبًا صحيحًا.';
+  if(msg.includes('unit_in_use')) return 'لا يمكن حذف هذه الوحدة لأنها مستخدمة في مواد أو معاملات حالية أو سابقة.';
   if(msg.includes('unit_name_required')) return 'اكتب اسم الوحدة.';
   if(msg.includes('function')&&msg.includes('not found')) return 'هذه الخدمة لم تُحدّث على الخادم بعد.';
   return fallback;

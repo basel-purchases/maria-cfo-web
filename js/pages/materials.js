@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=0.17';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.17';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.17';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.17';
+import * as api from '../api.js?v=0.18';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.18';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.18';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.18';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.18';
 
 const PAGE_SIZE=10;
 
@@ -251,6 +252,10 @@ function addMaterial(root, units, rows) {
           return false;
         }
 
+        if(isVagueContextualName(unitText)){
+          toast('استخدم وحدة مخزون أساسية مثل غرام أو كيلوغرام، ثم أضف وحدة خاصة بالتحويلات باسم المادة.','error');
+          return false;
+        }
         let baseUnit=api.findUnitByText(unitText,units);
         if(!baseUnit){
           baseUnit=await api.resolveUnit(unitText,units);
@@ -427,7 +432,7 @@ async function manageMaterialUnits(root, units, material){
     const base=choices.find(x=>x.isBase);
     const m=modal({
       title:`وحدات ${material.name}`,
-      subtitle:'أضف أي وحدة مرتبطة بهذه المادة، مثل كرتونة أو سحارة أو ملعقة. نفس التحويل يعمل في الشراء والوصفات.',
+      subtitle:'أضف وحدة باسم واضح مثل «ملعقة سكر» أو «كرتونة ماء»، وحدد قيمتها بالوحدة الأساسية؛ نفس التحويل يعمل في الشراء والوصفات.',
       wide:true,
       submitText:'إغلاق',
       body:`

@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=0.17';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.17';
-import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.17';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.17';
+import * as api from '../api.js?v=0.18';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.18';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.18';
+import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.18';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.18';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
@@ -759,6 +760,10 @@ function addItem(root,id,mats,units,currency='SYP'){
 
     createBtn.disabled=true;
     try{
+      if(isVagueContextualName(unitText)){
+        toast('اختر وحدة مخزون أساسية مثل غرام أو قطعة، وأضف الملاعق والأكياس الخاصة من تحويلات المادة.','error');
+        return;
+      }
       let baseUnit=api.findUnitByText(unitText,units);
       if(!baseUnit){
         baseUnit=await api.resolveUnit(unitText,units);

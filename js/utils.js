@@ -106,8 +106,12 @@ export const unitDisplay = unit => {
   if(!unit) return '—';
   const code=String(unit.code??'').trim();
   const mapped=UNIT_LABELS[code.toUpperCase()];
-  if(mapped) return mapped;
   const name=String(unit.name??'').trim();
+  // A descriptive user-defined name must not be masked by a legacy code label.
+  // E.g. code SPOON with name 'ملعقة سكر' must never be displayed as 'ملعقة'.
+  if(name && (unit.is_material_specific === true || /^U_/i.test(code) ||
+      (unit.is_system === false && /[\u0600-\u06ff]/.test(name) && name !== mapped))) return name;
+  if(mapped) return mapped;
   if(name) return name;
   return code || '—';
 };

@@ -1,6 +1,7 @@
-import * as api from './api.js?v=0.17';
-import { modal, toast, friendlyError } from './ui.js?v=0.17';
-import { esc, unitDisplay, num } from './utils.js?v=0.17';
+import * as api from './api.js?v=0.18';
+import { modal, toast, friendlyError } from './ui.js?v=0.18';
+import { esc, unitDisplay, num } from './utils.js?v=0.18';
+import { isContextualUnit, isProtectedUnit, isVagueContextualName, normalizedUnitName } from './unit-catalog.js?v=0.18';
 
 function unitById(units,id){
   return units.find(u=>String(u.id)===String(id));
@@ -65,7 +66,7 @@ export async function openConversionDialog({
 
   const m=modal({
     title:'إضافة تحويل وحدة',
-    subtitle:'اختر وحدة مرجعية، ثم ابحث عن الوحدة الأخرى أو اكتب اسم وحدة جديدة لإضافتها تلقائيًا.',
+    subtitle:'اكتب اسمًا يميز المادة، مثل «ملعقة سكر» أو «ملعقة سمنة»، وحدد العلاقة. الوحدات القياسية مشتركة فقط عندما تكون قيمتها ثابتة.',
     submitText:'حفظ التحويل',
     body:`
       <div class="conversion-pair-grid" data-conversion-grid>
@@ -77,7 +78,7 @@ export async function openConversionDialog({
         </div>
         <div class="field new-unit-field">
           <label>الوحدة الأخرى</label>
-          <input name="new_unit_text" list="${listId}" placeholder="اكتب أو ابحث مثل: ملعقة، سحارة..." required autocomplete="off">
+          <input name="new_unit_text" list="${listId}" placeholder="مثل: ملعقة سكر، كيس رز 25 كغ..." required autocomplete="off">
           <datalist id="${listId}">${datalistOptions(units)}</datalist>
         </div>
       </div>
@@ -103,6 +104,10 @@ export async function openConversionDialog({
       try{
         const refId=String(fd.get('reference_unit')||'');
         const unitText=String(fd.get('new_unit_text')||'').trim();
+        if(isVagueContextualName(unitText)){
+          toast(`استخدم اسمًا محددًا مثل «${unitText} ${material.name}» بدل «${unitText}» وحدها.`, 'error');
+          return false;
+        }
         const factor=Number(fd.get('factor'));
         const inverse=fd.get('inverse_mode')==='1';
         if(!(factor>0)){
@@ -112,29 +117,49 @@ export async function openConversionDialog({
         const ref=choices.find(x=>String(x.unitId)===refId);
         if(!ref) throw new Error('REFERENCE_UNIT_NOT_FOUND');
 
-        let newUnit=api.findUnitByText(unitText,units);
-        if(!newUnit){
-          newUnit=await api.resolveUnit(unitText,units);
-          if(newUnit && !units.some(u=>String(u.id)===String(newUnit.id))) units.push(newUnit);
-        }
-        if(!newUnit?.id) throw new Error('UNIT_REQUIRED');
-        if(String(newUnit.id)===String(refId)){
-          toast('اختر وحدتين مختلفتين للتحويل.','error');
-          return false;
-        }
-
         // Default: 1 reference = factor other units.
         // Inverse: 1 other unit = factor reference units.
         const quantityInBase=inverse
           ? factor * ref.quantityInBase
           : ref.quantityInBase / factor;
+        if(!(quantityInBase>=0.00000001) || !Number.isFinite(quantityInBase)){
+          toast('قيمة التحويل صغيرة جدًا أو غير صحيحة.','error');
+          return false;
+        }
 
-        await api.saveMaterialUnit({
-          materialId:material.id,
-          unitId:newUnit.id,
-          quantityInBase,
-          isPurchaseUnit:false,
-        });
+        let newUnit=api.findUnitByText(unitText,units) ||
+          units.find(u=>normalizedUnitName(unitDisplay(u))===normalizedUnitName(unitText));
+        if(newUnit && String(newUnit.id)===String(refId)){
+          toast('اختر وحدتين مختلفتين للتحويل.','error');
+          return false;
+        }
+
+        // A generic spoon/bag/box cannot have different meanings for
+        // different materials: require a descriptive, dedicated unit name.
+        if(newUnit && isContextualUnit(newUnit) && !newUnit.is_material_specific){
+          toast(`«${unitDisplay(newUnit)}» اسم عام قد يسبب خلطًا. اكتب «${unitDisplay(newUnit)} ${material.name}» كوحدة مستقلة.`, 'error');
+          return false;
+        }
+
+        if(!newUnit){
+          const id=await api.saveNamedUnit({
+            name:unitText,materialId:material.id,quantityInBase,
+          });
+          newUnit=await api.one('units',id);
+          if(newUnit && !units.some(u=>String(u.id)===String(newUnit.id))) units.push(newUnit);
+        }else if(isProtectedUnit(newUnit)){
+          // Standard grams/kilograms/litres etc. remain shared and reusable.
+          await api.saveMaterialUnit({materialId:material.id,unitId:newUnit.id,quantityInBase,isPurchaseUnit:false});
+        }else{
+          // Existing custom units can only be used by their original material.
+          // This RPC atomically checks ownership and upgrades legacy custom
+          // units to material-specific without touching posted history.
+          await api.saveNamedUnit({
+            id:newUnit.id,name:newUnit.name || unitDisplay(newUnit),
+            materialId:material.id,quantityInBase,
+          });
+        }
+        if(!newUnit?.id) throw new Error('UNIT_REQUIRED');
         toast('تم حفظ التحويل.','success');
         if(onSaved) await onSaved(newUnit.id,newUnit);
         return true;

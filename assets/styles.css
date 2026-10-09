@@ -748,3 +748,24 @@ textarea:focus{border-color:var(--plum);box-shadow:0 0 0 3px rgba(111,71,101,.08
 
 /* v0.17: OCR confidence notice (never color alone). */
 .agent-confidence{font-size:.78rem;white-space:nowrap}.agent-low-confidence{color:#9e5324;background:#fff1d7;font-weight:700;border-radius:6px;padding:.15rem .45rem}
+
+/* v0.18: visible, descriptive unit conversions in Settings */
+.units-conversion-table{min-width:790px;table-layout:auto}
+.units-conversion-table td{vertical-align:middle;line-height:1.7}
+.units-conversion-table th:nth-child(1){width:22%}
+.units-conversion-table th:nth-child(2){width:42%}
+.units-conversion-table th:nth-child(3){width:18%}
+.units-conversion-table th:nth-child(4){width:18%}
+.unit-relations{display:grid;gap:3px;font-size:13px}
+.unit-relations>div{line-height:1.8}
+.unit-relations small{font-size:11px;color:var(--muted)}
+.unit-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;display:block;color:var(--muted);direction:ltr;text-align:right;margin-top:4px}
+.unit-status{display:inline-block;padding:4px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:11px;white-space:normal}
+.unit-status-dedicated,.unit-status-material{background:var(--sage-soft);color:#2d633f}
+.unit-status-duplicate,.unit-status-ambiguous{background:var(--amber-soft);color:#7f5417}
+.unit-status-unassigned{background:var(--rose-soft);color:var(--plum)}
+.units-guidance{line-height:1.9;color:var(--plum-dark);background:var(--surface-2);border:1px solid var(--line);padding:12px 16px;border-radius:14px;margin:14px 0}
+.units-warning{margin:12px 0}
+.named-unit-preview{background:var(--sage-soft);color:#2c5635;border-radius:13px;padding:13px 16px;font-size:15px;font-weight:700;line-height:1.8}
+.units-conversion-table .material-actions{flex-wrap:wrap;gap:5px}
+@media(max-width:720px){.units-conversion-table{min-width:720px}.units-guidance{font-size:12px}}

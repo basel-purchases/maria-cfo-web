@@ -1,230 +1,259 @@
-import * as api from '../api.js?v=0.17';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.17';
-import { esc, unitDisplay } from '../utils.js?v=0.17';
+import * as api from '../api.js?v=0.18';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.18';
+import { esc, unitDisplay } from '../utils.js?v=0.18';
+import {
+  buildUnitCatalog,
+  formatUnitAmount,
+  normalizedUnitName,
+  validateNamedUnitDraft,
+} from '../unit-catalog.js?v=0.18';
 
-export async function renderSettings(root) {
+const TYPE_LABELS={
+  dedicated:'وحدة خاصة بمادة', material:'تحويل مادة',
+  ambiguous:'علاقات متعددة تحتاج مراجعة', duplicate:'اسم متكرر يحتاج مراجعة',
+  global:'تحويل عام', shared:'وحدة مشتركة', base:'قياسية / أساسية',
+  unassigned:'بلا علاقة محددة',
+};
+
+function relationHtml(entry){
+  if(entry.isProtected && !entry.ambiguous){
+    if(entry.general.length) return `<div class="unit-relations">${entry.general.slice(0,2).map(s=>`<div>${esc(s)}</div>`).join('')}</div>`;
+    return `<span class="muted-small">وحدة قياس عامة${entry.related.length?`، مستخدمة في ${entry.related.length} مادة`:''}</span>`;
+  }
+  if(entry.related.length){
+    return `<div class="unit-relations">${entry.related.slice(0,3).map(r=>`<div>${esc(r.text)}</div>`).join('')}${entry.related.length>3?`<small>و${entry.related.length-3} علاقات أخرى</small>`:''}</div>`;
+  }
+  if(entry.general.length){
+    return `<div class="unit-relations">${entry.general.slice(0,2).map(s=>`<div>${esc(s)}</div>`).join('')}${entry.general.length>2?`<small>و${entry.general.length-2} تحويلات أخرى</small>`:''}</div>`;
+  }
+  if(entry.baseMaterials.length){
+    return `<span class="muted-small">1 ${esc(unitDisplay(entry.unit))} = 1 ${esc(unitDisplay(entry.unit))} (وحدة أساسية لدى ${esc(entry.baseMaterials.map(m=>m.name).slice(0,2).join('، '))})</span>`;
+  }
+  return '<span class="muted-small">لم تُحدّد علاقة لها بعد</span>';
+}
+
+export async function renderSettings(root, selectedTab='general') {
   root.innerHTML = loader();
   try {
-    const [settingsRows, units, cashboxes] = await Promise.all([
+    const [settingsRows, units, cashboxes, materials, materialUnits, unitConversions] = await Promise.all([
       api.list('app_settings', { limit: 1 }),
       api.units(),
       api.cashboxes(),
+      api.catalogMaterials(),
+      api.allMaterialUnitLinks(),
+      api.unitConversions(),
     ]);
     const s = settingsRows[0] || {};
+    const catalog=buildUnitCatalog({units,materials,materialUnits,unitConversions});
+    const baseUnits=new Map(units.map(u=>[String(u.id),u]));
+    const alerts=catalog.filter(x=>['ambiguous','duplicate'].includes(x.status));
+
     root.innerHTML = `
-      <div class="page-head">
-        <div>
-          <h2>الإعدادات</h2>
-          <p>الإعدادات العامة والوحدات التي يستخدمها Maria CFO في المواد والفواتير والوصفات.</p>
-        </div>
-      </div>
+      <div class="page-head"><div><h2>الإعدادات</h2>
+        <p>الإعدادات العامة والوحدات وتحويلات المواد المستخدمة في الفواتير والوصفات.</p></div></div>
       <div class="settings-tabs" role="tablist">
-        <button type="button" class="settings-tab active" data-settings-tab="general">عام</button>
-        <button type="button" class="settings-tab" data-settings-tab="units">الوحدات</button>
+        <button type="button" class="settings-tab" data-settings-tab="general">عام</button>
+        <button type="button" class="settings-tab" data-settings-tab="units">الوحدات وعلاقاتها</button>
         <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
       </div>
 
       <div data-settings-pane="general">
-      <div class="grid cols-2">
-        <div class="card">
-          <h3>إعدادات حالية</h3>
-          <div class="kv">
+        <div class="grid cols-2">
+          <div class="card"><h3>إعدادات حالية</h3><div class="kv">
             <div class="k">العملة الأساسية</div><div>${esc(s.base_currency_code || s.base_currency || 'SYP')}</div>
             <div class="k">العملة الثانوية</div><div>${esc(s.secondary_currency_code || s.secondary_currency || 'USD')}</div>
             <div class="k">Food Cost الافتراضي</div><div>${esc(s.default_food_cost_percent ?? '30')}%</div>
             <div class="k">المنطقة الزمنية</div><div>${esc(s.timezone || '—')}</div>
+          </div></div>
+          <div class="card"><h3>سعر الصرف</h3><p>تغيير السعر اليوم لا يعيد كتابة العمليات التاريخية.</p>
+            <div class="form-grid" style="margin-top:12px">
+              <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
+              <div class="field"><label>1 USD = كم SYP</label><input id="fx-rate" type="number" step="any"></div>
+            </div><div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
+          </div>
+          <div class="card soft"><h3>جلسة الدخول</h3><p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>
+            <div class="quick-actions"><button class="btn secondary" id="settings-logout">تسجيل الخروج</button></div>
           </div>
         </div>
-        <div class="card">
-          <h3>سعر الصرف</h3>
-          <p>تغيير السعر اليوم لا يعيد كتابة العمليات التاريخية.</p>
-          <div class="form-grid" style="margin-top:12px">
-            <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
-            <div class="field"><label>1 USD = كم SYP</label><input id="fx-rate" type="number" step="any"></div>
-          </div>
-          <div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
-        </div>
-        <div class="card soft">
-          <h3>جلسة الدخول</h3>
-          <p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>
-          <div class="quick-actions"><button class="btn secondary" id="settings-logout">تسجيل الخروج</button></div>
-        </div>
-      </div>
       </div>
 
       <div data-settings-pane="payroll" hidden>
         <div class="card settings-payroll-box">
           <h3>صندوق دفع الرواتب</h3>
           <p>اختر صندوقًا نشطًا واحدًا. تُصرف رواتب الموظفين منه عبر حركة مالية موثقة، ولا تُخصم الرواتب من صندوق آخر تلقائيًا.</p>
-          <div class="form-grid" style="margin-top:18px">
-            <div class="field"><label>الصندوق الافتراضي للرواتب</label>
-              <select id="payroll-cashbox">
-                <option value="">— اختر الصندوق —</option>
-                ${cashboxes.filter(b=>b.is_active!==false).map(b=>`<option value="${esc(b.id)}" ${b.id===s.payroll_cashbox_id?'selected':''}>${esc(b.name)}</option>`).join('')}
-              </select>
-            </div>
-          </div>
+          <div class="form-grid" style="margin-top:18px"><div class="field"><label>الصندوق الافتراضي للرواتب</label>
+            <select id="payroll-cashbox"><option value="">— اختر الصندوق —</option>
+            ${cashboxes.filter(b=>b.is_active!==false).map(b=>`<option value="${esc(b.id)}" ${b.id===s.payroll_cashbox_id?'selected':''}>${esc(b.name)}</option>`).join('')}
+            </select></div></div>
           <div class="quick-actions"><button class="btn" id="save-payroll-cashbox">حفظ صندوق الرواتب</button><a class="btn secondary" href="#/payroll">عرض المستحقات</a></div>
           <p class="metric-note">لا تغيّر هذه الإعدادات الصندوق المسجّل في الدفعات التاريخية.</p>
         </div>
       </div>
 
       <div data-settings-pane="units" hidden>
-      <div class="card units-settings-card">
-        <div class="settings-card-head">
-          <div>
-            <h3>الوحدات</h3>
-            <p>أضف أو عدّل أسماء الوحدات. إذا كانت وحدة مستخدمة في بيانات حالية فلن يسمح النظام بحذفها حمايةً للبيانات.</p>
+        <div class="card units-settings-card">
+          <div class="settings-card-head"><div>
+            <h3>دليل الوحدات وقيم التحويل</h3>
+            <p>لكل وحدة خاصة اسم واضح وقيمة واحدة مرتبطة بمادة محددة. مثل: 1 ملعقة سكر = 5 غرام من السكر.</p>
+          </div><button type="button" class="btn add-unit">إضافة وحدة وعلاقتها</button></div>
+          <div class="units-guidance">
+            <strong>لمنع الالتباس:</strong> استخدم «ملعقة سكر» و«ملعقة سمنة» بدل تكرار «ملعقة» بقيم مختلفة.
+            الوحدات القياسية مثل الغرام والكيلوغرام مشتركة، أما الوحدات الخاصة فترتبط بمادة واحدة.
           </div>
-          <button type="button" class="btn add-unit">إضافة وحدة</button>
+          ${alerts.length?`<div class="notice units-warning"><strong>${alerts.length} وحدة تحتاج مراجعة:</strong> توجد أسماء مكررة أو وحدات قديمة ذات علاقات متعددة. لن ندمجها أو نغيّر كمياتها تلقائيًا.</div>`:''}
+          <div class="list-toolbar compact-toolbar"><div class="search-box"><span aria-hidden="true">⌕</span>
+            <input id="unit-search" type="search" placeholder="ابحث عن الوحدة أو المادة أو قيمة التحويل" autocomplete="off">
+          </div><div class="list-count" id="unit-count">${units.length} وحدة</div></div>
+          <div id="unit-list"></div>
+          <p class="metric-note">تعديل قيمة التحويل يؤثر في العمليات الجديدة والمسودات التي تستخدمها. السجلات المالية المنشورة لا تُعاد كتابتها. ولا يمكن حذف وحدة ما زالت مستخدمة.</p>
         </div>
-        <div class="list-toolbar compact-toolbar">
-          <div class="search-box">
-            <span aria-hidden="true">⌕</span>
-            <input id="unit-search" type="search" placeholder="ابحث باسم الوحدة أو الكود" autocomplete="off">
-          </div>
-          <div class="list-count" id="unit-count">${units.length} وحدة</div>
-        </div>
-        <div id="unit-list"></div>
-      </div>
       </div>`;
 
     const tabs=[...root.querySelectorAll('[data-settings-tab]')];
     const panes=[...root.querySelectorAll('[data-settings-pane]')];
-    tabs.forEach(tab=>{
-      tab.onclick=()=>{
-        const key=tab.dataset.settingsTab;
-        tabs.forEach(x=>x.classList.toggle('active',x===tab));
-        panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
-      };
-    });
+    const setTab=key=>{
+      tabs.forEach(tab=>{
+        const active=tab.dataset.settingsTab===key;
+        tab.classList.toggle('active',active);
+        tab.setAttribute('aria-selected',String(active));
+      });
+      panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
+    };
+    tabs.forEach(tab=>{tab.onclick=()=>setTab(tab.dataset.settingsTab);});
+    setTab(['general','payroll','units'].includes(selectedTab)?selectedTab:'general');
 
-    root.querySelector('#save-payroll-cashbox').onclick = async () => {
+    root.querySelector('#save-payroll-cashbox').onclick=async()=>{
       const id=root.querySelector('#payroll-cashbox').value;
       if(!id){toast('اختر صندوقًا لدفع الرواتب.','error');return;}
-      try {
-        await api.setPayrollCashbox(id);
-        toast('تم حفظ صندوق الرواتب.','success');
-      } catch(e){toast(friendlyError(e),'error');}
+      try{await api.setPayrollCashbox(id);toast('تم حفظ صندوق الرواتب.','success');}
+      catch(e){toast(friendlyError(e),'error');}
     };
-
-    root.querySelector('#fx-save').onclick = async () => {
-      try {
-        const rate = Number(root.querySelector('#fx-rate').value);
-        if (!(rate > 0)) {
-          toast('أدخل سعر صرف صحيح.', 'error');
-          return;
-        }
-        try {
-          await api.rpc('set_exchange_rate', {
-            p_currency_code: 'USD',
-            p_rate_to_base: rate,
-            p_effective_at: new Date().toISOString(),
-          });
-        } catch (_) {
-          await api.rpc('set_exchange_rate', { p_currency_code: 'USD', p_rate: rate });
-        }
-        toast('تم حفظ سعر الصرف', 'success');
-      } catch (e) {
-        toast(friendlyError(e), 'error');
-      }
+    root.querySelector('#fx-save').onclick=async()=>{
+      try{
+        const rate=Number(root.querySelector('#fx-rate').value);
+        if(!(rate>0)){toast('أدخل سعر صرف صحيح.','error');return;}
+        try{await api.rpc('set_exchange_rate',{
+          p_currency_code:'USD',p_rate_to_base:rate,p_effective_at:new Date().toISOString(),
+        });}catch(_){await api.rpc('set_exchange_rate',{p_currency_code:'USD',p_rate:rate});}
+        toast('تم حفظ سعر الصرف','success');
+      }catch(e){toast(friendlyError(e),'error');}
     };
-
-    root.querySelector('#settings-logout').onclick = async () => {
-      await api.signOut();
-      location.hash = '';
-      location.reload();
-    };
+    root.querySelector('#settings-logout').onclick=async()=>{await api.signOut();location.hash='';location.reload();};
 
     const list=root.querySelector('#unit-list');
     const search=root.querySelector('#unit-search');
     const count=root.querySelector('#unit-count');
     const draw=()=>{
-      const q=String(search.value||'').trim().toLowerCase();
-      const filtered=units.filter(u=>{
+      const q=normalizedUnitName(search.value);
+      const filtered=catalog.filter(entry=>{
         if(!q) return true;
-        return String(u.name||'').toLowerCase().includes(q) || String(u.code||'').toLowerCase().includes(q);
+        return [unitDisplay(entry.unit),entry.unit.name,entry.unit.code,
+          ...entry.related.map(r=>r.text),...entry.general]
+          .some(value=>normalizedUnitName(value).includes(q));
       });
       count.textContent=`${filtered.length} وحدة`;
-      list.innerHTML=`
-        <div class="table-wrap table-fit">
-          <table class="table compact-table units-table">
-            <thead><tr><th>اسم الوحدة</th><th>الكود</th><th>إجراء</th></tr></thead>
-            <tbody>
-              ${filtered.map(u=>`
-                <tr>
-                  <td><strong>${esc(unitDisplay(u))}</strong></td>
-                  <td><span class="code-chip">${esc(u.code||'—')}</span></td>
-                  <td>
-                    <div class="material-actions">
-                      <button type="button" class="mini-btn edit-unit" data-id="${esc(u.id)}">تعديل</button>
-                      <button type="button" class="mini-btn danger-lite delete-unit" data-id="${esc(u.id)}">حذف</button>
-                    </div>
-                  </td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>`;
+      list.innerHTML=`<div class="table-wrap table-fit"><table class="table compact-table units-table units-conversion-table">
+        <thead><tr><th>اسم الوحدة</th><th>قيمتها وعلاقتها</th><th>النوع</th><th>الإجراء</th></tr></thead>
+        <tbody>${filtered.map(entry=>`<tr>
+          <td><strong>${esc(unitDisplay(entry.unit))}</strong><small class="unit-code">${esc(entry.unit.code||'—')}</small></td>
+          <td>${relationHtml(entry)}</td>
+          <td><span class="unit-status unit-status-${esc(entry.status)}">${esc(TYPE_LABELS[entry.status]||entry.status)}</span></td>
+          <td><div class="material-actions">
+            ${entry.canEdit?`<button type="button" class="mini-btn edit-unit" data-id="${esc(entry.unit.id)}">تعديل القيمة والاسم</button>`:''}
+            ${entry.canDelete?`<button type="button" class="mini-btn danger-lite delete-unit" data-id="${esc(entry.unit.id)}">حذف</button>`:''}
+            ${!entry.canEdit && !entry.canDelete?'<span class="muted-small">محميّة / تحتاج مراجعة</span>':''}
+          </div></td></tr>`).join('') || '<tr><td colspan="4" class="empty-table">لا توجد وحدات تطابق البحث.</td></tr>'}
+        </tbody></table></div>`;
 
       list.querySelectorAll('.edit-unit').forEach(btn=>{
-        const u=units.find(x=>String(x.id)===String(btn.dataset.id));
-        if(u) btn.onclick=()=>unitEditor(root,u);
+        const entry=catalog.find(x=>String(x.unit.id)===String(btn.dataset.id));
+        if(entry) btn.onclick=()=>unitEditor(root,entry,{units,materials,catalog,baseUnits});
       });
       list.querySelectorAll('.delete-unit').forEach(btn=>{
-        const u=units.find(x=>String(x.id)===String(btn.dataset.id));
-        if(!u) return;
+        const entry=catalog.find(x=>String(x.unit.id)===String(btn.dataset.id));
+        if(!entry) return;
         btn.onclick=async()=>{
-          if(!(await confirmBox(`حذف وحدة «${unitDisplay(u)}»؟ لن يتم الحذف إذا كانت مستخدمة في مواد أو تحويلات.`,'حذف'))) return;
+          const message=`حذف وحدة «${unitDisplay(entry.unit)}»${entry.related[0]?' وعلاقتها بالمادة':''}؟ لن يُسمح بالحذف إذا كانت مستخدمة في أي سجل مالي أو وصفة.`;
+          if(!(await confirmBox(message,'حذف الوحدة'))) return;
           try{
-            await api.deleteCustomUnit(u.id);
-            toast('تم حذف الوحدة.','success');
-            await renderSettings(root);
-          }catch(e){
-            const msg=String(e?.message||e||'').toLowerCase();
-            if(msg.includes('unit_in_use') || msg.includes('foreign key')) toast('لا يمكن حذف هذه الوحدة لأنها مستخدمة حاليًا. يمكنك تعديل اسمها بدلًا من ذلك.','error');
-            else toast(friendlyError(e,'تعذر حذف الوحدة.'),'error');
-          }
+            await api.deleteNamedUnit(entry.unit.id);
+            toast('تم حذف الوحدة وعلاقتها غير المستخدمة.','success');
+            await renderSettings(root,'units');
+          }catch(e){toast(friendlyError(e,'تعذر حذف الوحدة. قد تكون مستخدمة حاليًا.'),'error');}
         };
       });
     };
     search.addEventListener('input',draw);
-    root.querySelector('.add-unit').onclick=()=>unitEditor(root,null);
+    root.querySelector('.add-unit').onclick=()=>unitEditor(root,null,{units,materials,catalog,baseUnits});
     draw();
-  } catch (e) {
-    root.innerHTML = `<div class="notice">${friendlyError(e)}</div>`;
-  }
+  }catch(e){root.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
 }
 
-function unitEditor(root,unit){
-  modal({
-    title:unit?'تعديل الوحدة':'إضافة وحدة',
-    subtitle:'يمكن استخدام الوحدة الجديدة مباشرة في تحويلات المواد والوصفات.',
-    body:`
-      <div class="form-grid">
-        <div class="field">
-          <label>اسم الوحدة</label>
-          <input name="name" value="${esc(unit?.name||'')}" required autocomplete="off" placeholder="مثال: سحارة">
-        </div>
-        <div class="field">
-          <label>الكود <span class="optional-badge">اختياري</span></label>
-          <input name="code" value="${esc(unit?.code||'')}" autocomplete="off" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا">
-        </div>
-      </div>`,
+function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
+  const unit=entry?.unit||null;
+  const existing=entry?.materialLinks?.[0]||null;
+  const linkedMaterial=existing ? materials.find(m=>String(m.id)===String(existing.material_id)) : entry?.baseMaterials?.[0];
+  const currentId=String(linkedMaterial?.id||'');
+  const unitName=unitDisplay(unit);
+  const m=modal({
+    title:unit?'تعديل الوحدة وقيمة التحويل':'إضافة وحدة مع علاقتها',
+    subtitle:'تُعرّف الوحدة مرة واحدة باسم واضح وبقيمة من وحدة مخزون مادة محددة.',
+    body:`<div class="form-grid">
+      <div class="field full"><label>اسم الوحدة المميز</label>
+        <input name="unit_name" value="${esc(unit?.name||'')}" required maxlength="120" placeholder="مثال: ملعقة سكر أو ملعقة سمنة" autocomplete="off">
+        <small>لا تستخدم «ملعقة» وحدها عندما تختلف قيمتها باختلاف المادة.</small>
+      </div>
+      <div class="field"><label>المادة المرتبطة</label>
+        ${existing?`<input type="hidden" name="material_id" value="${esc(currentId)}"><input value="${esc(linkedMaterial?.name||'—')}" disabled>`:
+          `<select name="material_id" required><option value="">— اختر المادة —</option>
+            ${materials.map(mat=>`<option value="${esc(mat.id)}" ${String(mat.id)===currentId?'selected':''}>${esc(mat.name)}</option>`).join('')}
+          </select>`}
+      </div>
+      <div class="field"><label>قيمة الوحدة بوحدة مخزون المادة</label>
+        <div class="input-with-suffix"><input name="amount" type="number" step="any" min="0.00000001" value="${existing?esc(existing.quantity_in_base):entry?.baseMaterials?.length?'1':''}" required>
+          <span class="input-suffix" data-base-label>الوحدة الأساسية</span></div>
+      </div>
+      <div class="field full"><div class="named-unit-preview" data-relation-preview></div></div>
+      <div class="field full"><p class="metric-note">مثال: «ملعقة سكر» بقيمة 5 ومادة «سكر» وحدتها الأساسية «غرام» تعني أن 1 ملعقة سكر = 5 غرام من السكر. لا تتغير قيود البيع والمشتريات السابقة.</p></div>
+    </div>`,
     submitText:unit?'حفظ التعديل':'إضافة الوحدة',
     onSubmit:async fd=>{
       try{
-        await api.saveCustomUnit({
+        const payload={
           id:unit?.id||null,
-          name:fd.get('name'),
-          code:fd.get('code'),
+          name:fd.get('unit_name'),
+          materialId:fd.get('material_id'),
+          quantityInBase:fd.get('amount'),
+        };
+        const error=validateNamedUnitDraft({
+          name:payload.name, materialId:payload.materialId,
+          amount:payload.quantityInBase,unitId:payload.id,units,catalog,
         });
-        toast(unit?'تم تعديل الوحدة.':'تمت إضافة الوحدة.','success');
-        await renderSettings(root);
+        if(error){toast(error,'error');return false;}
+        await api.saveNamedUnit(payload);
+        toast(unit?'تم تحديث اسم الوحدة وقيمة تحويلها.':'تمت إضافة الوحدة وعلاقتها.','success');
+        await renderSettings(root,'units');
         return true;
-      }catch(e){
-        toast(friendlyError(e,'تعذر حفظ الوحدة. قد يكون الاسم أو الكود مستخدمًا مسبقًا.'),'error');
-        return false;
-      }
+      }catch(e){toast(friendlyError(e,'تعذر حفظ الوحدة وعلاقتها.'),'error');return false;}
     },
   });
+  const form=m.form;
+  const materialEl=form.querySelector('[name="material_id"]');
+  const amountEl=form.querySelector('[name="amount"]');
+  const nameEl=form.querySelector('[name="unit_name"]');
+  const preview=form.querySelector('[data-relation-preview]');
+  const suffix=form.querySelector('[data-base-label]');
+  const refresh=()=>{
+    const mat=materials.find(x=>String(x.id)===String(materialEl?.value));
+    const base=baseUnits.get(String(mat?.base_unit_id));
+    suffix.textContent=unitDisplay(base);
+    const name=String(nameEl.value||'الوحدة').trim();
+    const amount=formatUnitAmount(amountEl.value);
+    preview.textContent=mat
+      ? `1 ${name} = ${amount} ${unitDisplay(base)} من ${mat.name}`
+      : 'اختر المادة لتظهر علاقة الوحدة وقيمتها.';
+  };
+  [materialEl,amountEl,nameEl].forEach(el=>el?.addEventListener('input',refresh));
+  materialEl?.addEventListener('change',refresh);
+  refresh();
 }

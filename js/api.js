@@ -1,6 +1,7 @@
-import { supabase, configured } from './supabase.js?v=0.17';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.17';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.17';
+import { supabase, configured } from './supabase.js?v=0.18';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.18';
+import { isVagueContextualName } from './unit-catalog.js?v=0.18';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.18';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -179,8 +180,21 @@ export async function saveMaterialInitialState({materialId,openingQuantity=null,
   }
 }
 
+// A paged catalog read prevents silent truncation by PostgREST's max-rows.
+export async function catalogRows(table,select='*'){
+  const out=[];
+  const pageSize=500;
+  for(let start=0;start<100000;start+=pageSize){
+    const rows=await dataOrThrow(need().from(table).select(select)
+      .order('id',{ascending:true}).range(start,start+pageSize-1));
+    out.push(...rows);
+    if(rows.length<pageSize) return out;
+  }
+  throw new Error('UNIT_CATALOG_TOO_LARGE');
+}
+
 export async function units(){
-  const rows=await list('units',{order:'code',ascending:true,limit:300});
+  const rows=await catalogRows('units');
   const preferred=[
     'PCS','TRAY','SAHARA','CAN','CARTON','BOX','PACK','PACKET','SACK','BAG',
     'KG','G','L','ML','SACHET','SPOON','TBSP','TSP','SCOOP','CUP','GLASS',
@@ -195,6 +209,32 @@ export async function units(){
     const br=rank.has(bc)?rank.get(bc):999;
     return ar-br || ac.localeCompare(bc);
   });
+}
+
+export async function allMaterialUnitLinks(){
+  return catalogRows('material_units','id,material_id,unit_id,quantity_in_base,is_purchase_unit');
+}
+
+export async function unitConversions(){
+  return catalogRows('unit_conversions');
+}
+
+export async function saveNamedUnit({id=null,name,materialId,quantityInBase}){
+  return rpc('save_named_unit_v018',{
+    p_unit_id:id || null,
+    p_name:String(name||'').trim(),
+    p_code:null,
+    p_material_id:materialId,
+    p_quantity_in_base:Number(quantityInBase),
+  });
+}
+
+export async function deleteNamedUnit(id){
+  return rpc('delete_named_unit_v018',{p_unit_id:id});
+}
+
+export async function catalogMaterials(){
+  return catalogRows('materials','id,name,base_unit_id');
 }
 
 export async function materialUnits(materialId){
@@ -467,6 +507,7 @@ export async function saveCustomUnit({id=null,name,code=null}){
 export async function resolveUnit(value,allUnits=[]){
   const clean=String(value||'').trim();
   if(!clean) throw new Error('UNIT_REQUIRED');
+  if(isVagueContextualName(clean)) throw new Error('UNIT_NAME_TOO_GENERIC');
   const found=findUnitByText(clean,allUnits);
   if(found) return found;
   const id=await saveCustomUnit({name:clean});

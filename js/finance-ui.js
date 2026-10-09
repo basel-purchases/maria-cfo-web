@@ -1,4 +1,4 @@
-import { esc, money, pick } from './utils.js?v=0.17';
+import { esc, money, pick } from './utils.js?v=0.18';
 
 const n=(value)=>Number.isFinite(Number(value))?Number(value):0;
 export function financialCard(title,value,{currency=true,foot='',tone='',kind=''}={}){
