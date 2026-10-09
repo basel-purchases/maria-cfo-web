@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.18';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.18';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.18';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.18';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.18';
+import * as api from '../api.js?v=0.19';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.19';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.19';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.19';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.19';
 
 const PAGE_SIZE=10;
 

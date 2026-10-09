@@ -1,6 +1,7 @@
-// Maria CFO v0.18: one descriptive label for each material-specific quantity.
+// Maria CFO v0.19: one descriptive label for each material-specific quantity.
 // Data is read from the original units, material_units and unit_conversions.
-import { unitDisplay } from './utils.js?v=0.18';
+import { unitDisplay } from './utils.js?v=0.19';
+import { prettyRelation } from './unit-display-conversion.js?v=0.19';
 
 const GENERAL_CODES = new Set(['KG','G','L','ML','PCS','PC','UNIT','DOZ','DOZEN']);
 export const CONTEXTUAL_UNIT_CODES = new Set([
@@ -104,7 +105,7 @@ export function buildUnitCatalog({units=[],materials=[],materialUnits=[],unitCon
       return {
         material:mat,
         factor:Number(link.quantity_in_base),
-        text:`1 ${unitDisplay(unit)} = ${formatUnitAmount(link.quantity_in_base)} ${unitDisplay(base)} (${mat?.name||'مادة غير معروفة'})`,
+        text:`${prettyRelation(unit,base,link.quantity_in_base,units,formatUnitAmount)||`1 ${unitDisplay(unit)} = ${formatUnitAmount(link.quantity_in_base)} ${unitDisplay(base)}`} (${mat?.name||'مادة غير معروفة'})`,
       };
     });
     const general=generalRelations.map(rel=>{

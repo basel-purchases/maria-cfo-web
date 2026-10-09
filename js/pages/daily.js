@@ -1,6 +1,6 @@
-import * as api from '../api.js?v=0.18';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.18';
-import { esc,money,dateOnly,statusBadge,todayISO,num } from '../utils.js?v=0.18';
+import * as api from '../api.js?v=0.19';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.19';
+import { esc,money,dateOnly,statusBadge,todayISO,num } from '../utils.js?v=0.19';
 
 function inventoryMinimum(r){
   const keys=[

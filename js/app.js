@@ -1,25 +1,26 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.18';
-import * as api from './api.js?v=0.18';
-import { esc } from './utils.js?v=0.18';
-import { toast, friendlyError, modal } from './ui.js?v=0.18';
-import { renderDashboard } from './pages/dashboard.js?v=0.18';
-import { renderHub } from './pages/hubs.js?v=0.18';
-import { renderMaterials } from './pages/materials.js?v=0.18';
-import { renderSuppliers } from './pages/suppliers.js?v=0.18';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.18';
-import { renderMenu } from './pages/menu.js?v=0.18';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.19';
+import * as api from './api.js?v=0.19';
+import { esc } from './utils.js?v=0.19';
+import { toast, friendlyError, modal } from './ui.js?v=0.19';
+import { renderDashboard } from './pages/dashboard.js?v=0.19';
+import { renderHub } from './pages/hubs.js?v=0.19';
+import { renderMaterials } from './pages/materials.js?v=0.19';
+import { renderSuppliers } from './pages/suppliers.js?v=0.19';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.19';
+import { renderMenu } from './pages/menu.js?v=0.19';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.18';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.18';
-import { renderEvents } from './pages/events.js?v=0.18';
-import { renderReports } from './pages/reports.js?v=0.18';
-import { renderAssistant } from './pages/assistant.js?v=0.18';
-import { renderSettings } from './pages/settings.js?v=0.18';
+} from './pages/daily.js?v=0.19';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.19';
+import { renderEvents } from './pages/events.js?v=0.19';
+import { renderReports } from './pages/reports.js?v=0.19';
+import { renderAssistant } from './pages/assistant.js?v=0.19';
+import { renderImages } from './pages/images.js?v=0.19';
+import { renderSettings } from './pages/settings.js?v=0.19';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -35,6 +36,7 @@ const nav = [
   ['#/events', 'الحفلات'],
   ['#/reports-hub', 'الإحصائيات والتقارير'],
   ['#/assistant', 'المساعد الذكي'],
+  ['#/images', 'الصور'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -99,7 +101,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.18</div>
+        <div class="sidebar-foot">Web v0.19</div>
       </aside>
 
       <main class="main">
@@ -266,7 +268,7 @@ function active(hash) {
     materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees',
-    'events-list': 'events', reports: 'reports-hub',
+    'events-list': 'events', reports: 'reports-hub', images: 'images',
   }[key] || key;
   app.querySelectorAll('.nav a').forEach((a) => {
     const routeKey = a.dataset.route.replace('#/', '');
@@ -295,6 +297,7 @@ async function route() {
     events: 'الحفلات',
     'reports-hub': 'الإحصائيات والتقارير',
     assistant: 'المساعد الذكي',
+    images: 'الصور والمعالجة المحلية',
     settings: 'الإعدادات',
     materials: 'المواد والكميات والأسعار',
     suppliers: 'الموردون',
@@ -341,6 +344,7 @@ async function route() {
       case 'events-list': return renderEvents(root);
       case 'reports': return renderReports(root);
       case 'assistant': return renderAssistant(root);
+      case 'images': return renderImages(root);
       case 'settings': return renderSettings(root);
       default:
         location.hash = '#/dashboard';
