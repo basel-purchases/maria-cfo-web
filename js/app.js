@@ -1,26 +1,26 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.20';
-import * as api from './api.js?v=0.20';
-import { esc } from './utils.js?v=0.20';
-import { toast, friendlyError, modal } from './ui.js?v=0.20';
-import { renderDashboard } from './pages/dashboard.js?v=0.20';
-import { renderHub } from './pages/hubs.js?v=0.20';
-import { renderMaterials } from './pages/materials.js?v=0.20';
-import { renderSuppliers } from './pages/suppliers.js?v=0.20';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.20';
-import { renderMenu } from './pages/menu.js?v=0.20';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.21';
+import * as api from './api.js?v=0.21';
+import { esc } from './utils.js?v=0.21';
+import { toast, friendlyError, modal } from './ui.js?v=0.21';
+import { renderDashboard } from './pages/dashboard.js?v=0.21';
+import { renderHub } from './pages/hubs.js?v=0.21';
+import { renderMaterials } from './pages/materials.js?v=0.21';
+import { renderSuppliers } from './pages/suppliers.js?v=0.21';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.21';
+import { renderMenu } from './pages/menu.js?v=0.21';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.20';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.20';
-import { renderEvents } from './pages/events.js?v=0.20';
-import { renderReports } from './pages/reports.js?v=0.20';
-import { renderAssistant } from './pages/assistant.js?v=0.20';
-import { renderImages } from './pages/images.js?v=0.20';
-import { renderSettings } from './pages/settings.js?v=0.20';
+} from './pages/daily.js?v=0.21';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.21';
+import { renderEvents } from './pages/events.js?v=0.21';
+import { renderReports } from './pages/reports.js?v=0.21';
+import { renderAssistant } from './pages/assistant.js?v=0.21';
+import { renderImages } from './pages/images.js?v=0.21';
+import { renderSettings } from './pages/settings.js?v=0.21';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -101,7 +101,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.20</div>
+        <div class="sidebar-foot">Web v0.21</div>
       </aside>
 
       <main class="main">
@@ -297,7 +297,7 @@ async function route() {
     events: 'الحفلات',
     'reports-hub': 'الإحصائيات والتقارير',
     assistant: 'المساعد الذكي',
-    images: 'الصور والمعالجة المحلية',
+    images: 'الصور - OCR.space',
     settings: 'الإعدادات',
     materials: 'المواد والكميات والأسعار',
     suppliers: 'الموردون',

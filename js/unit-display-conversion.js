@@ -1,6 +1,6 @@
 // v0.19: Presentation-only metric conversions. Inventory base units and historic
 // quantity_in_base always remain unchanged in PostgreSQL.
-import { unitDisplay } from './utils.js?v=0.20';
+import { unitDisplay } from './utils.js?v=0.21';
 
 const PACKAGE_CODES=new Set(['CARTON','BOX','PACK','PACKET','TRAY','BAG','SACK','CRATE']);
 

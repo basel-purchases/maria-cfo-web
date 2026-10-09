@@ -1,3 +1,13 @@
+## Web v0.21 - OCR.space and Images UX
+
+- New `ocr-space` authenticated Supabase Edge Function; secret `OCR_SPACE_API_KEY` stays on the server.
+- Per-engine attempt counters (day and month) via owner-only audit table, not provider balance.
+- Horizontal gallery, full-width review, cashbox in publish panel; fast/strong cloud OCR.
+- OCR only updates editable text; user alone starts extracting draft items.
+- Searchable catalog, explicit new-material base unit, new menu item dialog with recipe ingredients.
+- Financial posting still requires explicit confirmation and uses existing RPCs.
+- Previous account data and schema unaffected except audit-only v0.21 table.
+
 # سجل التغييرات — Maria CFO Web v0.20
 
 - عرض الرصيد بوحدات مفهومة متى كانت العلاقة مسجلة، مثل 34 كرتونة و14 ظرف، مع بقاء الرصيد الأصلي ظاهرًا.

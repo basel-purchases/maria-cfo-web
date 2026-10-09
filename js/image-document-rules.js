@@ -55,18 +55,24 @@ export function validateImageDocument(doc,{menu=[],materials=[],units=[],materia
   const prepared=[];
   for(const [index,row] of (doc.items||[]).entries()){
     const rowNo=index+1;
-    const known=allowed.find(item=>String(item.id)===String(row.catalog_id));
-    if(!known){problems.push(`البند ${rowNo}: اختر ${purchase?'مادة':'صنفًا'} من القائمة`);continue;}
+    const requested=String(row.catalog_query||row.name||'').trim();
+    const known=allowed.find(item=>String(item.id)===String(row.catalog_id)) ||
+      allowed.find(item=>normalizedName(item.name)===normalizedName(requested));
+    const newMaterial=purchase&&!known&&!!requested;
+    if(!known&&!newMaterial){problems.push(`البند ${rowNo}: اختر ${purchase?'مادة':'صنفًا'} من القائمة`);continue;}
+    if(newMaterial&&!units.some(u=>String(u.id)===String(row.new_base_unit_id)))
+      problems.push(`البند ${rowNo}: حدد وحدة أساسية للمادة الجديدة`);
     const qty=Number(normalizeArabicNumbers(row.quantity));
     const price=Number(normalizeArabicNumbers(row.unit_price));
     const discount=Number(normalizeArabicNumbers(row.discount||0));
     if(!Number.isFinite(qty)||qty<=0)problems.push(`البند ${rowNo}: الكمية أكبر من صفر`);
     if(!Number.isFinite(price)||price<=0)problems.push(`البند ${rowNo}: سعر الوحدة أكبر من صفر`);
     if(!Number.isFinite(discount)||discount<0||discount>(purchase?qty*price:100))problems.push(`البند ${rowNo}: خصم صالح`);
-    const rowData={catalog_id:known.id,name:known.name,quantity:qty,unit_price:price,discount};
+    const rowData={catalog_id:known?.id||null,name:known?.name||requested,quantity:qty,unit_price:price,discount,new_material:newMaterial};
     if(purchase){
-      const unit=units.find(u=>String(u.id)===String(row.unit_id));
-      const validUnit=Boolean(unit) && (String(known.base_unit_id)===String(row.unit_id)||materialLinks.some(rel=>String(rel.material_id)===String(known.id)&&String(rel.unit_id)===String(row.unit_id)));
+      const unitId=newMaterial?row.new_base_unit_id:row.unit_id;
+      const unit=units.find(u=>String(u.id)===String(unitId));
+      const validUnit=Boolean(unit) && (newMaterial||String(known.base_unit_id)===String(unitId)||materialLinks.some(rel=>String(rel.material_id)===String(known.id)&&String(rel.unit_id)===String(unitId)));
       if(!validUnit)problems.push(`البند ${rowNo}: اختر وحدة شراء مرتبطة بالمادة`);
       rowData.unit_id=unit?.id||null;
     }

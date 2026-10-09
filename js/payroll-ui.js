@@ -1,4 +1,4 @@
-import { esc, money, dateOnly } from './utils.js?v=0.20';
+import { esc, money, dateOnly } from './utils.js?v=0.21';
 
 export const PAY_LABELS = Object.freeze({monthly:'شهري', daily:'يومي', hourly:'ساعي'});
 export function payTypeBadge(type) {

@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.20';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.20';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.20';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.20';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.20';
-import { formatSmartStock } from '../material-stock-display.js?v=0.20';
+import * as api from '../api.js?v=0.21';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.21';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.21';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.21';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.21';
+import { formatSmartStock } from '../material-stock-display.js?v=0.21';
 
 const PAGE_SIZE=10;
 

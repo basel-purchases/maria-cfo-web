@@ -110,7 +110,7 @@ test('new images route and styles integrated without changing config.js',()=>{
   assert.match(app,/\['#\/images', 'الصور'\]/);
   assert.match(app,/case 'images': return renderImages\(root\)/);
   assert.match(css,/\.image-document-grid\{/);
-  assert.match(images,/دقيق/);
+  assert.match(images,/data-ocr="3"/);
   assert.match(images,/حفظ محلي/);
   assert.match(images,/نشر الجاهزة/);
 });

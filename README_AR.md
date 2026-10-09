@@ -1,3 +1,5 @@
+> New in **Maria CFO Web v0.21**: OCR.space cloud OCR, wider Images workspace, usage attempt counters, catalog search and in-place material/menu creation. Deploy instructions: `docs/DEPLOY_OCR_SPACE_V021.md`. Preserve your existing `config.js` and Git settings.
+
 # **الإصدار الحالي: Maria CFO Web v0.20**
 
 راجع [README_v020_AR.md](README_v020_AR.md) لتعليمات التحديث، وتعليمات الاختبار في `docs/TEST_STOCK_UNITS_OCR_V020_AR.md`. هذا الإصدار **لا يتطلب SQL جديدًا**.
