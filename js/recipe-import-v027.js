@@ -2,7 +2,7 @@
 import * as api from './api.js?v=0.27';
 import {esc} from './utils.js?v=0.27';
 import {toast,loader,friendlyError} from './ui.js?v=0.27';
-import {readAmeenWorkbook,sha256Hex,cleanName} from './ameen-import-parser.js?v=0.27';
+import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=0.27';
 import {parseRecipesV027} from './recipe-import-parser-v027.js?v=0.27';
 export {parseRecipesV027};
 
@@ -49,7 +49,7 @@ async function verifyMenuCatalog(parsed){
     return !expected||exact(expected)!==exact(x.baseUnit);
   }).map(x=>`${x.materialName}: ${x.baseUnit}`);
   const missingStock=parsed.newMaterials.filter(n=>!stockNames.has(exact(n)));
-  return {missingMenu,unexpected,missingStock,unitMismatch};
+  return {missingMenu,unexpected,missingStock,unitMismatch,menu,menuNames};
 }
 
 function blockScreen(){
@@ -88,26 +88,54 @@ export async function renderRecipeImportV027(root){
    const parsed=parseRecipesV027(workbook);
    const check=await verifyMenuCatalog(parsed);
    const hash=await sha256Hex(workbook.buffer);
-   const issues=[...check.missingMenu.map(x=>TXT.errors+': '+x),...check.unexpected.map(x=>'\u0645\u0627\u062f\u0629 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f\u0629: '+x),...new Set(check.unitMismatch)];
+   // An absent menu label is not an absent ingredient. Let the owner explicitly
+   // associate the Excel recipe with an EXISTING menu item without changing DB names.
+   const issues=[...check.unexpected.map(x=>'مادة غير موجودة: '+x),...new Set(check.unitMismatch)];
+   const menuOptions=check.menu.filter(r=>check.menuNames.get(String(r.name??'').trim().toLocaleLowerCase('ar').replace(/\s+/g,' '))===1);
+   const missingSet=new Set(check.missingMenu);
+   const usedExact=new Set(parsed.recipes.filter(r=>!missingSet.has(r.menuName)).map(r=>String(r.menuName).trim().toLocaleLowerCase('ar').replace(/\s+/g,' ')));
+   const remainingMenu=menuOptions.filter(r=>!usedExact.has(String(r.name).trim().toLocaleLowerCase('ar').replace(/\s+/g,' ')));
+   const mappingMarkup=check.missingMenu.length?`<div class="notice"><strong>الوجبات التالية لم تتطابق أسماؤها مع قاعدة البيانات. اختر لكل وصفة الوجبة الموجودة المقصودة (لا ننشئ وجبات جديدة):</strong>
+     ${check.missingMenu.map((name,i)=>`<div class="field"><label for="recipe-map-${i}">${esc(name)}</label>
+       <select id="recipe-map-${i}" data-recipe-name="${esc(name)}" class="recipe-menu-map"><option value="">— اختر الوجبة الموجودة —</option>
+       ${remainingMenu.map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('')}</select></div>`).join('')}</div>`:'';
    previewHost.innerHTML=`<div class="card"><div class="grid cols-3 finance-summary-grid">
     <div class="card"><strong>${parsed.recipes.length}</strong><p>${TXT.total}</p></div>
     <div class="card"><strong>${parsed.lines.length}</strong><p>${TXT.rows}</p></div>
     <div class="card"><strong>${check.missingStock.length}</strong><p>${TXT.created}</p></div></div>
     <p class="metric-note">${TXT.assumed}: ${parsed.estimates}</p>
-    ${issues.length?`<div class="notice rose"><strong>${TXT.blocked}</strong><ul>${issues.slice(0,20).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:
-    `<div class="notice green">\u0643\u0644 \u0623\u0633\u0645\u0627\u0621 \u0627\u0644\u0648\u062c\u0628\u0627\u062a \u0627\u0644\u0640 75 \u0645\u0648\u062c\u0648\u062f\u0629 \u0641\u064a \u0627\u0644\u0642\u0627\u0639\u062f\u0629.</div>`}
+    ${mappingMarkup}
+    ${issues.length?`<div class="notice rose"><strong>توجد أخطاء مواد أو وحدات يجب تصحيحها قبل الاستيراد.</strong><ul>${issues.slice(0,20).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:
+    `${check.missingMenu.length?'':'<div class="notice green">جميع أسماء الوجبات متطابقة مع القاعدة.</div>'}`}
     <label class="recipe-confirm-check"><input type="checkbox" id="recipe-v027-replace"> ${TXT.replaced}</label>
     <button class="btn" id="recipe-v027-commit" type="button" ${issues.length?'disabled':''}>${TXT.import}</button>
     <p class="metric-note">${TXT.warn}</p>
    </div>`;
    const submit=previewHost.querySelector('#recipe-v027-commit');
    if(!submit)return;
+   const selectors=[...previewHost.querySelectorAll('.recipe-menu-map')];
+   function validateMappings(){
+     const values=selectors.map(el=>el.value);
+     const distinct=new Set(values.filter(Boolean));
+     const valid=values.every(Boolean)&&distinct.size===values.length;
+     submit.disabled=issues.length>0||!valid;
+     return valid;
+   }
+   selectors.forEach(el=>el.addEventListener('change',validateMappings));
+   validateMappings();
    submit.onclick=async()=>{
+    if(!validateMappings()){toast('يرجى ربط كل وصفة بوجبة مختلفة موجودة في القائمة.','error');return;}
+    const map=new Map(selectors.map(el=>[el.dataset.recipeName,remainingMenu.find(r=>String(r.id)===el.value)?.name]));
+    if([...map.values()].some(x=>!x)){toast('الوجبة المختارة غير موجودة. أعد المعاينة.','error');return;}
+    const resolvedRecipes=parsed.recipes.map(r=>({...r,menuName:map.get(r.menuName)||r.menuName}));
+    const names=resolvedRecipes.map(r=>String(r.menuName).trim().toLocaleLowerCase('ar').replace(/\s+/g,' '));
+    if(new Set(names).size!==names.length){toast('لا يمكن ربط وصفتين بالوجبة نفسها.','error');return;}
+
     if(!previewHost.querySelector('#recipe-v027-replace').checked){toast(TXT.replaced,'error');return;}
     submit.disabled=true;const release=blockScreen();
     try{
      const result=await api.rpc('import_menu_recipes_v027',{
-      p_sha256:hash,p_recipes:parsed.recipes,p_lines:parsed.lines,p_replace_existing:true
+      p_sha256:hash,p_recipes:resolvedRecipes,p_lines:parsed.lines,p_replace_existing:true
      });
      previewHost.innerHTML=`<div class="card notice green"><h3>${result.duplicateFile?TXT.already:TXT.done}</h3>
       <p>${TXT.total}: ${esc(result.recipesImported||75)} | ${TXT.created}: ${esc(result.materialsCreated??0)}</p></div>`;

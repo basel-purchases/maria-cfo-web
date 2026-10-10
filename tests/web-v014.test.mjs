@@ -79,7 +79,7 @@ test('all relative JS imports exist and are versioned',()=>{
         for(const m of text.matchAll(rx)){
           const relative=m[1].split('?')[0];
           assert.ok(existsSync(resolve(dir,relative)),`${abs} missing ${relative}`);
-          assert.match(m[1],/\?v=0\.27$/);
+          assert.match(m[1],/\?v=0\.27(?:\.1)?$/);
         }
       }
     }

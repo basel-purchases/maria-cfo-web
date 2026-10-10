@@ -24,7 +24,7 @@ import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
 import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.27';
-import {renderRecipeImportV027} from './recipe-import-v027.js?v=0.27';
+import {renderRecipeImportV027} from './recipe-import-v027.js?v=0.27.1';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 
 const app = document.querySelector('#app');
