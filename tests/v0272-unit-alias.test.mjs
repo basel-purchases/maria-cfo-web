@@ -93,8 +93,8 @@ test('browser workflow always sends canonical payload to existing RPC',()=>{
   assert.match(importCode,/p_lines:check\.canonicalLines/);
   assert.match(importCode,/api\.catalogRows\('units','id,name,code,is_material_specific'\)/);
   assert.match(importCode,/recipe-unit-match-v0272\.js\?v=0\.27\.2/);
-  assert.match(appCode,/recipe-import-v027\.js\?v=0\.27\.2/);
-  assert.match(indexCode,/js\/app\.js\?v=0\.27\.2/);
+  assert.match(appCode,/recipe-import-v028\.js\?v=0\.28/);
+  assert.match(indexCode,/js\/app\.js\?v=0\.28/);
   assert.match(migration,/public\.recipe_unit_matches_v0272/);
   assert.match(migration,/public\.save_menu_recipe_item_v07/);
   assert.doesNotMatch(migration,/UPDATE\s+public\.(materials|inventory_movements|orders)/i);

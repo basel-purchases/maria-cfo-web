@@ -174,3 +174,10 @@ Maria CFO v0.27 - from v0.25: 75 recipe import, transaction-safe recipes and fil
 - Unified supplier table and supplier statement balances, supporting overdue-positive-balance filters and source movement drill-down.
 - New nullable `uncollected_papers_v025` report field, populated from Excel via owner-checked `import_ameen_v024` and safe same-file supplementary-field refresh.
 - No automatic supplier payment or order posting is added.
+
+## v0.28 — إعادة استيراد الوصفات وتكلفة المواد الحالية
+- استيراد قابل للتكرار للملف نفسه من دون أن يمنعه SHA256 القديم (`import_menu_recipes_v028`).
+- ربط السعر من `materials.last_purchase_unit_cost_base` عبر View التكلفة الحالية الموجودة، بدون نقل الصفر من Excel وبدون العبث بـLedger.
+- تحديث تفاضلي لبنود الوصفة مع نسخة احتياطية مستقلة لكل تشغيل وحماية RLS.
+- معاينة قبل الحفظ لأسعار المكونات الناقصة والوصفات المكتملة؛ منع عرض Food Cost 0% عندما تكون التكلفة مجهولة.
+- ترحيل SQL جديد مطلوب قبل استخدام تحديث v0.28 على قاعدة الإنتاج.

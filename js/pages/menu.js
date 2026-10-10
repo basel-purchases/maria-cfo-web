@@ -25,12 +25,17 @@ function effectiveSalePrice(row){
 }
 
 function displayedFoodCost(row){
+  // Number(null) === 0 must NEVER turn an unknown recipe cost into "0.0%".
+  if(row.recipe_cost_base==null || row.recipe_cost_base===''
+      || Number(row.missing_cost_count)>0 || row.has_missing_cost===true)return null;
   const recipe=Number(row.recipe_cost_base);
   const effective=effectiveSalePrice(row);
   if(Number.isFinite(recipe) && Number.isFinite(effective) && effective>0){
     return recipe/effective*100;
   }
-  const fallback=Number(row.actual_food_cost_percent??row.food_cost_percent);
+  const raw=row.actual_food_cost_percent??row.food_cost_percent;
+  if(raw==null || raw==='')return null;
+  const fallback=Number(raw);
   return Number.isFinite(fallback)?fallback:null;
 }
 
@@ -88,7 +93,7 @@ export async function renderMenu(root){
         <div class="menu-summary">
           <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
           ${menuDiscount(r)>0?`<div class="menu-net-price"><span>سعر البيع بعد الخصم</span><strong>${money(effectiveSalePrice(r))}</strong></div>`:''}
-          <div><span>تكلفة الوصفة</span><strong>${r.recipe_cost_base!=null?money(r.recipe_cost_base):'—'}</strong></div>
+          <div><span>تكلفة الوصفة</span><strong>${r.recipe_cost_base!=null && Number(r.missing_cost_count||0)===0?money(r.recipe_cost_base):'غير محسوبة'}</strong></div>
           <div><span>Food Cost</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
           <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
           <div><span>وحدة البيع من الأمين</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
@@ -245,17 +250,23 @@ async function recipeDialog(root,id,name,mats,units){
       if(!material) return {...x,__unitCost:null,__lineCost:null};
       const inputUnitId=String(x.input_unit_id||x.unit_id||material.base_unit_id||'');
       const inputQty=Number(x.input_quantity??x.quantity_original??x.quantity??x.quantity_base??0);
-      let factor=1;
-      if(inputUnitId && String(inputUnitId)!==String(material.base_unit_id)){
+      let factor=String(inputUnitId)===String(material.base_unit_id)?1:NaN;
+      if(!Number.isFinite(factor)){
         try{
           const choices=await materialUnitChoices(material,units);
           const choice=choices.find(c=>String(c.unitId)===inputUnitId);
           if(choice && Number(choice.quantityInBase)>0) factor=Number(choice.quantityInBase);
-        }catch(_){ factor=NaN; }
+        }catch(_){ /* Unknown conversion must not be treated as factor=1. */ }
       }
+      // Use the saved base-unit quantity to price ingredients. It is the same
+      // source of truth as the database's menu_item_costs view.
+      const storedBase=Number(x.quantity_base);
+      const baseQty=x.quantity_base!=null && Number.isFinite(storedBase)&&storedBase>0
+        ? storedBase : (Number.isFinite(factor)&&inputQty>0?factor*inputQty:null);
+      if(!Number.isFinite(factor)&&baseQty!=null&&inputQty>0)factor=baseQty/inputQty;
       const baseCost=materialBaseCost(material);
-      const unitCost=baseCost!=null && Number.isFinite(factor) ? baseCost*factor : null;
-      const lineCost=unitCost!=null && Number.isFinite(inputQty) ? unitCost*inputQty : null;
+      const unitCost=baseCost!=null && Number.isFinite(factor)?baseCost*factor:null;
+      const lineCost=baseCost!=null && baseQty!=null?baseCost*baseQty:null;
       return {...x,__unitCost:unitCost,__lineCost:lineCost,__factor:factor};
     }));
 
@@ -363,7 +374,7 @@ async function recipeDialog(root,id,name,mats,units){
       const knownCost=rows.reduce((sum,x)=>sum+(Number.isFinite(Number(x.__lineCost))?Number(x.__lineCost):0),0);
       const missingCost=rows.some(x=>x.__lineCost==null || !Number.isFinite(Number(x.__lineCost)));
       totalBox.innerHTML=rows.length
-        ? `<strong>تكلفة الوصفة الحالية: ${money(knownCost)}</strong>${missingCost?'<span> • توجد مادة بلا سعر معروف</span>':''}`
+        ? `<strong>${missingCost?'المجموع المعروف فقط':'تكلفة الوصفة الحالية'}: ${money(knownCost)}</strong>${missingCost?'<span> • التكلفة الكاملة غير محسوبة لوجود مادة بلا سعر معروف</span>':''}`
         : '<span>لم تُضف مكونات بعد.</span>';
 
       host.innerHTML=rows.length?`

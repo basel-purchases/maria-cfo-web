@@ -7,7 +7,7 @@ import { renderHub } from './pages/hubs.js?v=0.27';
 import { renderMaterials } from './pages/materials.js?v=0.27';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.27';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.27';
-import { renderMenu } from './pages/menu.js?v=0.27';
+import { renderMenu } from './pages/menu.js?v=0.28';
 import {
   renderInventory,
   renderCashboxes,
@@ -24,7 +24,7 @@ import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
 import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.27';
-import {renderRecipeImportV027} from './recipe-import-v027.js?v=0.27.2';
+import {renderRecipeImportV028} from './recipe-import-v028.js?v=0.28';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 
 const app = document.querySelector('#app');
@@ -108,7 +108,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.27.2</div>
+        <div class="sidebar-foot">Web v0.28</div>
       </aside>
 
       <main class="main">
@@ -340,7 +340,7 @@ async function route() {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImports(root);
-      case 'recipes-import': return renderRecipeImportV027(root);
+      case 'recipes-import': return renderRecipeImportV028(root);
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');
