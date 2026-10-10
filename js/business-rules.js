@@ -14,6 +14,7 @@ export const EMPLOYEE_RATE_COLUMNS = Object.freeze({
   monthly: 'monthly_salary_original',
   daily: 'daily_rate_original',
   hourly: 'hourly_rate_original',
+  fixed: 'fixed_pay_original_v023',
 });
 
 const ATTENDANCE_STATUSES = new Set([

@@ -1,13 +1,13 @@
-import * as api from '../api.js?v=0.22';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.22';
-import { esc, unitDisplay } from '../utils.js?v=0.22';
-import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.23';
+import { esc, unitDisplay } from '../utils.js?v=0.23';
+import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.23';
 import {
   buildUnitCatalog,
   formatUnitAmount,
   normalizedUnitName,
   validateNamedUnitDraft,
-} from '../unit-catalog.js?v=0.22';
+} from '../unit-catalog.js?v=0.23';
 
 const TYPE_LABELS={
   dedicated:'وحدة خاصة بمادة', material:'تحويل مادة',
@@ -36,13 +36,15 @@ function relationHtml(entry){
 export async function renderSettings(root, selectedTab='general') {
   root.innerHTML = loader();
   try {
-    const [settingsRows, units, cashboxes, materials, materialUnits, unitConversions] = await Promise.all([
+    const [settingsRows, units, cashboxes, materials, materialUnits, unitConversions, expenseCategories, materialCategories, assetCategories, menuCategories] = await Promise.all([
       api.list('app_settings', { limit: 1 }),
       api.units(),
       api.cashboxes(),
       api.catalogMaterials(),
       api.allMaterialUnitLinks(),
       api.unitConversions(),
+      api.expenseCategories(),
+      api.materialCategoriesV023(),api.assetCategoriesV023(),api.menuCategoriesV023(),
     ]);
     const s = settingsRows[0] || {};
     const catalog=buildUnitCatalog({units,materials,materialUnits,unitConversions});
@@ -55,7 +57,11 @@ export async function renderSettings(root, selectedTab='general') {
       <div class="settings-tabs" role="tablist">
         <button type="button" class="settings-tab" data-settings-tab="general">عام</button>
         <button type="button" class="settings-tab" data-settings-tab="units">الوحدات وعلاقاتها</button>
+        <button type="button" class="settings-tab" data-settings-tab="orders">\u0627\u0644\u062e\u0635\u0645 \u0648\u0627\u0644\u0631\u0633\u0648\u0645</button>
+        <button type="button" class="settings-tab" data-settings-tab="expenses">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a</button>
         <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
+        <button type="button" class="settings-tab" data-settings-tab="staff">\u0627\u0644\u062f\u0648\u0627\u0645 \u0648\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a</button>
+        <button type="button" class="settings-tab" data-settings-tab="catalogs">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u062f\u062e\u0644\u0627\u062a</button>
       </div>
 
       <div data-settings-pane="general">
@@ -78,6 +84,34 @@ export async function renderSettings(root, selectedTab='general') {
         </div>
       </div>
 
+      <div data-settings-pane="orders" hidden>
+        <section class="card order-settings-card">
+          <h3>\u0627\u0644\u062e\u0635\u0645 \u0648\u0627\u0644\u0631\u0633\u0648\u0645</h3>
+          <p>\u062a\u0637\u0628\u064a\u0642 \u0627\u0644\u0646\u0633\u0628 \u0639\u0644\u0649 \u0645\u0633\u0648\u062f\u0627\u062a \u062c\u062f\u064a\u062f\u0629 \u0641\u0642\u0637. \u0627\u0644\u0645\u0639\u0627\u0645\u0644\u0627\u062a \u0627\u0644\u0645\u0646\u0634\u0648\u0631\u0629 \u0627\u0644\u0642\u062f\u064a\u0645\u0629 \u062a\u0628\u0642\u0649 \u0643\u0645\u0627 \u0647\u064a.</p>
+          <div class="form-grid">
+            <div class="field"><label>\u062e\u0635\u0645 \u0627\u0644\u0623\u0648\u0631\u062f\u0631 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a %</label><input id="order-default-discount" type="number" min="0" max="100" step="any" value="${esc(s.default_order_discount_percent??0)}"></div>
+            <div class="field"><label>\u0631\u0633\u0645 \u0627\u0644\u0625\u0646\u0641\u0627\u0642 %</label><input id="order-monthly-tax" type="number" min="0" max="100" step="any" value="${esc(s.monthly_expenditure_tax_percent??0)}"></div>
+            <div class="field"><label>\u0631\u0633\u0645 \u0627\u0644\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062d\u0644\u064a\u0629 %</label><input id="order-local-tax" type="number" min="0" max="100" step="any" value="${esc(s.local_administration_tax_percent??0)}"></div>
+            <div class="field"><label>\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a</label>
+              <select id="expense-default-box"><option value="">\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645</option>
+              ${cashboxes.filter(b=>b.is_active!==false).map(b=>`<option value="${esc(b.id)}" ${String(s.default_expense_cashbox_id||'')===String(b.id)?'selected':''}>${esc(b.name)}</option>`).join('')}</select>
+            </div>
+          </div>
+          <div class="quick-actions"><button class="btn" id="save-order-settings" type="button">\u062d\u0641\u0638 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a</button></div>
+          <div class="notice" style="margin-top:14px">\u0639\u0646\u062f \u062a\u0641\u0639\u064a\u0644 \u0631\u0633\u0648\u0645 \u0623\u0648 \u062e\u0635\u0645 \u0625\u062c\u0645\u0627\u0644\u064a \u062a\u062c\u0628 \u0645\u0631\u0627\u062c\u0639\u0629 \u0646\u0634\u0631 \u0627\u0644\u0623\u0648\u0631\u062f\u0631 \u0645\u062d\u0627\u0633\u0628\u064a\u064b\u0627 \u0642\u0628\u0644 \u0627\u0633\u062a\u062e\u062f\u0627\u0645\u0647 \u0641\u064a \u0627\u0644\u0645\u0628\u064a\u0639\u0627\u062a.</div>
+        </section>
+      </div>
+
+      <div data-settings-pane="expenses" hidden>
+        <section class="card expense-categories-card">
+          <div class="settings-card-head"><div><h3>\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a</h3><p>\u0623\u0636\u0641 \u0623\u0648 \u0639\u062f\u0644 \u062a\u0635\u0646\u064a\u0641\u0627\u062a\u0643 \u0628\u062d\u0633\u0628 \u0627\u0644\u062d\u0627\u062c\u0629.</p></div>
+          <button type="button" class="btn" id="new-expense-category">\u0625\u0636\u0627\u0641\u0629 \u062a\u0635\u0646\u064a\u0641</button></div>
+          <div class="table-wrap table-fit"><table class="table"><thead><tr><th>\u0627\u0644\u062a\u0635\u0646\u064a\u0641</th><th>\u0627\u0644\u0625\u062c\u0631\u0627\u0621</th></tr></thead><tbody>
+          ${expenseCategories.map(c=>`<tr><td>${esc(c.name)}</td><td><div class="material-actions"><button class="mini-btn edit-expense-category" type="button" data-id="${esc(c.id)}">\u062a\u0639\u062f\u064a\u0644</button><button class="mini-btn danger-lite delete-expense-category" type="button" data-id="${esc(c.id)}">\u062d\u0630\u0641</button></div></td></tr>`).join('')}</tbody></table></div>
+          <p class="metric-note">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0645\u0633\u062a\u062e\u062f\u0645\u0629 \u0641\u064a \u0645\u0635\u0631\u0648\u0641\u0627\u062a \u0633\u0627\u0628\u0642\u0629 \u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0630\u0641\u0647\u0627.</p>
+        </section>
+      </div>
+
       <div data-settings-pane="payroll" hidden>
         <div class="card settings-payroll-box">
           <h3>صندوق دفع الرواتب</h3>
@@ -89,6 +123,23 @@ export async function renderSettings(root, selectedTab='general') {
           <div class="quick-actions"><button class="btn" id="save-payroll-cashbox">حفظ صندوق الرواتب</button><a class="btn secondary" href="#/payroll">عرض المستحقات</a></div>
           <p class="metric-note">لا تغيّر هذه الإعدادات الصندوق المسجّل في الدفعات التاريخية.</p>
         </div>
+      </div>
+
+      <div data-settings-pane="staff" hidden>
+        <section class="card"><h3>\u062f\u0648\u0627\u0645 \u0627\u0644\u0639\u0627\u0645\u0644\u064a\u0646</h3><p>\u062a\u0624\u062b\u0631 \u0627\u0644\u0642\u064a\u0645 \u0627\u0644\u062c\u062f\u064a\u062f\u0629 \u0639\u0644\u0649 \u0627\u0644\u062f\u0648\u0627\u0645 \u0627\u0644\u0645\u0633\u062a\u0642\u0628\u0644\u064a\u060c \u0648\u0644\u0627 \u062a\u064f\u0639\u064a\u062f \u0627\u062d\u062a\u0633\u0627\u0628 \u0627\u0644\u0631\u0648\u0627\u062a\u0628 \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u0629.</p>
+          <div class="form-grid"><div class="field"><label>\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0645 \u0627\u0644\u064a\u0648\u0645\u064a</label><input id="staff-daily-hours" type="number" min="0.25" max="24" step="0.25" value="${esc(s.default_required_daily_hours??8)}"></div>
+          <div class="field"><label>\u0645\u0639\u0627\u0645\u0644 \u0627\u0644\u0633\u0627\u0639\u0629 \u0627\u0644\u0625\u0636\u0627\u0641\u064a\u0629</label><input id="staff-ot-multiplier" type="number" min="0" max="20" step="0.05" value="${esc(s.default_overtime_multiplier??1.5)}"></div>
+          <div class="field"><label>\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0629 \u0644\u0643\u0644 \u0645\u0648\u0638\u0641 / \u0633\u0646\u0629</label><input id="staff-leave-days" type="number" min="0" max="366" step="1" value="${esc(s.paid_leave_days_per_year_v023??12)}"></div></div>
+          <button type="button" class="btn" id="save-staff-policy">\u062d\u0641\u0638 \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0645</button>
+        </section>
+      </div>
+
+      <div data-settings-pane="catalogs" hidden>
+        <section class="card"><h3>\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0648\u0627\u062f \u0648\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a \u0648\u0627\u0644\u0648\u062c\u0628\u0627\u062a</h3>
+          ${[['material',materialCategories,'\u0627\u0644\u0645\u0648\u0627\u062f'],['asset',assetCategories,'\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a'],['menu',menuCategories,'\u0627\u0644\u0645\u064a\u0646\u064a\u0648']].map(([kind,rows,title])=>`<div class="category-section"><div class="finance-section-head"><h4>${title}</h4><button type="button" class="mini-btn add-category-v023" data-kind="${kind}">\u0625\u0636\u0627\u0641\u0629</button></div>
+            <div class="table-wrap"><table class="table"><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td><button class="mini-btn edit-category-v023" data-kind="${kind}" data-id="${esc(r.id)}">\u062a\u0639\u062f\u064a\u0644</button> <button class="mini-btn danger-lite delete-category-v023" data-kind="${kind}" data-id="${esc(r.id)}">\u062d\u0630\u0641</button></td></tr>`).join('')||'<tr><td>\u0644\u0627 \u062a\u0648\u062c\u062f \u062a\u0635\u0646\u064a\u0641\u0627\u062a</td></tr>'}</tbody></table></div></div>`).join('')}
+          <p class="metric-note">\u0644\u0627 \u064a\u064f\u0633\u0645\u062d \u0628\u062d\u0630\u0641 \u062a\u0635\u0646\u064a\u0641 \u062a\u0631\u062a\u0628\u0637 \u0628\u0647 \u0633\u062c\u0644\u0627\u062a \u0633\u0627\u0628\u0642\u0629 \u0628\u062f\u0648\u0646 \u0645\u0631\u0627\u062c\u0639\u0629.</p>
+        </section>
       </div>
 
       <div data-settings-pane="units" hidden>
@@ -121,7 +172,7 @@ export async function renderSettings(root, selectedTab='general') {
       panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
     };
     tabs.forEach(tab=>{tab.onclick=()=>setTab(tab.dataset.settingsTab);});
-    setTab(['general','payroll','units'].includes(selectedTab)?selectedTab:'general');
+    setTab(['general','payroll','units','orders','expenses','staff','catalogs'].includes(selectedTab)?selectedTab:'general');
 
     root.querySelector('#save-payroll-cashbox').onclick=async()=>{
       const id=root.querySelector('#payroll-cashbox').value;
@@ -139,6 +190,64 @@ export async function renderSettings(root, selectedTab='general') {
         toast('تم حفظ سعر الصرف','success');
       }catch(e){toast(friendlyError(e),'error');}
     };
+    root.querySelector('#save-order-settings').onclick=async()=>{
+      try{
+        const pick=id=>Number(root.querySelector(id)?.value);
+        const discount=pick('#order-default-discount'),monthlyTax=pick('#order-monthly-tax'),localTax=pick('#order-local-tax');
+        if([discount,monthlyTax,localTax].some(v=>!Number.isFinite(v)||v<0||v>100))throw Error('INVALID_ORDER_RATE');
+        await api.saveOrderSettings(discount,monthlyTax,localTax,root.querySelector('#expense-default-box')?.value||null);
+        toast('\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a.','success');
+      }catch(error){toast(friendlyError(error,'\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a.'),'error');}
+    };
+    const editExpenseCategory=(row=null)=>modal({
+      title:row?'\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u062a\u0635\u0646\u064a\u0641':'\u0625\u0636\u0627\u0641\u0629 \u062a\u0635\u0646\u064a\u0641',
+      body:`<div class="field"><label>\u0627\u0633\u0645 \u0627\u0644\u062a\u0635\u0646\u064a\u0641</label><input name="category_name" value="${esc(row?.name||'')}" maxlength="120" required></div>`,
+      onSubmit:async fd=>{
+        try{
+          const name=String(fd.get('category_name')||'').trim();
+          if(name.length<2)throw Error('CATEGORY_NAME_INVALID');
+          await api.manageExpenseCategory(row?'rename':'add',row?.id||null,name);
+          toast('\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u062a\u0635\u0646\u064a\u0641.','success');
+          await renderSettings(root,'expenses');return true;
+        }catch(error){toast(friendlyError(error),'error');return false;}
+      },
+    });
+    root.querySelector('#new-expense-category').onclick=()=>editExpenseCategory();
+    root.querySelectorAll('.edit-expense-category').forEach(button=>button.onclick=()=>{
+      const row=expenseCategories.find(c=>String(c.id)===String(button.dataset.id));
+      if(row)editExpenseCategory(row);
+    });
+    root.querySelectorAll('.delete-expense-category').forEach(button=>button.onclick=async()=>{
+      const row=expenseCategories.find(c=>String(c.id)===String(button.dataset.id));if(!row)return;
+      if(!(await confirmBox(`\u062d\u0630\u0641 \u0627\u0644\u062a\u0635\u0646\u064a\u0641 \u00ab${row.name}\u00bb?`,'\u062d\u0630\u0641')))return;
+      try{await api.manageExpenseCategory('delete',row.id);await renderSettings(root,'expenses');}
+      catch(error){toast(friendlyError(error,'\u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0630\u0641 \u062a\u0635\u0646\u064a\u0641 \u0645\u0633\u062a\u062e\u062f\u0645.'),'error');}
+    });
+    root.querySelector('#save-staff-policy').onclick=async()=>{
+      try{
+       const hours=Number(root.querySelector('#staff-daily-hours').value),ot=Number(root.querySelector('#staff-ot-multiplier').value),leaves=Number(root.querySelector('#staff-leave-days').value);
+       if(!(hours>0&&hours<=24&&ot>=0&&ot<=20&&Number.isInteger(leaves)&&leaves>=0&&leaves<=366))throw Error('INVALID_STAFF_POLICY');
+       await api.saveStaffPolicy(hours,ot,leaves);toast('\u062a\u0645 \u062d\u0641\u0638 \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0645','success');
+      }catch(e){toast(friendlyError(e),'error');}
+    };
+    const categoryKinds={material:materialCategories,asset:assetCategories,menu:menuCategories};
+    const editCategory=(kind,row=null)=>modal({title:row?'\u062a\u0639\u062f\u064a\u0644 \u062a\u0635\u0646\u064a\u0641':'\u0625\u0636\u0627\u0641\u0629 \u062a\u0635\u0646\u064a\u0641',
+      body:`<div class="field"><label>\u0627\u0644\u0627\u0633\u0645</label><input name="name" maxlength="120" value="${esc(row?.name||'')}" required></div>`,
+      onSubmit:async fd=>{try{
+        const name=String(fd.get('name')||'').trim();if(!name)throw Error('CATEGORY_NAME_REQUIRED');
+        if(row)await api.renameCatalogCategoryV023(kind,row.id,name);else await api.createCatalogCategoryV023(kind,name);
+        await renderSettings(root,'catalogs');return true;
+      }catch(e){toast(friendlyError(e),'error');return false;}}
+    });
+    root.querySelectorAll('.add-category-v023').forEach(b=>b.onclick=()=>editCategory(b.dataset.kind));
+    root.querySelectorAll('.edit-category-v023').forEach(b=>b.onclick=()=>{
+      const row=categoryKinds[b.dataset.kind]?.find(x=>String(x.id)===b.dataset.id);if(row)editCategory(b.dataset.kind,row);
+    });
+    root.querySelectorAll('.delete-category-v023').forEach(b=>b.onclick=async()=>{
+      if(!(await confirmBox('\u062d\u0630\u0641 \u0627\u0644\u062a\u0635\u0646\u064a\u0641\u061f','\u062d\u0630\u0641')))return;
+      try{await api.deleteCatalogCategoryV023(b.dataset.kind,b.dataset.id);await renderSettings(root,'catalogs');}
+      catch(e){toast(friendlyError(e),'error');}
+    });
     root.querySelector('#settings-logout').onclick=async()=>{await api.signOut();location.hash='';location.reload();};
 
     const list=root.querySelector('#unit-list');

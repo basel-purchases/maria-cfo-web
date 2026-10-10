@@ -1,5 +1,5 @@
-import * as api from '../api.js?v=0.22';
-import { esc } from '../utils.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { esc } from '../utils.js?v=0.23';
 
 const LINKS={
   dashboard:'الرئيسية',reports:'التقارير',orders:'الأوردرات',purchases:'المشتريات',

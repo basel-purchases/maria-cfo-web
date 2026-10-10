@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.22';
-import { loader, friendlyError } from '../ui.js?v=0.22';
-import { money, esc, todayISO } from '../utils.js?v=0.22';
-import { financialCard, financialRowTable, qualityMessages, barTrend, finalProfitValue, simpleInfo } from '../finance-ui.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { loader, friendlyError } from '../ui.js?v=0.23';
+import { money, esc, todayISO } from '../utils.js?v=0.23';
+import { financialCard, financialRowTable, qualityMessages, barTrend, finalProfitValue, simpleInfo } from '../finance-ui.js?v=0.23';
 
 function periodStart(kind){
   const today=todayISO();const d=new Date(today+'T12:00:00');
@@ -29,9 +29,14 @@ export async function renderReports(root){
     <button class="btn soft period-preset" data-period="year">هذه السنة</button>
   </div><div class="form-grid"><div class="field"><label>من</label><input id="r-from" type="date" value="${periodStart('month')}"></div><div class="field"><label>إلى</label><input id="r-to" type="date" value="${todayISO()}"></div></div>
   <div class="quick-actions"><button class="btn" id="r-load">تحديث التقرير</button></div></div>
-  <div id="report-out" aria-live="polite"></div>`;
+  <div class="quick-actions report-mode"><button class="btn secondary" id="report-mode-finance">\u0627\u0644\u0645\u0627\u0644\u064a \u0648\u0627\u0644\u062a\u0634\u063a\u064a\u0644\u064a</button><button class="btn secondary" id="report-mode-salary">\u0625\u062d\u0635\u0627\u0621 \u0627\u0644\u0631\u0648\u0627\u062a\u0628</button></div>
+  <div id="report-out" aria-live="polite"></div><div id="report-payroll" hidden></div>`;
   const out=root.querySelector('#report-out'),from=root.querySelector('#r-from'),to=root.querySelector('#r-to');
-  const refresh=()=>loadReport(out,from.value,to.value);
+  let salaryTab=false;
+  const salary=root.querySelector('#report-payroll');
+  const refresh=()=>salaryTab?loadSalaryReport(salary,from.value,to.value):loadReport(out,from.value,to.value);
+  root.querySelector('#report-mode-finance').onclick=()=>{salaryTab=false;out.hidden=false;salary.hidden=true;refresh();};
+  root.querySelector('#report-mode-salary').onclick=()=>{salaryTab=true;out.hidden=true;salary.hidden=false;refresh();};
   root.querySelector('#r-load').onclick=refresh;
   for(const button of root.querySelectorAll('.period-preset'))button.onclick=()=>{
     from.value=periodStart(button.dataset.period);to.value=todayISO();refresh();
@@ -148,4 +153,28 @@ async function loadReport(out,start,end){
       {key:'new_price',label:'السعر الجديد',format:(v,row)=>v==null?'—':money(v,row.new_currency||'SYP')},
     ])}</section>
   </div>`;
+}
+
+
+async function loadSalaryReport(out,start,end){
+  if(!start||!end||end<start){out.innerHTML='<div class="notice">\u0627\u062e\u062a\u0631 \u0641\u062a\u0631\u0629 \u0635\u062d\u064a\u062d\u0629.</div>';return;}
+  out.innerHTML=loader();
+  try{
+    const [stats,paid]=await Promise.all([api.payrollStatisticsV023(start,end),api.salaryPaymentPage(start,end,0,25)]);
+    const card=(name,value,opts={})=>financialCard(name,value,{...opts});
+    out.innerHTML=`<div class="grid cols-4 finance-summary-grid">
+      ${card('\u0631\u0648\u0627\u062a\u0628 \u0645\u062f\u0641\u0648\u0639\u0629',stats.total_salary_cash_paid_base)}
+      ${card('\u0631\u0648\u0627\u062a\u0628 \u0645\u0642\u0637\u0648\u0639\u0629 \u0645\u062f\u0641\u0648\u0639\u0629',stats.fixed_cash_paid_base)}
+      ${card('\u0633\u0644\u0641 \u0645\u0635\u0631\u0648\u0641\u0629',stats.advances_disbursed_base)}
+      ${card('\u0631\u0635\u064a\u062f \u0633\u0644\u0641 \u0642\u0627\u0626\u0645',stats.advances_open_base)}
+      ${card('\u062e\u0635\u0648\u0645 \u0633\u0644\u0641 \u0645\u0639\u062a\u0645\u062f\u0629',stats.advances_applied_base)}
+      ${card('\u0639\u062f\u062f \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646',stats.active_employees,{currency:false})}
+      ${card('\u0623\u064a\u0627\u0645 \u0625\u062c\u0627\u0632\u0629 \u0645\u062f\u0641\u0648\u0639\u0629',stats.paid_leave_days,{currency:false})}
+      ${card('\u0623\u064a\u0627\u0645 \u063a\u064a\u0627\u0628',stats.absent_days,{currency:false})}
+    </div>
+    <section class="card finance-section"><div class="finance-section-head"><h3>\u062d\u0631\u0643\u0627\u062a \u0635\u0631\u0641 \u0627\u0644\u0631\u0648\u0627\u062a\u0628</h3><a href="#/payroll" class="btn secondary">\u0633\u062c\u0644 \u0627\u0644\u0635\u0631\u0641</a></div>
+    <p class="metric-note">${paid.total||0} \u062d\u0631\u0643\u0629. \u0644\u0644\u062a\u0641\u0627\u0635\u064a\u0644 \u0648\u0627\u0644\u0635\u0641\u062d\u0627\u062a \u0627\u0644\u0643\u0627\u0645\u0644\u0629 \u0627\u0641\u062a\u062d \u0642\u0633\u0645 \u0627\u0644\u0631\u0648\u0627\u062a\u0628.</p>
+    ${Object.entries(paid.totals_by_currency||{}).map(([code,total])=>`<span class="pay-total-chip">${money(total,code)}</span>`).join(' ')}</section>
+    <div class="notice">\u062a\u0643\u0644\u0641\u0629 \u0631\u0627\u062a\u0628 \u0645\u0639\u062a\u0645\u062f \u062a\u062e\u062a\u0644\u0641 \u0639\u0646 \u0627\u0644\u0646\u0642\u062f \u0627\u0644\u0645\u0635\u0631\u0648\u0641: \u0627\u0644\u0633\u0644\u0641\u0629 \u062f\u0641\u0639\u0629 \u0645\u0628\u0643\u0631\u0629 \u0648\u0644\u064a\u0633\u062a \u0645\u0635\u0631\u0648\u0641 \u0631\u0627\u062a\u0628 \u0625\u0636\u0627\u0641\u064a\u064b\u0627.</div>`;
+  }catch(e){out.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
 }

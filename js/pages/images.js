@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.22';
-import { esc, unitDisplay, todayISO } from '../utils.js?v=0.22';
-import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.22';
-import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.22';
-import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.22';
-import {usageSummary} from '../image-cloud-rules.js?v=0.22';
-import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { esc, unitDisplay, todayISO } from '../utils.js?v=0.23';
+import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.23';
+import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.23';
+import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.23';
+import {usageSummary} from '../image-cloud-rules.js?v=0.23';
+import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.23';
 
 const T={
   fast:'\u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0633\u0631\u064a\u0639 - Engine 1',
@@ -99,7 +99,7 @@ export async function renderImages(root){
     const eligible=targets().filter(isReady).length;
     const buttonsDisabled=processing?'disabled':'';
     root.innerHTML=`
-      <div class="page-head image-page-head"><div><h2>الصور - إدخال سريع</h2><p>${T.cloud}</p></div></div>
+      <div class="page-head image-page-head"><div><h2>الصور - إدخال سريع</h2></div></div>
       <div class="notice image-privacy-notice"><strong>الخصوصية:</strong> ${T.cloud} ${T.warned}</div>
       ${catalogError?`<div class="notice rose">${esc(catalogError)}</div>`:''}
       ${usageError?`<div class="notice rose">${T.count}: ${esc(usageError)}. ${T.counted}</div>`:''}

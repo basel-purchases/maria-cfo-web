@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.22';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.22';
-import { esc, money, unitDisplay, num } from '../utils.js?v=0.22';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.23';
+import { esc, money, unitDisplay, num } from '../utils.js?v=0.23';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.23';
 
 function menuPrice(row){
   return row.manual_price_original ?? row.manual_price ?? row.price ?? row.suggested_price_rounded ?? row.suggested_price ?? null;
@@ -44,7 +44,7 @@ function materialBaseCost(row){
 export async function renderMenu(root){
   root.innerHTML=loader();
   try{
-    const [rows,mats,units]=await Promise.all([api.menuItems(),api.materials(),api.units()]);
+    const [rows,mats,units,categories]=await Promise.all([api.menuItems(),api.materials(),api.units(),api.menuCategoriesV023()]);
     root.innerHTML=`
       <div class="page-head">
         <div>
@@ -54,10 +54,11 @@ export async function renderMenu(root){
         <button class="btn add">إضافة وجبة</button>
       </div>
       ${rows.length?`
-        <div class="grid cols-3">
+        <div class="list-toolbar"><select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div id="menu-listing" class="grid cols-3">
           ${rows.map(r=>`
             <div class="card section-card menu-card">
-              <span class="tag">${r.has_missing_cost?'تكلفة ناقصة':'وجبة'}</span>
+              <span class="tag menu-category-name" data-category-id="${esc(r.category_id||'')}">${r.has_missing_cost?'تكلفة ناقصة':'وجبة'}</span>
               <h3>${esc(r.name)}</h3>
               <div class="menu-summary">
                 <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
@@ -78,24 +79,26 @@ export async function renderMenu(root){
           <br><button class="btn add">إضافة وجبة</button>
         </div>`}`;
 
-    root.querySelectorAll('.add').forEach(b=>b.onclick=()=>addMenu(root));
+    root.querySelectorAll('.add').forEach(b=>b.onclick=()=>addMenu(root,categories));
+    root.querySelector('#menu-category-filter')?.addEventListener('change',e=>{const id=e.target.value;root.querySelectorAll('.menu-card').forEach(card=>{const key=card.querySelector('.menu-category-name')?.dataset.categoryId;card.hidden=Boolean(id&&key!==id);});});
     root.querySelectorAll('.recipe').forEach(b=>b.onclick=()=>recipeDialog(root,b.dataset.id,b.dataset.name,mats,units));
     root.querySelectorAll('.edit-menu').forEach(b=>{
       const row=rows.find(x=>String(x.id)===String(b.dataset.id));
-      if(row) b.onclick=()=>editMenu(root,row);
+      if(row) b.onclick=()=>editMenu(root,row,categories);
     });
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }
 }
 
-function menuFormBody(row={}){
+function menuFormBody(row={},categories=[]){
   return `
     <div class="form-grid">
       <div class="field full">
         <label>اسم الوجبة</label>
         <input name="name" value="${esc(row.name||'')}" required autocomplete="off">
       </div>
+      <div class="field"><label>التصنيف</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(row.category_id||'')?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
       <div class="field">
         <label>سعر البيع <span class="optional-badge">اختياري</span></label>
         <input name="price" type="number" min="0" step="any" value="${menuPrice(row)==null?'':esc(menuPrice(row))}" autocomplete="off">
@@ -111,10 +114,10 @@ function menuFormBody(row={}){
     </div>`;
 }
 
-function addMenu(root){
+function addMenu(root,categories=[]){
   modal({
     title:'إضافة وجبة',
-    body:menuFormBody(),
+    body:menuFormBody({},categories),
     onSubmit:async fd=>{
       try{
         const name=String(fd.get('name')||'').trim();
@@ -124,6 +127,7 @@ function addMenu(root){
           price:String(fd.get('price')||'').trim()||null,
           foodCost:String(fd.get('fc')||'').trim()||null,
           discount:String(fd.get('discount')||'').trim()||0,
+          categoryId:fd.get('category')||null,
         });
         toast('تمت إضافة الوجبة','success');
         await renderMenu(root);
@@ -136,10 +140,10 @@ function addMenu(root){
   });
 }
 
-function editMenu(root,row){
+function editMenu(root,row,categories=[]){
   modal({
     title:`تعديل ${row.name||'الوجبة'}`,
-    body:menuFormBody(row),
+    body:menuFormBody(row,categories),
     submitText:'حفظ التعديل',
     onSubmit:async fd=>{
       try{
@@ -150,6 +154,7 @@ function editMenu(root,row){
           price:String(fd.get('price')||'').trim()||null,
           foodCost:String(fd.get('fc')||'').trim()||null,
           discount:String(fd.get('discount')||'').trim()||0,
+          categoryId:fd.get('category')||null,
         });
         toast('تم تحديث الوجبة.','success');
         await renderMenu(root);

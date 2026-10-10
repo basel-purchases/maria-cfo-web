@@ -1,8 +1,8 @@
-import { esc, money, dateOnly } from './utils.js?v=0.22';
+import { esc, money, dateOnly } from './utils.js?v=0.23';
 
-export const PAY_LABELS = Object.freeze({monthly:'شهري', daily:'يومي', hourly:'ساعي'});
+export const PAY_LABELS = Object.freeze({monthly:'شهري', daily:'يومي', hourly:'ساعي', fixed:'مقطوع'});
 export function payTypeBadge(type) {
-  const className = ['monthly','daily','hourly'].includes(type) ? type : 'unknown';
+  const className = ['monthly','daily','hourly','fixed'].includes(type) ? type : 'unknown';
   return `<span class="pay-type-badge pay-${className}">${esc(PAY_LABELS[type] || type || '—')}</span>`;
 }
 export function employeeName(name,type){

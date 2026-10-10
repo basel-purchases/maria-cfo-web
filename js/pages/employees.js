@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.22';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.22';
-import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.22';
-import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.23';
+import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.23';
+import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.23';
 
-import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.22';
-const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة'};
+import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.23';
+const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
 const ATTENDANCE_LABELS = {
   full: 'دوام كامل', partial: 'دوام جزئي', absent: 'غياب',
   paid_leave: 'إجازة مدفوعة', unpaid_leave: 'إجازة غير مدفوعة',
@@ -46,7 +46,7 @@ function openEmployeeModal(root) {
       <div class="field"><label>الاسم</label><input name="name" required></div>
       <div class="field"><label>الوظيفة</label><input name="job"></div>
       <div class="field"><label>نوع الأجر</label><select name="pay">
-        <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option>
+        <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option><option value="fixed">مقطوع</option>
       </select></div>
       <div class="field"><label class="wage-label">الراتب الشهري</label>
         <input name="wage" type="number" min="0.01" step="any" required inputmode="decimal">
@@ -85,11 +85,13 @@ export async function renderAttendance(root) {
 async function drawAttendance(root, day) {
   root.innerHTML = loader();
   try {
-    const [rows, employees] = await Promise.all([api.attendance(day), api.employees()]);
+    const [rows, employees, staffRules, usedLeave] = await Promise.all([api.attendance(day), api.employees(), api.payrollSettings(), api.paidLeaveUsed(day.slice(0,4))]);
+    const leaveCounts=new Map();for(const entry of usedLeave)leaveCounts.set(entry.employee_id,(leaveCounts.get(entry.employee_id)||0)+1);
+    const allowance=Number(staffRules.paid_leave_days_per_year_v023||0);
     const employeeNames = Object.fromEntries(employees.map(e => [e.id, e.name]));
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>الدوام</h2><p>اعتمد الدوام الطبيعي للجميع ثم عدّل الاستثناءات فقط.</p></div>
+        <div><h2>الدوام</h2><p>اعتمد الدوام الطبيعي للجميع ثم عدّل الاستثناءات فقط. الإجازات السنوية: ${allowance}.</p></div>
         <div class="quick-actions">
           <input id="att-date" type="date" value="${esc(day)}" style="padding:10px;border:1px solid var(--line);border-radius:12px">
           <button type="button" class="btn init" ${!employees.length ? 'disabled' : ''}>اعتماد الطبيعي</button>
@@ -99,11 +101,12 @@ async function drawAttendance(root, day) {
         ? '<div class="notice">أضف الموظفين أولًا إذا كنت تريد استخدام الدوام.</div>'
         : rows.length
           ? `<div class="table-wrap"><table class="table">
-               <thead><tr><th>الموظف</th><th>المطلوب</th><th>الفعلي</th><th>الحالة</th><th></th></tr></thead>
+               <thead><tr><th>الموظف</th><th>المطلوب</th><th>الفعلي</th><th>الحالة</th><th>إجازة / المسموح</th><th></th></tr></thead>
                <tbody>${rows.map(r => `<tr>
                  <td>${employeeName(employeeNames[r.employee_id], employees.find(e=>e.id===r.employee_id)?.pay_type)}</td>
                  <td>${esc(r.expected_hours)}</td><td>${esc(r.worked_hours)}</td>
                  <td>${esc(ATTENDANCE_LABELS[r.status] || r.status)}</td>
+                 <td>${leaveCounts.get(r.employee_id)||0} / ${allowance}</td>
                  <td><button type="button" class="btn secondary edit" data-id="${esc(r.id)}">تعديل</button></td>
                </tr>`).join('')}</tbody>
              </table></div>`
@@ -136,6 +139,7 @@ function openAttendanceModal(root, day, row, name) {
     title: name || 'موظف',
     subtitle: 'سجّل ساعات العمل الحقيقية، ثم اختر مقدار النقص الذي تريد تطبيقه إن وُجد.',
     body: `<div class="form-grid">
+      <div class="field"><label>إجازة مدفوعة</label><input type="checkbox" name="leave_flag" class="attendance-leave-check"></div>
       <div class="field"><label>الحالة</label><select name="status">
         ${Object.entries(ATTENDANCE_LABELS).map(([value, label]) =>
           `<option value="${value}">${label}</option>`).join('')}
@@ -157,7 +161,7 @@ function openAttendanceModal(root, day, row, name) {
         await api.setAttendance({
           employeeId: row.employee_id,
           date: day,
-          status: fd.get('status'),
+          status: fd.get('leave_flag')==='on'?'paid_leave':fd.get('status'),
           expected,
           worked: fd.get('worked'),
           overtime: fd.get('ot'),
@@ -179,6 +183,13 @@ function openAttendanceModal(root, day, row, name) {
   const shortage = m.form.elements.namedItem('short');
   const hint = m.form.querySelector('[data-shortage-hint]');
   status.value = row.status || 'full';
+  const leave=m.form.querySelector('[name=leave_flag]');
+  leave.checked=row.status==='paid_leave';
+  leave.addEventListener('change',()=>{
+    if(leave.checked){status.value='paid_leave';worked.value='0';shortage.value='0';}
+    else if(status.value==='paid_leave'){status.value='full';worked.value=String(expected);shortage.value='0';}
+    refreshShortageHint();
+  });
 
   function refreshShortageHint() {
     try {
@@ -196,6 +207,7 @@ function openAttendanceModal(root, day, row, name) {
   }
 
   status.addEventListener('change', () => {
+    leave.checked=status.value==='paid_leave';
     if (['absent', 'paid_leave', 'unpaid_leave'].includes(status.value)) worked.value = '0';
     if (status.value === 'full' && Number(worked.value) === 0 && expected > 0) worked.value = String(expected);
     refreshShortageHint();
@@ -222,6 +234,9 @@ export async function renderPayroll(root) {
     const employeeMap=new Map(employees.map(e=>[e.id,e]));
     const boxMap=new Map(boxes.map(b=>[b.id,b.name]));
     const chosenBox=boxes.find(b=>b.id===settings.payroll_cashbox_id);
+    const fixedStaff=employees.filter(e=>e.pay_type==='fixed'&&e.status==='active');
+    const advances=await api.employeeAdvances().catch(()=>[]);
+    const outstanding=new Map();for(const a of advances.filter(a=>a.status==='open')){const key=a.employee_id;outstanding.set(key,(outstanding.get(key)||0)+Number(a.remaining_original||0));}
     const dueItems=dues.filter(d=>Number(d.estimated_due_original)>0.001);
     const zeroDue=dues.filter(d=>Number(d.estimated_due_original)<=0.001);
     const dueWarnings=dues.filter(d=>d.review_note);
@@ -230,7 +245,7 @@ export async function renderPayroll(root) {
       balancesError=balancesResult.status==='rejected'?friendlyError(balancesResult.reason,'تعذّر تحميل المستحقات المعتمدة.'):'',
       paymentsError=paymentsResult.status==='rejected'?friendlyError(paymentsResult.reason,'تعذّر تحميل سجل المدفوعات.'):'';
     root.innerHTML=`
-      <div class="page-head"><div><h2>الرواتب والمستحقات</h2><p>تظهر أجور اليومي والساعي فور تسجيل الدوام. ولا تختفي الدفعة من السجل المالي بعد الصرف.</p></div><a class="btn secondary" href="#/settings">إعداد صندوق الرواتب</a></div>
+      <div class="page-head"><div><h2>الرواتب والمستحقات</h2><p>تظهر أجور اليومي والساعي فور تسجيل الدوام. ولا تختفي الدفعة من السجل المالي بعد الصرف.</p></div><div class="quick-actions"><a class="btn secondary" href="#/advances">سلف الموظفين</a><a class="btn secondary" href="#/settings">إعداد صندوق الرواتب</a></div></div>
       ${!chosenBox?`<div class="notice"><strong>حدد صندوق دفع الرواتب أولًا.</strong> لا يمكن دفع راتب قبل اختيار صندوق نشط من <a href="#/settings" class="text-link">الإعدادات ← الرواتب</a>.</div>`:
       `<div class="notice green">صندوق دفع الرواتب: <strong>${esc(chosenBox.name)}</strong> · كل دفعة تُسجَّل في حركة الصندوق.</div>`}
       ${schemaError?`<div class="notice"><strong>خدمة احتساب الأجور اليومية غير مفعّلة:</strong> ${esc(schemaError)}<p>نفّذ Migration v0.14 في Supabase ثم حدّث الموقع.</p></div>`:''}
@@ -241,24 +256,32 @@ export async function renderPayroll(root) {
         <div class="card"><div class="metric-label">المستحقات اليومية المقدّرة</div><div class="metric-note">${currenciesSummary(dueItems)}</div><div class="metric-note">تُعرض العملات منفصلة ولا تُجمع دون تحويل تاريخي</div></div>
       </div>
       <section class="card finance-section"><div class="finance-section-head"><div><h3>أجور الدوام المسجّل</h3><p>يومي وساعي · قبل الدفع يثبت النظام الحساب النهائي ويطبّق السلف والخصومات المسجلة.</p></div><a href="#/attendance" class="btn secondary">الدوام</a></div>
-      ${dueItems.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>اليوم</th><th>الساعات</th><th>المبلغ التقديري</th><th>الصرف</th></tr></thead><tbody>
-      ${dueItems.map(d=>`<tr><td>${employeeName(d.employee_name,d.pay_type)}</td><td>${dateOnly(d.work_date)}</td><td>${esc(d.worked_hours)} / ${esc(d.expected_hours)}</td><td><strong>${money(d.estimated_due_original,d.currency_code)}</strong></td><td><button class="btn pay-daily" data-employee="${esc(d.employee_id)}" data-date="${esc(d.work_date)}" ${!chosenBox?'disabled':''}>دفع</button></td></tr>`).join('')}
+      ${dueItems.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>اليوم</th><th>الساعات</th><th>المبلغ التقديري</th><th>رصيد السلفة</th><th>الصرف</th></tr></thead><tbody>
+      ${dueItems.map(d=>`<tr><td>${employeeName(d.employee_name,d.pay_type)}</td><td>${dateOnly(d.work_date)}</td><td>${esc(d.worked_hours)} / ${esc(d.expected_hours)}</td><td><strong>${money(d.estimated_due_original,d.currency_code)}</strong></td><td>${money(outstanding.get(d.employee_id)||0,d.currency_code)}</td><td><button class="btn pay-daily" data-employee="${esc(d.employee_id)}" data-date="${esc(d.work_date)}" ${!chosenBox?'disabled':''}>دفع</button></td></tr>`).join('')}
       </tbody></table></div>`:'<div class="empty"><strong>لا توجد أجور يومية أو ساعية تنتظر الصرف</strong><div>بعد تسجيل الدوام تظهر الأجور غير المسددة هنا.</div></div>'}
       ${zeroDue.length?`<p class="metric-note">${zeroDue.length} سجل دوام دون مبلغ مستحق حاليًا (مثل غياب غير مدفوع أو صفر ساعات).</p>`:''}
       ${dueWarnings.length?`<div class="notice"><strong>أيام تحتاج مراجعة</strong><div>${dueWarnings.map(d=>`${esc(d.employee_name)} (${dateOnly(d.work_date)}): ${esc(d.review_note)}`).join('<hr>')}</div><a href="#/attendance" class="text-link">مراجعة الدوام</a></div>`:''}</section>
       <section class="card finance-section"><div class="finance-section-head"><div><h3>أرصدة الرواتب المعتمدة</h3><p>المدفوع جزئيًا يبقى ظاهرًا حتى يسدد بالكامل.</p></div></div>
-      ${balances.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>الفترة</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th></th></tr></thead><tbody>${balances.map(b=>`<tr>
+      ${balances.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>الفترة</th><th>المستحق</th><th>المدفوع</th><th>خصم سلفة</th><th>باقي السلفة</th><th>المتبقي</th><th></th></tr></thead><tbody>${balances.map(b=>`<tr>
       <td>${employeeName(b.employee_name,b.pay_type||employeeMap.get(b.employee_id)?.pay_type)}</td>
-      <td>${dateOnly(b.run.period_start)} — ${dateOnly(b.run.period_end)}</td><td>${money(b.net_due_original,b.currency_code)}</td><td>${money(b.paid_original,b.currency_code)}</td><td><strong>${money(b.remaining_original,b.currency_code)}</strong></td>
+      <td>${dateOnly(b.run.period_start)} — ${dateOnly(b.run.period_end)}</td><td>${money(b.net_due_original,b.currency_code)}</td><td>${money(b.paid_original,b.currency_code)}</td><td>${money(b.advance_deduction_original||0,b.currency_code)}</td><td>${money(outstanding.get(b.employee_id)||0,b.currency_code)}</td><td><strong>${money(b.remaining_original,b.currency_code)}</strong></td>
       <td><button class="btn pay-balance" data-id="${esc(b.payroll_item_id)}" ${!chosenBox?'disabled':''}>دفع</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لا توجد أرصدة رواتب معتمدة وغير مدفوعة.</div>'}</section>
+      <section class="card finance-section"><div class="finance-section-head"><div><h3>\u0627\u0644\u0623\u062c\u0648\u0631 \u0627\u0644\u0645\u0642\u0637\u0648\u0639\u0629</h3><p>\u062a\u064f\u0635\u0631\u0641 \u062f\u0648\u0646 \u0634\u0631\u0637 \u0627\u0644\u062f\u0648\u0627\u0645 \u0645\u0639 \u062e\u0635\u0645 \u0623\u0642\u0633\u0627\u0637 \u0627\u0644\u0633\u0644\u0641 \u0627\u0644\u0645\u0633\u062a\u062d\u0642\u0629.</p></div></div>
+      ${fixedStaff.length?`<div class="table-wrap"><table class="table"><thead><tr><th>\u0627\u0644\u0645\u0648\u0638\u0641</th><th>\u0627\u0644\u0623\u062c\u0631</th><th>\u0631\u0635\u064a\u062f \u0627\u0644\u0633\u0644\u0641\u0629</th><th>\u0627\u0644\u062f\u0641\u0639</th></tr></thead><tbody>${fixedStaff.map(e=>`<tr><td>${employeeName(e.name,e.pay_type)}</td><td>${money(e.fixed_pay_original_v023,e.wage_currency_code)}</td><td>${money(outstanding.get(e.id)||0,e.wage_currency_code)}</td><td><button class="btn pay-fixed" data-id="${esc(e.id)}" ${!chosenBox?'disabled':''}>\u062f\u0641\u0639</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0648\u0638\u0641\u0648\u0646 \u0628\u0623\u062c\u0631 \u0645\u0642\u0637\u0648\u0639.</div>'}</section>
       <section class="card finance-section"><div class="finance-section-head"><div><h3>الرواتب الشهرية</h3><p>تُثبت الرواتب الشهرية في مسير قابل للمراجعة والاعتماد، ولا يُخصم النقص تلقائيًا.</p></div><button type="button" class="btn create-month" ${!employees.some(e=>e.pay_type==='monthly')?'disabled':''}>إنشاء مسير شهري</button></div>
       ${monthlyRuns.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الفترة</th><th>الحالة</th><th>الموظفون</th><th>أيام دوام ناقصة</th><th>المبلغ بعد الحساب</th><th>إجراءات</th></tr></thead><tbody>
       ${monthlyRuns.map(r=>`<tr><td>${dateOnly(r.period_start)} — ${dateOnly(r.period_end)}</td><td>${statusBadge(r.status)}</td><td>${esc(r.employee_count)}</td><td>${esc(r.missing_attendance_days)}</td><td>${money(r.total_net_due_base||0)}</td><td>${r.status==='draft'?`<button class="btn secondary recalc-month" data-id="${esc(r.payroll_run_id)}">تحديث</button> <button class="btn approve-month" data-id="${esc(r.payroll_run_id)}" ${Number(r.missing_attendance_days)>0?'disabled':''}>اعتماد</button>`:'—'}</td></tr>`).join('')}
       </tbody></table></div>`:'<div class="empty">لم تُنشأ مسيرات رواتب شهرية حتى الآن.</div>'}</section>
-      <section class="card finance-section"><div class="finance-section-head"><div><h3>سجل صرف الرواتب</h3><p>دائم وقابل للمراجعة: الدفع لا يحذف السجل، ويدخل مباشرة في الصندوق.</p></div></div>
-      ${paymentsError?`<div class="notice">${esc(paymentsError)}</div>`:''}
-      ${payments.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>تاريخ الدفع</th><th>المبلغ المدفوع</th><th>الصندوق</th><th>الحالة</th></tr></thead><tbody>${payments.map(p=>`<tr><td>${employeeName(employeeMap.get(p.employee_id)?.name||'موظف',employeeMap.get(p.employee_id)?.pay_type)}</td><td>${dateOnly(p.occurred_at)}</td><td>${money(p.amount_original,p.currency_code)}</td><td>${esc(boxMap.get(p.cashbox_id)||'—')}</td><td>${statusBadge(p.status)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لم تُسجّل دفعات راتب بعد.</div>'}</section>`;
+      <section class="card finance-section"><div class="finance-section-head"><h3>\u0633\u062c\u0644 \u0635\u0631\u0641 \u0627\u0644\u0631\u0648\u0627\u062a\u0628</h3></div><div id="salary-ledger-v023"></div></section>`;
+    await renderSalaryLedger(root,employeeMap,boxMap);
 
+    for(const b of root.querySelectorAll('.pay-fixed')) b.onclick=()=>{
+      const employee=fixedStaff.find(e=>e.id===b.dataset.id);if(!employee)return;
+      modal({title:'\u0635\u0631\u0641 \u0623\u062c\u0631 \u0645\u0642\u0637\u0648\u0639',submitText:'\u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062f\u0641\u0639',
+        body:`<div class="notice rose">${employeeName(employee.name,'fixed')} · ${money(employee.fixed_pay_original_v023,employee.wage_currency_code)}<div>\u0627\u0644\u0635\u0646\u062f\u0648\u0642: ${esc(chosenBox.name)}</div><div>\u0627\u0644\u0633\u0644\u0641\u0629: ${money(outstanding.get(employee.id)||0,employee.wage_currency_code)}</div></div><div class="field"><label>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0635\u0631\u0641</label><input type="date" name="date" value="${todayISO()}" required></div>`,
+        onSubmit:async fd=>{try{await api.payFixedEmployee(employee.id,chosenBox.id,fd.get('date'));toast('\u062a\u0645 \u0635\u0631\u0641 \u0627\u0644\u0623\u062c\u0631','success');await renderPayroll(root);return true;}catch(error){toast(friendlyError(error),'error');return false;}}
+      });
+    };
     for(const b of root.querySelectorAll('.pay-daily')) b.onclick=()=>{
       const d=dueItems.find(x=>x.employee_id===b.dataset.employee&&x.work_date===b.dataset.date);
       if(!d)return;
@@ -293,4 +316,38 @@ export async function renderPayroll(root) {
   } catch(e) {
     root.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;
   }
+}
+
+// Independent, server-paginated salary ledger. Historic payments never disappear.
+async function renderSalaryLedger(root,employeeMap,boxMap){
+  const wrap=root.querySelector('#salary-ledger-v023');if(!wrap)return;
+  const now=todayISO();
+  let kind='day',day=now,page=0,period;
+  const fetchPage=async()=>{
+    const bounds=(await import('../payroll-policy-v023.js?v=0.23')).salaryPeriod(kind,day);
+    period=bounds;
+    const result=await api.salaryPaymentPage(bounds.start,bounds.end,page*25,25);
+    const rows=Array.isArray(result?.rows)?result.rows:[];
+    const count=Number(result?.total)||0;
+    const allTotals=Object.entries(result?.totals_by_currency||{}).map(([code,val])=>money(val,code)).join(' + ')||'0';
+    const paid=new Map();
+    for(const row of rows){if(row.status==='voided')continue;const code=row.currency_code||'SYP';paid.set(code,(paid.get(code)||0)+Number(row.amount_original||0));}
+    wrap.innerHTML=`<div class="form-grid"><div class="field"><label>\u0627\u0644\u0641\u062a\u0631\u0629</label><select id="salary-kind"><option value="day" ${kind==='day'?'selected':''}>\u064a\u0648\u0645\u064a</option><option value="month" ${kind==='month'?'selected':''}>\u0634\u0647\u0631\u064a</option><option value="year" ${kind==='year'?'selected':''}>\u0633\u0646\u0648\u064a</option></select></div><div class="field"><label>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</label><input id="salary-day" type="date" value="${esc(day)}"></div></div>
+    <p class="metric-note">${bounds.start} \u2014 ${bounds.end} \u00b7 ${count} \u062d\u0631\u0643\u0629. \u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0641\u062a\u0631\u0629: ${allTotals}</p>
+    <div class="table-wrap"><table class="table"><thead><tr><th>\u0627\u0644\u0645\u0648\u0638\u0641</th><th>\u0627\u0644\u064a\u0648\u0645</th><th>\u0627\u0644\u0645\u062f\u0641\u0648\u0639</th><th>\u062e\u0635\u0645 \u0633\u0644\u0641\u0629</th><th>\u0627\u0644\u0635\u0646\u062f\u0648\u0642</th><th>\u0627\u0644\u0646\u0648\u0639</th></tr></thead><tbody>
+    ${rows.map(p=>{const e=employeeMap.get(p.employee_id);return `<tr><td>${employeeName(e?.name||'?',e?.pay_type)}</td><td>${dateOnly(p.occurred_at)}</td><td>${money(p.amount_original,p.currency_code)}</td><td>${money(p.advance_deducted_original||0,p.currency_code)}</td><td>${esc(boxMap.get(p.cashbox_id)||'\u2014')}</td><td>${p.kind==='fixed'?'\u0645\u0642\u0637\u0648\u0639':'\u0645\u0633\u064a\u0631'}</td></tr>`;}).join('')||'<tr><td colspan="6">\u0644\u0627 \u062a\u0648\u062c\u062f \u062f\u0641\u0639\u0627\u062a \u0641\u064a \u0627\u0644\u0641\u062a\u0631\u0629.</td></tr>'}</tbody></table></div>
+    <div class="pagination-bar"><button id="salary-prev" class="mini-btn" ${page<=0?'disabled':''}>\u0627\u0644\u0633\u0627\u0628\u0642</button><span>${page+1} / ${Math.max(1,Math.ceil(count/25))}</span><button id="salary-next" class="mini-btn" ${(page+1)*25>=count?'disabled':''}>\u0627\u0644\u062a\u0627\u0644\u064a</button></div>`;
+    wrap.querySelector('#salary-kind').onchange=e=>{kind=e.target.value;page=0;safeLoad();};
+    wrap.querySelector('#salary-day').onchange=e=>{day=e.target.value;page=0;safeLoad();};
+    wrap.querySelector('#salary-prev').onclick=()=>{page--;safeLoad();};
+    wrap.querySelector('#salary-next').onclick=()=>{page++;safeLoad();};
+    // Preserve selected controls across pagination by assigning after markup refresh.
+    wrap.querySelector('#salary-kind').value=kind;
+  };
+  const safeLoad=async()=>{
+    const k=wrap.querySelector('#salary-kind'),d=wrap.querySelector('#salary-day');
+    if(k)kind=k.value;if(d)day=d.value;
+    try{await fetchPage();}catch(e){wrap.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
+  };
+  await safeLoad();
 }

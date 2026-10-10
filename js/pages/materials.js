@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.22';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.22';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.22';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.22';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.22';
-import { formatSmartStock } from '../material-stock-display.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.23';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.23';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.23';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.23';
+import { formatSmartStock } from '../material-stock-display.js?v=0.23';
 
 const PAGE_SIZE=10;
 
@@ -65,14 +65,15 @@ function filterRows(rows,query){
 export async function renderMaterials(root) {
   root.innerHTML = loader();
   try {
-    let [rows, units] = await Promise.all([api.materials(), api.units()]);
+    let [rows, units, categories] = await Promise.all([api.materials(), api.units(), api.materialCategoriesV023()]);
     rows = await api.ensureMaterialCodes(rows);
     await Promise.all(rows.map(r=>api.ensureStandardMaterialUnits(r,units).catch(()=>null)));
     let materialLinks=[];
     try{materialLinks=await api.allMaterialUnitLinks();}
     catch(error){console.warn('Material relationships unavailable for display.',error);}
 
-    const state={query:'',page:1};
+    const state={query:'',page:1,category:''};
+    const categoryMap=new Map(categories.map(c=>[String(c.id),c.name]));
     root.innerHTML = `
       <div class="page-head">
         <div>
@@ -87,6 +88,7 @@ export async function renderMaterials(root) {
             <span aria-hidden="true">⌕</span>
             <input id="material-search" type="search" placeholder="ابحث باسم المادة أو الكود" autocomplete="off">
           </div>
+          <select id="material-filter-category"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
           <div class="list-count" id="material-count"></div>
         </div>
         <div id="materials-list"></div>` : `
@@ -98,7 +100,7 @@ export async function renderMaterials(root) {
         </div>`}`;
 
     root.querySelectorAll('.add').forEach((b) => {
-      b.onclick = () => addMaterial(root, units, rows);
+      b.onclick = () => addMaterial(root, units, rows,categories);
     });
 
     if(!rows.length) return;
@@ -108,19 +110,19 @@ export async function renderMaterials(root) {
     const search=root.querySelector('#material-search');
 
     const draw=()=>{
-      const filtered=filterRows(rows,state.query);
+      const filtered=filterRows(rows,state.query).filter(r=>!state.category||String(r.category_id_v023||'')===state.category);
       const pages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
       state.page=Math.min(state.page,pages);
       const start=(state.page-1)*PAGE_SIZE;
       const shown=filtered.slice(start,start+PAGE_SIZE);
       count.textContent=`${filtered.length} مادة`;
       list.innerHTML=`
-        ${shown.length ? table(shown, units, materialLinks) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
+        ${shown.length ? table(shown, units, materialLinks,categoryMap) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
         ${filtered.length>PAGE_SIZE ? pagination(state.page,pages) : ''}`;
 
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
-        if (row) b.onclick = () => editMaterial(root, units, row);
+        if (row) b.onclick = () => editMaterial(root, units, row,categories);
       });
       list.querySelectorAll('[data-material-units]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialUnits);
@@ -130,6 +132,7 @@ export async function renderMaterials(root) {
       list.querySelector('[data-page-next]')?.addEventListener('click',()=>{state.page=Math.min(pages,state.page+1);draw();});
     };
 
+    root.querySelector('#material-filter-category').onchange=e=>{state.category=e.target.value;state.page=1;draw();};
     search.addEventListener('input',()=>{
       state.query=search.value;
       state.page=1;
@@ -150,13 +153,14 @@ function pagination(page,pages){
     </div>`;
 }
 
-function table(rows, units, materialLinks=[]) {
+function table(rows, units, materialLinks=[],categoryMap=new Map()) {
   return `
     <div class="table-wrap table-fit">
       <table class="table materials-table">
         <thead>
           <tr>
             <th>المادة</th>
+            <th>التصنيف</th>
             <th>الوحدة</th>
             <th>الكود</th>
             <th>الرصيد الموجود</th>
@@ -175,6 +179,7 @@ function table(rows, units, materialLinks=[]) {
             return `
               <tr>
                 <td><strong>${esc(r.name)}</strong></td>
+                <td>${esc(categoryMap.get(String(r.category_id_v023))||'—')}</td>
                 <td>${esc(unit || '—')}</td>
                 <td><span class="code-chip">${esc(materialCode(r))}</span></td>
                 <td><strong class="smart-stock-main" title="${esc(shownStock.original)}">${esc(shownStock.text)}</strong>${shownStock.converted?`<small class="smart-stock-sub">الأساس: ${esc(shownStock.original)}<span> · ${esc(shownStock.relationship)}</span></small>`:''}</td>
@@ -193,14 +198,15 @@ function table(rows, units, materialLinks=[]) {
     </div>`;
 }
 
-function addMaterial(root, units, rows) {
+function addMaterial(root, units, rows,categories=[]) {
+  const generalUnits=units.filter(u=>u.is_material_specific!==true);
   const listId=`material-base-units-${Date.now()}`;
   const m = modal({
     title: 'إضافة مادة',
     subtitle: 'أدخل المادة ووحدة المخزون. يمكنك إضافة أي تحويلات لاحقًا من زر «الوحدات والتحويل».',
     wide: true,
     body: `
-      ${unitListHtml(units,listId)}
+      ${unitListHtml(generalUnits,listId)}
       <div class="form-grid material-form-grid">
         <div class="field">
           <label>اسم المادة</label>
@@ -211,6 +217,7 @@ function addMaterial(root, units, rows) {
           <input name="material_code" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
         </div>
 
+        <div class="field full"><label>التصنيف</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
         <div class="field full">
           <label>وحدة المخزون الأساسية</label>
           <input name="base_unit_text" list="${listId}" placeholder="ابحث أو اكتب وحدة جديدة" required autocomplete="off">
@@ -258,11 +265,17 @@ function addMaterial(root, units, rows) {
           return false;
         }
 
-        if(isVagueContextualName(unitText)){
-          toast('استخدم وحدة مخزون أساسية مثل غرام أو كيلوغرام، ثم أضف وحدة خاصة بالتحويلات باسم المادة.','error');
+        // Common units such as BOX, PACK, PCS and BAG are valid base units.
+        // The ambiguity guard applies only when inventing a NEW custom unit.
+        let baseUnit=api.findUnitByText(unitText,units);
+        if(!baseUnit && isVagueContextualName(unitText)){
+          toast('\u0627\u062e\u062a\u0631 \u0627\u0644\u0648\u062d\u062f\u0629 \u0627\u0644\u0645\u0639\u0631\u0651\u0641\u0629 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0648 \u0627\u0643\u062a\u0628 \u0627\u0633\u0645\u064b\u0627 \u0645\u0645\u064a\u0632\u064b\u0627 \u0644\u0648\u062d\u062f\u0629 \u062c\u062f\u064a\u062f\u0629.','error');
           return false;
         }
-        let baseUnit=api.findUnitByText(unitText,units);
+        if(baseUnit?.is_material_specific){
+          toast('\u0647\u0630\u0647 \u0648\u062d\u062f\u0629 \u062e\u0627\u0635\u0629 \u0628\u0645\u0627\u062f\u0629 \u0623\u062e\u0631\u0649. \u0627\u062e\u062a\u0631 \u0648\u062d\u062f\u0629 \u0639\u0627\u0645\u0629.','error');
+          return false;
+        }
         if(!baseUnit){
           baseUnit=await api.resolveUnit(unitText,units);
           if(baseUnit && !units.some(u=>String(u.id)===String(baseUnit.id))) units.push(baseUnit);
@@ -292,7 +305,7 @@ function addMaterial(root, units, rows) {
           {name, code, base_unit_id: baseUnitId},
         ];
 
-        const created = await api.insertFirst('materials', basePayloads);
+        const created = await api.insertFirst('materials', basePayloads.map(p=>({...p,category_id_v023:fd.get('category')||null})));
 
         if (targetRaw !== '' && targetOf(created) == null) {
           await api.setMaterialAlertMinimum(created.id, Number(targetRaw), created);
@@ -330,7 +343,7 @@ function addMaterial(root, units, rows) {
   refresh();
 }
 
-function editMaterial(root, units, material) {
+function editMaterial(root, units, material,categories=[]) {
   const current = stockOf(material);
   const currentTarget = targetOf(material);
   const currentPrice = priceOf(material);
@@ -350,6 +363,7 @@ function editMaterial(root, units, material) {
           <label>الكود</label>
           <input name="code" value="${esc(currentCode)}" autocomplete="off">
         </div>
+        <div class="field"><label>التصنيف</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}" ${c.id===material.category_id_v023?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
         <div class="field">
           <label>وحدة المخزون</label>
           <input value="${esc(unit)}" disabled>
@@ -392,8 +406,8 @@ function editMaterial(root, units, material) {
         if(!code) code=await api.nextMaterialCode();
 
         await api.updateFirst('materials',material.id,[
-          {name,quick_code:code},
-          {name,code},
+          {name,quick_code:code,category_id_v023:fd.get('category')||null},
+          {name,code,category_id_v023:fd.get('category')||null},
         ]);
 
         if (targetRaw !== '') {

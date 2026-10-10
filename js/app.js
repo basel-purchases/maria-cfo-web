@@ -1,26 +1,28 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.22';
-import * as api from './api.js?v=0.22';
-import { esc } from './utils.js?v=0.22';
-import { toast, friendlyError, modal } from './ui.js?v=0.22';
-import { renderDashboard } from './pages/dashboard.js?v=0.22';
-import { renderHub } from './pages/hubs.js?v=0.22';
-import { renderMaterials } from './pages/materials.js?v=0.22';
-import { renderSuppliers } from './pages/suppliers.js?v=0.22';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.22';
-import { renderMenu } from './pages/menu.js?v=0.22';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.23';
+import * as api from './api.js?v=0.23';
+import { esc } from './utils.js?v=0.23';
+import { toast, friendlyError, modal } from './ui.js?v=0.23';
+import { renderDashboard } from './pages/dashboard.js?v=0.23';
+import { renderHub } from './pages/hubs.js?v=0.23';
+import { renderMaterials } from './pages/materials.js?v=0.23';
+import { renderSuppliers } from './pages/suppliers.js?v=0.23';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.23';
+import { renderMenu } from './pages/menu.js?v=0.23';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.22';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.22';
-import { renderEvents } from './pages/events.js?v=0.22';
-import { renderReports } from './pages/reports.js?v=0.22';
-import { renderAssistant } from './pages/assistant.js?v=0.22';
-import { renderImages } from './pages/images.js?v=0.22';
-import { renderSettings } from './pages/settings.js?v=0.22';
+} from './pages/daily.js?v=0.23';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.23';
+import { renderEvents } from './pages/events.js?v=0.23';
+import { renderReports } from './pages/reports.js?v=0.23';
+import { renderAssistant } from './pages/assistant.js?v=0.23';
+import { renderImages } from './pages/images.js?v=0.23';
+import { renderSettings } from './pages/settings.js?v=0.23';
+import { renderAssets } from './pages/assets.js?v=0.23';
+import { renderAdvances } from './pages/advances.js?v=0.23';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -101,7 +103,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.22</div>
+        <div class="sidebar-foot">Web v0.23</div>
       </aside>
 
       <main class="main">
@@ -265,9 +267,9 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
-    'employees-list': 'employees', attendance: 'employees', payroll: 'employees',
+    'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees',
     'events-list': 'events', reports: 'reports-hub', images: 'images',
   }[key] || key;
   app.querySelectorAll('.nav a').forEach((a) => {
@@ -300,6 +302,8 @@ async function route() {
     images: 'الصور - OCR.space',
     settings: 'الإعدادات',
     materials: 'المواد والكميات والأسعار',
+    assets: '\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a',
+    advances: '\u0633\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646',
     suppliers: 'الموردون',
     purchases: 'فواتير الشراء',
     purchase: 'تفاصيل الفاتورة',
@@ -329,6 +333,8 @@ async function route() {
       case 'events': return renderHub(root, 'events');
       case 'reports-hub': return renderHub(root, 'reports');
       case 'materials': return renderMaterials(root);
+      case 'assets': return renderAssets(root);
+      case 'advances': return renderAdvances(root);
       case 'suppliers': return renderSuppliers(root);
       case 'purchases': return renderPurchases(root);
       case 'purchase': return renderPurchaseDetail(root, id);

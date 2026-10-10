@@ -895,3 +895,38 @@ textarea:focus{border-color:var(--plum);box-shadow:0 0 0 3px rgba(111,71,101,.08
 
 /* v0.22: highlight derived OCR numbers that require manual verification. */
 .image-item-review-note{display:block;margin-top:6px;color:#975518;font-size:12px;font-weight:600;line-height:1.65;white-space:normal;}
+
+/* Maria CFO batch 1: inventory, cashbox ledger and order financial toolbar */
+.inventory-parts-table th,.inventory-parts-table td{white-space:normal;min-width:125px}
+.inventory-minor{font-weight:600;color:var(--plum)}
+.cashbox-ledger-filters{margin:14px 0;grid-template-columns:repeat(4,minmax(130px,1fr))}
+.cashbox-ledger-totals{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+.cashbox-ledger-totals>div{border:1px solid var(--line);padding:12px 18px;border-radius:14px;display:flex;flex-direction:column;gap:6px;min-width:185px}
+.ledger-in,.metric-in strong{color:#24724f;font-weight:700}
+.ledger-out,.metric-out strong{color:#aa3d4b;font-weight:700}
+.order-detail-toolbar{display:grid;grid-template-columns:minmax(360px,1.5fr) minmax(275px,1fr);gap:16px;align-items:start}
+.order-finance-card .section-head-inline{margin-bottom:12px}
+.order-collected{font-size:clamp(18px,2.2vw,28px);color:var(--plum);white-space:nowrap}
+.order-finance-grid{display:grid;grid-template-columns:repeat(3,minmax(105px,1fr));gap:12px}
+.order-finance-grid>div{display:flex;flex-direction:column;gap:6px;padding:10px;background:#fcf8fa;border-radius:12px}
+.order-finance-grid small{font-size:11px;line-height:1.5;color:var(--muted)}
+.order-finance-grid strong{font-size:15px;direction:ltr;text-align:right}
+.order-finance-grid .order-final{background:#f3e7ed;border:1px solid #e4d3de}
+.order-discount-control{margin-top:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.order-discount-control label{font-size:13px;font-weight:600}
+.order-discount-control input{max-width:100px;min-width:80px}
+.order-action-buttons{margin-top:16px;flex-wrap:wrap}
+.settings-tabs{flex-wrap:wrap}
+.order-settings-card,.expense-categories-card{margin-top:8px}
+.expense-filters{margin-bottom:14px}
+.expense-filters .form-grid{max-width:800px}
+@media(max-width:820px){.order-detail-toolbar{grid-template-columns:1fr}.cashbox-ledger-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.order-finance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.cashbox-ledger-filters{grid-template-columns:1fr}.order-finance-grid{grid-template-columns:1fr 1fr}.order-detail-toolbar{display:block}.order-controls-card{margin-top:12px}}
+
+/* Maria CFO v0.23 */
+[hidden]{display:none!important;}
+.pay-type-badge.pay-fixed{background:#ece8ff;color:#51428d;border-color:#c8baf7;}
+.attendance-leave-check{width:22px;height:22px;accent-color:#698e72;}
+.category-section{margin-top:20px;padding-top:12px;border-top:1px solid var(--line,#ded5dc);}
+.category-section .table{margin-top:8px;}
+.report-mode{margin:18px 0;}

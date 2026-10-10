@@ -1,7 +1,7 @@
-import { supabase, configured } from './supabase.js?v=0.22';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.22';
-import { isVagueContextualName } from './unit-catalog.js?v=0.22';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.22';
+import { supabase, configured } from './supabase.js?v=0.23';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.23';
+import { isVagueContextualName } from './unit-catalog.js?v=0.23';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.23';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -95,6 +95,37 @@ export async function materials(){
     try{return await list('materials',{order:'id',ascending:true,limit:1000});}
     catch(__){return list('materials',{order:'name',ascending:true,limit:1000});}
   }
+}
+
+// Actual latest purchase movement by occurred_at, not the latest row insertion time.
+export async function latestMaterialPurchasePrices(){
+  const results=new Map();
+  // Use verified read-only SQL after migration; old deployments have a bounded fallback.
+  try{
+    const rows=await rpc('get_latest_material_purchase_prices_v023');
+    if(Array.isArray(rows)){
+      for(const r of rows){
+        if(r.material_id!=null && r.price_per_base!=null) results.set(String(r.material_id),Number(r.price_per_base));
+      }
+      return results;
+    }
+  }catch(e){console.info('latest price RPC fallback',e?.code||e?.message);}
+
+  const page=750;
+  for(let offset=0;offset<15000;offset+=page){
+    const q=need().from('inventory_movements')
+      .select('material_id,movement_type,quantity_delta_base,unit_cost_base_per_base_unit,occurred_at')
+      .eq('movement_type','purchase').order('occurred_at',{ascending:false})
+      .range(offset,offset+page-1);
+    const rows=await dataOrThrow(q);
+    for(const r of rows){
+      const id=String(r.material_id||'');
+      const price=Number(r.unit_cost_base_per_base_unit);
+      if(id&&!results.has(id)&&Number(r.quantity_delta_base)>0&&Number.isFinite(price))results.set(id,price);
+    }
+    if(rows.length<page)break;
+  }
+  return results;
 }
 
 export async function recordInventoryMovement({materialId,quantityDelta,movementType='opening',unitCost=null,note=null}){
@@ -347,9 +378,10 @@ export async function menuItems(){
   return master.map(m=>({...m,...(costMap[String(m.id)]||{}),...m}));
 }
 
-export async function createMenuItem({name,price=null,foodCost=null,discount=null}){
+export async function createMenuItem({name,price=null,foodCost=null,discount=null,categoryId=null}){
   const payload={
     name:String(name||'').trim(),
+    category_id:categoryId||null,
     manual_price_original:price===''||price===null ? null : Number(price),
     target_food_cost_percent:foodCost===''||foodCost===null ? null : Number(foodCost),
     default_discount_percent:discount===''||discount===null ? 0 : Number(discount),
@@ -377,9 +409,10 @@ export async function setMenuPrice(menuItemId,price){
   }
 }
 
-export async function updateMenuItem(id,{name,price=null,foodCost=null,discount=null}){
+export async function updateMenuItem(id,{name,price=null,foodCost=null,discount=null,categoryId=null}){
   const patch={
     name:String(name||'').trim(),
+    category_id:categoryId||null,
     target_food_cost_percent:foodCost===''||foodCost===null ? null : Number(foodCost),
     default_discount_percent:discount===''||discount===null ? 0 : Number(discount),
   };
@@ -573,6 +606,24 @@ export async function cashboxOverview(date=todayISO()){
   }
 }
 
+// Manual ledger only: purchases, sales, salaries and expenses are deliberately excluded.
+export async function cashboxManualTransactions(start,end){
+  const result=[];
+  const startIso=new Date(start+'T00:00:00').toISOString();
+  const afterEnd=new Date(new Date(end+'T00:00:00').getTime()+86400000).toISOString();
+  const page=500;
+  for(let offset=0;offset<25000;offset+=page){
+    const rows=await dataOrThrow(need().from('cashbox_transactions').select('*')
+      .gte('occurred_at',startIso).lt('occurred_at',afterEnd)
+      .order('occurred_at',{ascending:false}).range(offset,offset+page-1));
+    result.push(...rows);
+    if(rows.length<page)break;
+  }
+  return result;
+}
+
+export const zeroCashboxToGeneral=cashboxId=>rpc('zero_cashbox_to_general_v023',{p_source_cashbox_id:cashboxId});
+
 export async function recordCashboxAdjustment({cashboxId,direction,amount,currency='SYP',note=null,date=todayISO()}){
   return rpc('record_cashbox_adjustment_v013',{
     p_cashbox_id:cashboxId,
@@ -615,6 +666,49 @@ export async function expenseDetails(){
     };
   });
 }
+// Read all expenses for the selected period, and only their linked cashbox entries.
+// Pagination prevents silent truncation at 500 rows.
+export async function expenseDetailsForPeriod(start,end){
+  const startIso=new Date(start+'T00:00:00').toISOString();
+  const endIso=new Date(new Date(end+'T00:00:00').getTime()+86400000).toISOString();
+  const rows=[];const page=500;
+  for(let offset=0;offset<25000;offset+=page){
+    const chunk=await dataOrThrow(need().from('expenses').select('*')
+      .gte('occurred_at',startIso).lt('occurred_at',endIso)
+      .order('occurred_at',{ascending:false}).range(offset,offset+page-1));
+    rows.push(...chunk);if(chunk.length<page)break;
+  }
+  const [cats,boxes]=await Promise.all([expenseCategories(),cashboxes()]);
+  const catMap=Object.fromEntries(cats.map(c=>[String(c.id),c]));
+  const boxMap=Object.fromEntries(boxes.map(b=>[String(b.id),b]));
+  const txIds=[...new Set(rows.map(r=>r.cashbox_transaction_id).filter(Boolean))];
+  const txMap=new Map();
+  for(let i=0;i<txIds.length;i+=100){
+    const chunk=await dataOrThrow(need().from('cashbox_transactions').select('*').in('id',txIds.slice(i,i+100)));
+    for(const tx of chunk)txMap.set(String(tx.id),tx);
+  }
+  return rows.map(row=>{
+    const tx=txMap.get(String(row.cashbox_transaction_id))||null;
+    return {...row,category_name:catMap[String(row.category_id)]?.name||null,
+      cashbox_id:tx?.cashbox_id||null,
+      cashbox_name:boxMap[String(tx?.cashbox_id)]?.name||null,
+      amount_original:tx?.amount_original??null,
+      currency_code:tx?.currency_code||null,
+      transaction_is_void:tx?.is_void===true};
+  });
+}
+export const manageExpenseCategory=(action,id=null,name=null)=>rpc('manage_expense_category_v023',{
+  p_action:action,p_category_id:id,p_name:name,
+});
+export const saveOrderSettings=(discount,monthlyTax,localTax,expenseCashboxId)=>rpc('save_order_settings_v023',{
+  p_discount_percent:Number(discount),p_monthly_tax_percent:Number(monthlyTax),
+  p_local_tax_percent:Number(localTax),p_expense_cashbox_id:expenseCashboxId||null,
+});
+export const setOrderRates=(orderId,discount,monthlyTax,localTax)=>rpc('set_order_rates_v023',{
+  p_order_id:orderId,p_discount_percent:Number(discount),
+  p_expenditure_tax_percent:Number(monthlyTax),p_local_tax_percent:Number(localTax),
+});
+
 export const orders=()=>list('orders',{order:'occurred_at',limit:500});
 export const orderItems=id=>list('order_items',{order:'created_at',ascending:true,eq:{order_id:id},limit:300});
 export const employees=()=>list('employees',{order:'name',ascending:true,limit:500});
@@ -629,7 +723,7 @@ export const events=()=>list('events',{order:'event_date',limit:300});
 export const eventBookings=id=>list('event_bookings',{order:'created_at',ascending:true,eq:{event_id:id},limit:300});
 
 export async function statistics(start,end){
-  return rpc('get_financial_statistics',{p_start_date:start,p_end_date:end});
+  return rpc('get_financial_statistics_v023',{p_start_date:start,p_end_date:end});
 }
 
 function norm(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');}
@@ -805,20 +899,11 @@ export async function setOrderCashbox(orderId,cashboxId){
   throw last;
 }
 
-export async function postOrder(id){
-  let last;
-  for(let attempt=1;attempt<=2;attempt++){
-    try{return await rpc('post_order_v013',{p_order_id:id});}
-    catch(e){
-      last=e;
-      const msg=String(e?.message||e||'').toLowerCase();
-      const retry=msg.includes('failed to fetch')||msg.includes('network')||msg.includes('timeout')||msg.includes('502')||msg.includes('503')||msg.includes('504');
-      if(!retry||attempt===2) break;
-      await sleep(500);
-    }
-  }
-  throw last;
-}
+export const addComplimentaryOrderItem=({orderId,menuItemId,quantity,unitPrice})=>rpc('add_complimentary_order_item_v023',{p_order_id:orderId,p_menu_item_id:menuItemId,p_quantity:Number(quantity),p_unit_price_original:Number(unitPrice)});
+export const reopenPostedOrder=(orderId,reason)=>rpc('reopen_posted_order_v023',{p_order_id:orderId,p_reason:reason});
+
+// Posting money must never automatically retry after an ambiguous network failure.
+export async function postOrder(id){return rpc('post_order_v023',{p_order_id:id});}
 
 export async function recordExpense({cashboxId,amount,title,currency='SYP',categoryId=null,description=null,payee=null,date=todayISO()}){
   const occurredAt=new Date(date+'T12:00:00').toISOString();
@@ -900,7 +985,8 @@ export async function approvedSalaryBalances(){
   const runMap=new Map(runs.map(r=>[r.id,r]));
   const itemMap=new Map(items.map(i=>[i.id,i]));
   return balances.map(b=>({...b,run:runMap.get(b.payroll_run_id)||null,
-    pay_type:itemMap.get(b.payroll_item_id)?.pay_type_snapshot||null}))
+    pay_type:itemMap.get(b.payroll_item_id)?.pay_type_snapshot||null,
+    advance_deduction_original:itemMap.get(b.payroll_item_id)?.advance_deduction_original||0}))
     .filter(b=>b.run&&['approved','closed'].includes(b.run.status)&&Number(b.remaining_original)>0.001);
 }
 export async function payApprovedSalary(payrollItemId,amount=null){
@@ -923,3 +1009,58 @@ export async function statisticsTimeSeries(start,end,granularity='day'){
     p_start_date:start,p_end_date:end,p_granularity:granularity,
   });
 }
+
+// v0.23 staff, advances and non-financial inventories.
+export const employeeAdvances=()=>list('employee_advances',{order:'occurred_at',limit:1000});
+export const advanceDeductions=()=>list('payroll_advance_deductions',{limit:2000});
+export const fixedAdvanceDeductionsV023=()=>list('employee_fixed_advance_deductions_v023',{limit:2000});
+export async function recordEmployeeAdvance({employeeId,cashboxId,amount,repaymentMode='installments',installment=null,date=todayISO(),note=null}){
+  return rpc('record_employee_advance',{
+    p_employee_id:employeeId,p_cashbox_id:cashboxId,p_amount:Number(amount),
+    p_repayment_mode:repaymentMode,p_installment_amount:installment===null?null:Number(installment),
+    p_occurred_at:new Date(`${date}T12:00:00`).toISOString(),p_note:String(note||'').trim()||null,
+  });
+}
+export const saveStaffPolicy=(hours,multiplier,leaveDays)=>rpc('save_staff_policy_v023',{
+  p_daily_hours:Number(hours),p_overtime_multiplier:Number(multiplier),p_paid_leave_days:Number(leaveDays),
+});
+export const paidLeaveUsed=async(year)=>{
+  const start=`${year}-01-01`,end=`${year}-12-31`,all=[];
+  for(let offset=0;offset<20000;offset+=500){
+    const rows=await dataOrThrow(need().from('employee_attendance').select('employee_id,work_date')
+      .eq('status','paid_leave').gte('work_date',start).lte('work_date',end)
+      .order('work_date',{ascending:true}).range(offset,offset+499));
+    all.push(...rows);if(rows.length<500)break;
+  }
+  return all;
+};
+export const payFixedEmployee=(employeeId,cashboxId,date,note=null)=>rpc('pay_fixed_employee_v023',{
+  p_employee_id:employeeId,p_cashbox_id:cashboxId,p_work_date:date,p_note:note,
+});
+export const fixedPaymentHistory=()=>list('employee_fixed_payments_v023',{order:'occurred_at',limit:1000});
+export const salaryPaymentPage=(start,end,offset=0,limit=25)=>rpc('get_salary_payment_page_v023',{
+  p_start_date:start,p_end_date:end,p_offset:offset,p_limit:limit,
+});
+export const materialCategoriesV023=()=>list('material_categories_v023',{order:'name',ascending:true,limit:500});
+export const assetCategoriesV023=()=>list('asset_categories_v023',{order:'name',ascending:true,limit:500});
+export const menuCategoriesV023=()=>list('menu_categories',{order:'name',ascending:true,limit:500});
+export const restaurantAssetsV023=()=>list('restaurant_assets_v023',{order:'name',ascending:true,limit:1000});
+export async function createRestaurantAssetV023(row){return insert('restaurant_assets_v023',row);}
+export async function updateRestaurantAssetV023(id,row){return update('restaurant_assets_v023',id,row);}
+export async function deleteRestaurantAssetV023(id){return remove('restaurant_assets_v023',id);}
+export async function createCatalogCategoryV023(kind,name){
+  const table={material:'material_categories_v023',asset:'asset_categories_v023',menu:'menu_categories'}[kind];
+  if(!table)throw new Error('CATEGORY_KIND_INVALID');
+  return insert(table,{name:String(name).trim()});
+}
+export async function renameCatalogCategoryV023(kind,id,name){
+  const table={material:'material_categories_v023',asset:'asset_categories_v023',menu:'menu_categories'}[kind];
+  if(!table)throw new Error('CATEGORY_KIND_INVALID');
+  return update(table,id,{name:String(name).trim()});
+}
+export async function deleteCatalogCategoryV023(kind,id){
+  const table={material:'material_categories_v023',asset:'asset_categories_v023',menu:'menu_categories'}[kind];
+  if(!table)throw new Error('CATEGORY_KIND_INVALID');
+  return remove(table,id);
+}
+export const payrollStatisticsV023=(start,end)=>rpc('get_payroll_statistics_v023',{p_start_date:start,p_end_date:end});

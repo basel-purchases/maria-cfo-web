@@ -45,7 +45,7 @@ test('statistical KPI values use numeric value or explicit missing mark',()=>{
   assert.match(financialCard('إيراد',null),/—/);
 });
 test('financial RPC uses exact verified parameter names',()=>{
-  assert.match(api,/get_financial_statistics',\{p_start_date:start,p_end_date:end\}/);
+  assert.match(api,/(?:get_financial_statistics|get_financial_statistics_v023)',\{p_start_date:start,p_end_date:end\}/);
   assert.match(api,/get_home_dashboard',\{p_business_date:todayISO\(\)\}/);
   assert.match(api,/get_statistics_time_series'/);
 });
@@ -79,13 +79,13 @@ test('all relative JS imports exist and are versioned',()=>{
         for(const m of text.matchAll(rx)){
           const relative=m[1].split('?')[0];
           assert.ok(existsSync(resolve(dir,relative)),`${abs} missing ${relative}`);
-          assert.match(m[1],/\?v=0\.22$/);
+          assert.match(m[1],/\?v=0\.23$/);
         }
       }
     }
   }
   check(root);
-  assert.match(index,/v=0\.22/);
+  assert.match(index,/v=0\.23/);
 });
 test('project ZIP contents do not need Git or config changes',()=>{
   assert.equal(existsSync(join(base,'config.js')),false);

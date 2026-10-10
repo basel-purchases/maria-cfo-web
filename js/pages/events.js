@@ -1,6 +1,6 @@
-import * as api from '../api.js?v=0.22';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.22';
-import { esc, dateOnly, todayISO } from '../utils.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.23';
+import { esc, dateOnly, todayISO } from '../utils.js?v=0.23';
 
 export async function renderEvents(root) {
   root.innerHTML = loader();

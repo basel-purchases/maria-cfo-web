@@ -1,3 +1,7 @@
+# الإصدار الحالي: Maria CFO Web v0.23
+
+راجع `README_v023_AR.md` للتحديث الموحد وتحذيرات الاختبار.
+
 > New in **Maria CFO Web v0.22**: Engine 3 OCR text with separated name and numeric columns now converts into editable suggestions only after the user requests it. Inferred prices require review. Engine 1 E201 receives a clear explanation after redeploying `ocr-space`. **No new SQL migration**. See `docs/TEST_OCR_COLUMN_FIX_V022.md`. Keep your own config.js and Git files.
 
 > New in **Maria CFO Web v0.21**: OCR.space cloud OCR, wider Images workspace, usage attempt counters, catalog search and in-place material/menu creation. Deploy instructions: `docs/DEPLOY_OCR_SPACE_V021.md`. Preserve your existing `config.js` and Git settings.

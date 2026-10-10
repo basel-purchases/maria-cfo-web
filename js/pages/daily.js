@@ -1,6 +1,12 @@
-import * as api from '../api.js?v=0.22';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.22';
-import { esc,money,dateOnly,statusBadge,todayISO,num } from '../utils.js?v=0.22';
+import * as api from '../api.js?v=0.23';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.23';
+import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.23';
+import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.23';
+import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.23';
+import { downloadXlsx } from '../xlsx-export.js?v=0.23';
+import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.23';
+import { renderFilteredExpenses } from './expenses-batch.js?v=0.23';
+import { calculateOrderTotals } from '../order-totals.js?v=0.23';
 
 function inventoryMinimum(r){
   const keys=[
@@ -16,32 +22,64 @@ function inventoryMinimum(r){
   return dynamic ? r[dynamic] : null;
 }
 
+function stockSeparated(material,units,links){
+  const base=units.find(u=>String(u.id)===String(material.base_unit_id));
+  const baseLabel=unitDisplay(base)||material.base_unit_code||'';
+  const total=Number(material.current_stock_base??material.stock_quantity_base??material.current_stock??0);
+  if(!Number.isFinite(total))return {major:'\u2014',minor:'\u2014'};
+  const pair=chooseStockPair(material,units,links);
+  if(pair){
+    const split=splitStockQuantity(total,pair.large.factor,pair.small.factor);
+    if(split){
+      const sign=split.negative?'\u2212 ':'';
+      return {
+        major:`${sign}${stockNumber(split.whole,0)} ${unitDisplay(pair.large.unit)}`,
+        minor:`${sign}${stockNumber(split.minor,5)} ${unitDisplay(pair.small.unit)}`,
+        original:`${stockNumber(total)} ${baseLabel}`,
+      };
+    }
+  }
+  const major=Math.trunc(Math.abs(total));
+  const minor=Math.abs(total)-major;
+  const sign=total<0?'\u2212 ':'';
+  return {major:`${sign}${stockNumber(major,0)} ${baseLabel}`,minor:`${sign}${stockNumber(minor,5)} ${baseLabel}`,original:`${stockNumber(total)} ${baseLabel}`};
+}
+
+function lastPurchaseCost(row,purchasePrices){
+  const ledgerCost=purchasePrices?.get(String(row.id));
+  if(ledgerCost!=null)return ledgerCost;
+  for(const key of ['latest_purchase_unit_cost_base','last_purchase_unit_cost_base','latest_purchase_cost_base_per_base_unit','latest_purchase_unit_cost_base_per_base_unit']){
+    const v=row[key];if(v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)))return Number(v);
+  }
+  return null;
+}
+
 export async function renderInventory(root){
   root.innerHTML=loader();
   try{
-    const rows=await api.materials();
+    const [rows,units,links,purchasePrices]=await Promise.all([
+      api.materials(),api.units(),api.allMaterialUnitLinks().catch(()=>[]),
+      api.latestMaterialPurchasePrices().catch(()=>new Map()),
+    ]);
+    const baseLabels=Object.fromEntries(units.map(u=>[String(u.id),unitDisplay(u)]));
     root.innerHTML=`
-      <div class="page-head">
-        <div>
-          <h2>المخزون والجرد</h2>
-          <p>راقب الرصيد النظري لكل مادة والحد الأدنى الذي يبدأ عنده التنبيه.</p>
-        </div>
-      </div>
-      <div class="table-wrap table-fit">
-        <table class="table">
-          <thead><tr><th>المادة</th><th>الرصيد الحالي</th><th>الحد الأدنى قبل التنبيه</th><th>آخر شراء</th></tr></thead>
-          <tbody>${rows.map(r=>`
-            <tr>
-              <td>${esc(r.name)}</td>
-              <td><strong>${esc(r.current_stock_base??r.stock_quantity_base??r.current_stock??0)}</strong></td>
-              <td>${inventoryMinimum(r)==null?'—':esc(inventoryMinimum(r))}</td>
-              <td>${r.latest_purchase_unit_cost_base!=null?money(r.latest_purchase_unit_cost_base):'—'}</td>
-            </tr>`).join('')}</tbody>
-        </table>
-      </div>`;
-  }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
-  }
+      <div class="page-head"><div>
+        <h2>\u0627\u0644\u0645\u062e\u0632\u0648\u0646 \u0648\u0627\u0644\u062c\u0631\u062f</h2>
+        <p>\u0627\u0644\u0631\u0635\u064a\u062f \u0627\u0644\u0643\u0627\u0645\u0644 \u0648\u0627\u0644\u062c\u0632\u0621 \u0627\u0644\u0645\u062a\u0628\u0642\u064a \u062d\u0633\u0628 \u0648\u062d\u062f\u0627\u062a \u0627\u0644\u0645\u0627\u062f\u0629 \u0648\u062a\u062d\u0648\u064a\u0644\u0627\u062a\u0647\u0627.</p>
+      </div></div>
+      <div class="table-wrap table-fit"><table class="table inventory-parts-table">
+      <thead><tr><th>\u0627\u0644\u0645\u0627\u062f\u0629</th><th>\u0627\u0644\u0643\u0645\u064a\u0629 \u0628\u0627\u0644\u062c\u0645\u0644\u0629</th><th>\u0627\u0644\u0643\u0645\u064a\u0629 \u0627\u0644\u0645\u062a\u0628\u0642\u064a\u0629</th><th>\u062d\u062f \u0627\u0644\u062a\u0646\u0628\u064a\u0647</th><th>\u0622\u062e\u0631 \u0633\u0639\u0631 \u0634\u0631\u0627\u0621</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const stock=stockSeparated(r,units,links);
+        const cost=lastPurchaseCost(r,purchasePrices);
+        const base=baseLabels[String(r.base_unit_id)]||r.base_unit_code||'';
+        return `<tr><td><strong>${esc(r.name)}</strong></td>
+          <td title="${esc(stock.original)}"><strong>${esc(stock.major)}</strong></td>
+          <td><span class="inventory-minor">${esc(stock.minor)}</span></td>
+          <td>${inventoryMinimum(r)==null?'\u2014':`${esc(stockNumber(inventoryMinimum(r)))} ${esc(base)}`}</td>
+          <td>${cost==null?'\u2014':`${money(cost,'SYP')} / ${esc(base)}`}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+  }catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}
 }
 
 function firstNumeric(obj,keys){
@@ -93,7 +131,7 @@ export async function renderCashboxes(root){
               <div class="cashbox-balance-label">الرصيد المتوقع الآن</div>
               <div class="cashbox-balance">${bal===null?'—':money(bal,'SYP')}</div>
               <div class="metric-note">${session?`جلسة ${dateOnly(session.business_date||todayISO())}`:'سيتم فتح جلسة اليوم تلقائيًا'}</div>
-              <div class="cashbox-actions"><button class="btn secondary adjust-box" data-id="${esc(b.id)}" data-name="${esc(b.name||'صندوق')}">إضافة / سحب رصيد</button></div>
+              <div class="cashbox-actions"><button class="btn secondary adjust-box" data-id="${esc(b.id)}" data-name="${esc(b.name||'صندوق')}">إضافة / سحب</button>${b.is_general?'':`<button type="button" class="btn secondary zero-box" data-id="${esc(b.id)}">\u062a\u0635\u0641\u064a\u0631</button>`}</div>
             </div>`;
         }).join('')}
       </div>
@@ -109,17 +147,18 @@ export async function renderCashboxes(root){
             }).join('')}</tbody>
           </table>
         </div>
-      </div>`;
+      </div>
+      <div id="cashbox-ledger-host"></div>`;
 
     root.querySelectorAll('.adjust-box').forEach(btn=>btn.addEventListener('click',()=>{
       const boxId=btn.dataset.id;
       const boxName=btn.dataset.name||'الصندوق';
       modal({
-        title:`ضبط رصيد ${boxName}`,
-        subtitle:'استخدمه عند بداية النظام أو عند وجود حركة نقدية يدوية حقيقية. لا تستخدمه بدل تسجيل المبيعات أو المصروفات.',
+        title:`\u0625\u0636\u0627\u0641\u0629 / \u0633\u062d\u0628 \u2014 ${boxName}`,
+        subtitle:'',
         body:`
           <div class="form-grid">
-            <div class="field"><label>العملية</label><select name="direction"><option value="in">إضافة مبلغ للصندوق</option><option value="out">سحب مبلغ من الصندوق</option></select></div>
+            <div class="field"><label>العملية</label><select name="direction"><option value="in">إضافة</option><option value="out">سحب</option></select></div>
             <div class="field"><label>المبلغ</label><input name="amount" type="number" min="0.000001" step="any" required></div>
             <div class="field"><label>العملة</label><select name="currency"><option value="SYP">SYP</option><option value="USD">USD</option></select></div>
             <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
@@ -143,94 +182,24 @@ export async function renderCashboxes(root){
         }
       });
     }));
+    root.querySelectorAll('.zero-box').forEach(btn=>btn.addEventListener('click',async()=>{
+      const boxId=btn.dataset.id;
+      if(!(await confirmBox('\u0633\u062a\u0646\u062a\u0642\u0644 \u062c\u0645\u064a\u0639 \u0627\u0644\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0645\u062a\u0627\u062d\u0629 \u0625\u0644\u0649 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645\u060c \u0648\u0633\u062a\u0628\u0642\u0649 \u0627\u0644\u062d\u0631\u0643\u0627\u062a \u0645\u062d\u0641\u0648\u0638\u0629.', '\u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062a\u062d\u0648\u064a\u0644')))return;
+      btn.disabled=true;
+      try{
+        await api.zeroCashboxToGeneral(boxId);
+        toast('\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062a\u062d\u0648\u064a\u0644 \u0625\u0644\u0649 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645.', 'success');
+        await renderCashboxes(root);
+      }catch(error){toast(friendlyError(error,'\u062a\u0639\u0630\u0631 \u062a\u0635\u0641\u064a\u0631 \u0627\u0644\u0635\u0646\u062f\u0648\u0642.'),'error');btn.disabled=false;}
+    }));
+    await renderCashboxManualLedger(root.querySelector('#cashbox-ledger-host'),boxes);
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }
 }
 
 export async function renderExpenses(root){
-  root.innerHTML=loader();
-  try{
-    const [rows,boxes,cats]=await Promise.all([api.expenseDetails(),api.cashboxes(),api.expenseCategories()]);
-    const active=rows.filter(r=>!r.transaction_is_void);
-    const totals={SYP:0,USD:0};
-    active.forEach(r=>{const c=String(r.currency_code||'SYP').toUpperCase();if(c in totals) totals[c]+=Number(r.amount_original||0);});
-    root.innerHTML=`
-      <div class="page-head">
-        <div><h2>المصروفات</h2><p>كل مصروف هنا هو خروج نقدي فعلي من صندوق: صيانة، نقل، خدمات، أدوات، مرافق وغيرها. شراء مواد المخزون يبقى في فواتير الشراء.</p></div>
-        <button class="btn add">إضافة مصروف</button>
-      </div>
-      <div class="expense-summary">
-        <div class="card"><div class="metric-label">إجمالي المصروفات SYP</div><div class="metric-value">${money(totals.SYP,'SYP')}</div></div>
-        <div class="card"><div class="metric-label">إجمالي المصروفات USD</div><div class="metric-value">${money(totals.USD,'USD')}</div></div>
-        <div class="card"><div class="metric-label">عدد العمليات</div><div class="metric-value">${active.length}</div></div>
-      </div>
-      <div style="height:16px"></div>
-      ${rows.length?`
-        <div class="table-wrap table-fit"><table class="table expense-table">
-          <thead><tr><th>التاريخ</th><th>المصروف</th><th>التصنيف</th><th>المبلغ</th><th>الصندوق</th><th>الجهة</th><th>تفاصيل</th></tr></thead>
-          <tbody>${rows.map(r=>`<tr class="${r.transaction_is_void?'is-void':''}">
-            <td>${dateOnly(r.occurred_at)}</td>
-            <td><strong>${esc(r.title||'مصروف')}</strong>${r.description?`<small>${esc(r.description)}</small>`:''}</td>
-            <td>${esc(r.category_name||'أخرى')}</td>
-            <td><strong>${r.amount_original==null?'—':money(r.amount_original,r.currency_code||'SYP')}</strong></td>
-            <td>${esc(r.cashbox_name||'—')}</td>
-            <td>${esc(r.payee||'—')}</td>
-            <td><button class="mini-action expense-details" data-id="${esc(r.id)}">عرض</button></td>
-          </tr>`).join('')}</tbody>
-        </table></div>`:'<div class="card empty"><strong>لا توجد مصروفات بعد</strong><div>أضف أول مصروف ليتم تسجيله على الصندوق المختار.</div></div>'}`;
-
-    root.querySelector('.add').onclick=()=>modal({
-      title:'إضافة مصروف',
-      subtitle:'المبلغ سيُخصم من الصندوق المحدد فور تسجيل العملية.',
-      body:`
-        <div class="form-grid">
-          <div class="field full"><label>اسم المصروف</label><input name="title" placeholder="مثال: صيانة البراد" required></div>
-          <div class="field"><label>المبلغ</label><input name="amount" type="number" min="0.000001" step="any" required></div>
-          <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
-          <div class="field"><label>الصندوق</label><select name="box" required>${boxes.filter(b=>b.is_active!==false).map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>التصنيف</label><select name="cat"><option value="">أخرى</option>${cats.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div>
-          <div class="field"><label>المدفوع له <span class="optional-badge">اختياري</span></label><input name="payee" placeholder="شركة / شخص"></div>
-          <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
-          <div class="field full"><label>تفاصيل إضافية <span class="optional-badge">اختياري</span></label><textarea name="description" rows="3" placeholder="سبب المصروف أو رقم الإيصال أو أي ملاحظة مفيدة"></textarea></div>
-        </div>`,
-      onSubmit:async fd=>{
-        try{
-          await api.recordExpense({
-            cashboxId:fd.get('box'),amount:fd.get('amount'),title:fd.get('title'),
-            currency:fd.get('currency'),categoryId:fd.get('cat')||null,
-            payee:String(fd.get('payee')||'').trim()||null,
-            description:String(fd.get('description')||'').trim()||null,
-            date:fd.get('date')
-          });
-          toast('تم تسجيل المصروف وخصمه من الصندوق','success');
-          await renderExpenses(root);
-          return true;
-        }catch(e){toast(friendlyError(e),'error');return false;}
-      }
-    });
-
-    root.querySelectorAll('.expense-details').forEach(btn=>btn.addEventListener('click',()=>{
-      const r=rows.find(x=>String(x.id)===String(btn.dataset.id));
-      if(!r) return;
-      modal({
-        title:r.title||'تفاصيل المصروف',
-        body:`<div class="kv expense-detail-kv">
-          <div class="k">التاريخ</div><div>${dateOnly(r.occurred_at)}</div>
-          <div class="k">المبلغ</div><div><strong>${r.amount_original==null?'—':money(r.amount_original,r.currency_code||'SYP')}</strong></div>
-          <div class="k">التصنيف</div><div>${esc(r.category_name||'أخرى')}</div>
-          <div class="k">الصندوق</div><div>${esc(r.cashbox_name||'—')}</div>
-          <div class="k">المدفوع له</div><div>${esc(r.payee||'—')}</div>
-          <div class="k">الوصف</div><div>${esc(r.description||'—')}</div>
-          <div class="k">الحالة</div><div>${r.transaction_is_void?'<span class="badge danger">ملغى</span>':'<span class="badge ok">مسجل</span>'}</div>
-        </div>`,
-        submitText:'إغلاق',
-        onSubmit:async()=>true,
-      });
-    }));
-  }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
-  }
+  return renderFilteredExpenses(root);
 }
 
 function fileToBase64(file){
@@ -482,97 +451,138 @@ function itemPrice(x){
 export async function renderOrderDetail(root,id){
   root.innerHTML=loader();
   try{
-    const [order,items,menu,boxes]=await Promise.all([api.one('orders',id),api.orderItems(id),api.menuItems(),api.cashboxes()]);
+    const [order,items,menu,boxes]=await Promise.all([
+      api.one('orders',id),api.orderItems(id),api.menuItems(),api.cashboxes(),
+    ]);
+    if(!order)throw Error('ORDER_NOT_FOUND');
     const mm=Object.fromEntries(menu.map(x=>[String(x.id),x]));
     const boxMap=Object.fromEntries(boxes.map(x=>[String(x.id),x]));
+    const rates={
+      discountPercent:Number(order.order_discount_percent_v023||0),
+      expenditurePercent:Number(order.expenditure_tax_percent_v023||0),
+      localPercent:Number(order.local_administration_tax_percent_v023||0),
+    };
+    const calculated=calculateOrderTotals(items,rates);
+    const show=key=>{
+      if(order.status==='posted'){
+        const keys={orderDiscount:'order_discount_amount_original_v023',expenditureTax:'expenditure_tax_amount_original_v023',localTax:'local_administration_tax_amount_original_v023',collected:'net_total_original'};
+        const actual=order[keys[key]];
+        if(actual!=null)return Number(actual);
+      }
+      return calculated[key];
+    };
+    const readonly=order.status!=='draft';
+    const moneyFor=value=>money(value,order.currency_code||'SYP');
+    const label={
+      header:'\u062a\u0641\u0627\u0635\u064a\u0644 \u0627\u0644\u0623\u0648\u0631\u062f\u0631',
+      summary:'\u0645\u0644\u062e\u0635 \u0627\u0644\u0623\u0648\u0631\u062f\u0631',
+      gross:'\u0627\u0644\u0625\u062c\u0645\u0627\u0644\u064a \u0642\u0628\u0644 \u0627\u0644\u062e\u0635\u0645',
+      itemDiscount:'\u062e\u0635\u0648\u0645 \u0627\u0644\u0628\u0646\u0648\u062f',orderDiscount:'\u062e\u0635\u0645 \u0627\u0644\u0623\u0648\u0631\u062f\u0631',
+      expenditure:'\u0631\u0633\u0645 \u0627\u0644\u0625\u0646\u0641\u0627\u0642',local:'\u0631\u0633\u0645 \u0627\u0644\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062d\u0644\u064a\u0629',
+      final:'\u0627\u0644\u0645\u0642\u0628\u0648\u0636',hospitality:'\u0636\u064a\u0627\u0641\u0629',
+      save:'\u062d\u0641\u0638 \u0627\u0644\u062e\u0635\u0645',undo:'\u0633\u062d\u0628 \u0627\u0644\u0646\u0634\u0631 \u0648\u062a\u0639\u062f\u064a\u0644',
+    };
     root.innerHTML=`
-      <div class="page-head"><div><h2>تفاصيل الأوردر</h2><p>أضف الأصناف ثم انشر العملية.</p></div></div>
-      <div class="grid cols-2">
-        <div class="card"><div class="kv"><div class="k">الحالة</div><div>${statusBadge(order.status)}</div><div class="k">العملة</div><div>${esc(order.currency_code||'SYP')}</div><div class="k">الصندوق</div><div>${order.cashbox_id?esc(boxMap[String(order.cashbox_id)]?.name||'صندوق'): '<span class="muted">يُحدد عند النشر</span>'}</div></div></div>
-        <div class="card"><div class="quick-actions"><button class="btn add" ${order.status!=='draft'?'disabled':''}>إضافة صنف</button><button class="btn soft post" ${order.status!=='draft'||!items.length?'disabled':''}>نشر الأوردر</button></div></div>
+      <div class="page-head"><div><h2>${label.header}</h2><p>${statusBadge(order.status)} \u2014 ${esc(order.external_order_number||'')}</p></div></div>
+      <div class="order-detail-toolbar">
+        <section class="card order-finance-card" aria-label="${label.summary}">
+          <div class="section-head-inline"><h3>${label.summary}</h3><strong class="order-collected" data-order-total>${moneyFor(show('collected'))}</strong></div>
+          <div class="order-finance-grid">
+            <div><small>${label.gross}</small><strong>${moneyFor(calculated.gross)}</strong></div>
+            <div><small>${label.itemDiscount}</small><strong>${moneyFor(calculated.perItemDiscount)}</strong></div>
+            <div><small>${label.orderDiscount}</small><strong data-order-discount-money>${moneyFor(show('orderDiscount'))}</strong></div>
+            <div><small>${label.expenditure} (${rates.expenditurePercent}%)</small><strong data-order-expenditure>${moneyFor(show('expenditureTax'))}</strong></div>
+            <div><small>${label.local} (${rates.localPercent}% \u0645\u0646 \u0627\u0644\u0631\u0633\u0645)</small><strong data-order-local>${moneyFor(show('localTax'))}</strong></div>
+            <div class="order-final"><small>${label.final}</small><strong data-order-collected>${moneyFor(show('collected'))}</strong></div>
+          </div>
+          ${!readonly?`<div class="order-discount-control"><label>${label.orderDiscount} %</label><input class="order-discount-input" type="number" min="0" max="100" step="any" value="${rates.discountPercent}"><button class="btn secondary save-order-rate" type="button">${label.save}</button></div>`:''}
+        </section>
+        <section class="card order-controls-card">
+          <div class="kv"><div class="k">\u0627\u0644\u062d\u0627\u0644\u0629</div><div>${statusBadge(order.status)}</div>
+            <div class="k">\u0627\u0644\u0639\u0645\u0644\u0629</div><div>${esc(order.currency_code||'SYP')}</div>
+            <div class="k">\u0627\u0644\u0635\u0646\u062f\u0648\u0642</div><div>${order.cashbox_id?esc(boxMap[String(order.cashbox_id)]?.name||''):'\u0639\u0646\u062f \u0627\u0644\u0646\u0634\u0631'}</div>
+          </div>
+          <div class="quick-actions order-action-buttons">
+            ${!readonly?`<button type="button" class="btn add">\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641</button><button type="button" class="btn secondary hospitality">\u0625\u0636\u0627\u0641\u0629 \u0636\u064a\u0627\u0641\u0629</button><button type="button" class="btn soft post" ${!items.length?'disabled':''}>\u0646\u0634\u0631 \u0627\u0644\u0623\u0648\u0631\u062f\u0631</button>`:''}
+            ${order.status==='posted'?`<button type="button" class="btn secondary reopen-order">${label.undo}</button>`:''}
+          </div>
+        </section>
       </div>
-      <div style="height:16px"></div>
-      <div class="card">
-        <h3>الأصناف</h3>
-        ${items.length?`
-          <div class="table-wrap table-fit"><table class="table">
-            <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>التعديل</th></tr></thead>
-            <tbody>${items.map(x=>`
-              <tr>
-                <td>${esc(mm[String(x.menu_item_id)]?.name||x.raw_item_name||'صنف')}</td>
-                <td>${esc(x.quantity||1)}</td>
-                <td>${money(x.unit_price_original||0,order.currency_code||'SYP')}</td>
-                <td>${x.adjustment_type==='percent'?`${esc(x.adjustment_value||0)}% خصم`:x.adjustment_type==='complimentary'?'ضيافة':'—'}</td>
-              </tr>`).join('')}</tbody>
-          </table></div>`:'<div class="empty">لا توجد أصناف بعد.</div>'}
+      <div class="card" style="margin-top:16px"><h3>\u0627\u0644\u0623\u0635\u0646\u0627\u0641</h3>
+        ${items.length?`<div class="table-wrap table-fit"><table class="table"><thead><tr><th>\u0627\u0644\u0635\u0646\u0641</th><th>\u0627\u0644\u0643\u0645\u064a\u0629</th><th>\u0633\u0639\u0631 \u0627\u0644\u0648\u062d\u062f\u0629</th><th>\u0627\u0644\u062a\u0639\u062f\u064a\u0644</th><th>\u0627\u0644\u0635\u0627\u0641\u064a</th></tr></thead>
+        <tbody>${items.map(x=>`<tr><td>${esc(mm[String(x.menu_item_id)]?.name||x.raw_item_name||'')}</td><td>${esc(x.quantity||1)}</td><td>${moneyFor(x.unit_price_original||0)}</td>
+        <td>${x.adjustment_type==='complimentary'?`<span class="badge ok">${label.hospitality}</span>`:(['percent','discount_percent'].includes(x.adjustment_type)?`${esc(x.adjustment_value||0)}%`:'' )}</td>
+        <td>${moneyFor(x.adjustment_type==='complimentary'?0:(x.line_net_original??Number(x.unit_price_original||0)*Number(x.quantity||1)))}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">\u0644\u0627 \u062a\u0648\u062c\u062f \u0623\u0635\u0646\u0627\u0641.</div>'}
       </div>`;
 
-    root.querySelector('.add')?.addEventListener('click',()=>{
-      const m=modal({
-        title:'إضافة صنف',
-        body:`
-          <div class="form-grid">
-            <div class="field full"><label>الصنف</label><select name="item">${menu.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
-            <div class="field"><label>الكمية</label><input name="qty" type="number" step="any" value="1"></div>
-            <div class="field"><label>السعر</label><input name="price" type="number" step="any" min="0" required></div>
-            <div class="field"><label>الخصم % <span class="optional-badge">اختياري</span></label><input name="discount" type="number" min="0" max="100" step="any"></div>
-          </div>`,
+    const openAddItem=complimentary=>{
+      const m=modal({title:complimentary?'\u0625\u0636\u0627\u0641\u0629 \u0636\u064a\u0627\u0641\u0629':'\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641',body:`<div class="form-grid">
+        <div class="field full"><label>\u0627\u0644\u0635\u0646\u0641</label><select name="item" required>${menu.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>\u0627\u0644\u0643\u0645\u064a\u0629</label><input name="qty" type="number" min="0.0001" step="any" value="1" required></div>
+        <div class="field"><label>\u0627\u0644\u0633\u0639\u0631</label><input name="price" type="number" step="any" min="0" required></div>
+        ${complimentary?'':`<div class="field"><label>\u062e\u0635\u0645 \u0627\u0644\u0628\u0646\u062f %</label><input name="discount" type="number" min="0" max="100" step="any"></div>`}</div>`,
+      onSubmit:async fd=>{
+        try{
+          const input={orderId:id,menuItemId:fd.get('item'),quantity:Number(fd.get('qty')),unitPrice:Number(fd.get('price'))};
+          if(!(input.quantity>0)||!(input.unitPrice>=0))return false;
+          if(complimentary)await api.addComplimentaryOrderItem(input);
+          else await api.addOrderItem({...input,adjustmentType:Number(fd.get('discount')||0)>0?'percent':'none',adjustmentValue:Number(fd.get('discount')||0)});
+          toast('\u062a\u0645\u062a \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0635\u0646\u0641.','success');
+          await renderOrderDetail(root,id);return true;
+        }catch(e){toast(friendlyError(e),'error');return false;}
+      }});
+      const itemSel=m.form.querySelector('[name="item"]'),price=m.form.querySelector('[name="price"]'),discount=m.form.querySelector('[name="discount"]');
+      const refresh=()=>{const item=mm[String(itemSel.value)];price.value=itemPrice(item);if(discount)discount.value=Number(item?.default_discount_percent||0)||'';};
+      itemSel?.addEventListener('change',refresh);refresh();
+    };
+    root.querySelector('.add')?.addEventListener('click',()=>openAddItem(false));
+    root.querySelector('.hospitality')?.addEventListener('click',()=>openAddItem(true));
+    const discountInput=root.querySelector('.order-discount-input');
+    const preview=()=>{
+      const n=Number(discountInput.value);
+      if(!Number.isFinite(n)||n<0||n>100)return;
+      const calc=calculateOrderTotals(items,{...rates,discountPercent:n});
+      root.querySelector('[data-order-total]').textContent=moneyFor(calc.collected);
+      root.querySelector('[data-order-collected]').textContent=moneyFor(calc.collected);
+      root.querySelector('[data-order-discount-money]').textContent=moneyFor(calc.orderDiscount);
+      root.querySelector('[data-order-expenditure]').textContent=moneyFor(calc.expenditureTax);
+      root.querySelector('[data-order-local]').textContent=moneyFor(calc.localTax);
+    };
+    discountInput?.addEventListener('input',preview);
+    root.querySelector('.save-order-rate')?.addEventListener('click',async()=>{
+      const value=Number(discountInput.value);
+      if(!Number.isFinite(value)||value<0||value>100){toast('\u0646\u0633\u0628\u0629 \u0627\u0644\u062e\u0635\u0645 \u0645\u0646 0 \u0625\u0644\u0649 100.','error');return;}
+      try{await api.setOrderRates(id,value,rates.expenditurePercent,rates.localPercent);toast('\u062a\u0645 \u062d\u0641\u0638 \u062e\u0635\u0645 \u0627\u0644\u0623\u0648\u0631\u062f\u0631.','success');await renderOrderDetail(root,id);}
+      catch(e){toast(friendlyError(e),'error');}
+    });
+    root.querySelector('.post')?.addEventListener('click',async()=>{
+      if(discountInput&&Math.abs(Number(discountInput.value)-rates.discountPercent)>0.000001){toast('\u0627\u062d\u0641\u0638 \u0646\u0633\u0628\u0629 \u0627\u0644\u062e\u0635\u0645 \u0623\u0648\u0644\u064b\u0627.','error');return;}
+      let selectedBox=order.cashbox_id;
+      if(!selectedBox){
+        const active=boxes.filter(x=>x.is_active!==false);
+        if(!active.length){toast('\u0644\u0627 \u064a\u0648\u062c\u062f \u0635\u0646\u062f\u0648\u0642 \u0646\u0634\u0637.','error');return;}
+        selectedBox=await chooseOrderCashbox(active);
+        if(!selectedBox)return;
+        try{await api.setOrderCashbox(id,selectedBox);}catch(e){toast(friendlyError(e),'error');return;}
+      }
+      if(!(await confirmBox(`\u0627\u0644\u0645\u0628\u0644\u063a \u0627\u0644\u0645\u0642\u0628\u0648\u0636: ${moneyFor(calculated.collected)}. \u0633\u064a\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0646\u0642\u062f \u0648\u0627\u0633\u062a\u0647\u0644\u0627\u0643 \u0627\u0644\u0645\u062e\u0632\u0648\u0646.`, '\u0646\u0634\u0631')))return;
+      const btn=root.querySelector('.post');if(btn)btn.disabled=true;
+      try{await api.postOrder(id);toast('\u062a\u0645 \u0646\u0634\u0631 \u0627\u0644\u0623\u0648\u0631\u062f\u0631.','success');await renderOrderDetail(root,id);}
+      catch(error){toast(friendlyError(error,'\u062a\u0639\u0630\u0631 \u0627\u0644\u0646\u0634\u0631. \u062a\u062d\u0642\u0642 \u0645\u0646 \u062d\u0627\u0644\u0629 \u0627\u0644\u0623\u0648\u0631\u062f\u0631 \u0642\u0628\u0644 \u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629.'),'error');if(btn)btn.disabled=false;}
+    });
+    root.querySelector('.reopen-order')?.addEventListener('click',()=>{
+      modal({title:label.undo,subtitle:'\u062a\u0648\u062b\u064a\u0642 \u0627\u0644\u0633\u0628\u0628 \u0625\u0644\u0632\u0627\u0645\u064a. \u0633\u064a\u064f\u0631\u062f \u0627\u0644\u0645\u0628\u0644\u063a \u0648\u062a\u064f\u0633\u062a\u0639\u0627\u062f \u0627\u0644\u0645\u0648\u0627\u062f \u062b\u0645 \u062a\u064f\u0646\u0634\u0623 \u0645\u0633\u0648\u062f\u0629 \u062c\u062f\u064a\u062f\u0629.',
+        body:'<div class="field"><label>\u0633\u0628\u0628 \u0627\u0644\u062a\u0635\u062d\u064a\u062d</label><textarea name="reason" rows="3" minlength="5" required></textarea></div>',
+        submitText:label.undo,
         onSubmit:async fd=>{
           try{
-            const discount=num(fd.get('discount'),0);
-            await api.addOrderItem({
-              orderId:id,
-              menuItemId:fd.get('item'),
-              quantity:fd.get('qty')||1,
-              unitPrice:fd.get('price'),
-              adjustmentType:discount>0?'percent':'none',
-              adjustmentValue:discount,
-            });
-            toast('تمت إضافة الصنف','success');
-            await renderOrderDetail(root,id);
-            return true;
+            const newId=await api.reopenPostedOrder(id,String(fd.get('reason')||'').trim());
+            if(!newId)throw Error('ORDER_REVERSAL_NOT_CONFIRMED');
+            toast('\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0625\u0631\u062c\u0627\u0639 \u0648\u0641\u062a\u062d \u0645\u0633\u0648\u062f\u0629 \u062c\u062f\u064a\u062f\u0629.','success');
+            location.hash='#/order/'+newId;return true;
           }catch(e){toast(friendlyError(e),'error');return false;}
-        }
+        },
       });
-
-      const itemSel=m.form.querySelector('[name="item"]');
-      const price=m.form.querySelector('[name="price"]');
-      const discount=m.form.querySelector('[name="discount"]');
-      const refresh=()=>{
-        const item=mm[String(itemSel.value)];
-        price.value=itemPrice(item);
-        discount.value=num(item?.default_discount_percent,0)||'';
-      };
-      itemSel.addEventListener('change',refresh);
-      refresh();
     });
-
-    root.querySelector('.post')?.addEventListener('click',async()=>{
-      let selectedBox=order.cashbox_id||null;
-      if(!selectedBox){
-        const activeBoxes=boxes.filter(b=>b.is_active!==false);
-        if(!activeBoxes.length){toast('لا يوجد صندوق نشط. عرّف صندوقًا أولًا قبل نشر الأوردر.','error');return;}
-        const chosen=await chooseOrderCashbox(activeBoxes);
-        if(!chosen) return;
-        selectedBox=chosen;
-        try{
-          await api.setOrderCashbox(id,selectedBox);
-          order.cashbox_id=selectedBox;
-        }catch(e){toast(friendlyError(e,'تعذر ربط الأوردر بالصندوق.'),'error');return;}
-      }
-      if(!(await confirmBox('سيتم نشر الأوردر وتسجيل الإيراد واستهلاك مكونات الوصفة.','نشر الأوردر'))) return;
-      const btn=root.querySelector('.post');
-      if(btn){btn.disabled=true;btn.textContent='جاري النشر...';}
-      try{
-        await api.postOrder(id);
-        toast('تم نشر الأوردر وتحديث المخزون والإيراد','success');
-        await renderOrderDetail(root,id);
-      }catch(e){
-        toast(friendlyError(e,'تعذر نشر الأوردر. تحقق من الصندوق ومكونات الوصفات ثم حاول مرة أخرى.'),'error');
-        if(btn){btn.disabled=false;btn.textContent='نشر الأوردر';}
-      }
-    });
-  }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
-  }
+  }catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}
 }

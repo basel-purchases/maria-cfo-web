@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=0.22';
+import { esc } from './utils.js?v=0.23';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }
@@ -67,33 +67,58 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('function')&&msg.includes('not found')) return 'هذه الخدمة لم تُحدّث على الخادم بعد.';
   return fallback;
 }
-export function modal({title,subtitle='',body='',submitText='حفظ',onSubmit=async()=>true,wide=false,hideActions=false,onClose=null}){
+// Close all standard dialogs by backdrop, Escape, cancel or the close button.
+// Never close while submitting: an accidental click must not duplicate a write.
+export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638',onSubmit=async()=>true,wide=false,hideActions=false,onClose=null}){
   const back=document.createElement('div');
   back.className='modal-backdrop';
-  back.innerHTML=`<div class="modal ${wide?'wide':''}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button">×</button></div><form class="modal-form" autocomplete="off">${body}${hideActions?'':`<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">إلغاء</button></div>`}</form></div>`;
+  back.innerHTML=`<div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button" aria-label="Close">\u00d7</button></div><form class="modal-form" autocomplete="off">${body}${hideActions?'':`<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">\u0625\u0644\u063a\u0627\u0621</button></div>`}</form></div>`;
   document.body.appendChild(back);
-  let closed=false;
-  const close=async()=>{
-    if(closed) return;
-    closed=true;
-    back.remove();
-    if(onClose){ try{ await onClose(); }catch(e){ console.error(e); } }
+  let closed=false,busy=false;
+  const onKey=e=>{
+    if(e.key!=='Escape'||closed||busy)return;
+    const dialogs=[...document.querySelectorAll('.modal-backdrop')];
+    if(dialogs[dialogs.length-1]!==back)return;
+    e.preventDefault();close();
   };
-  back.querySelector('.x-btn').onclick=close;
-  back.querySelector('.cancel')?.addEventListener('click',close);
-  back.addEventListener('click',e=>{if(e.target===back) close();});
+  const close=async()=>{
+    if(closed||busy)return;
+    closed=true;
+    document.removeEventListener('keydown',onKey);
+    back.remove();
+    if(onClose){try{await onClose();}catch(e){console.error(e);}}
+  };
+  back.querySelector('.x-btn').addEventListener('click',()=>close());
+  back.querySelector('.cancel')?.addEventListener('click',()=>close());
+  back.addEventListener('click',e=>{if(e.target===back)close();});
+  document.addEventListener('keydown',onKey);
   const form=back.querySelector('form');
   form.addEventListener('submit',async e=>{
     e.preventDefault();
+    if(busy||closed)return;
+    busy=true;
     const btn=form.querySelector('[type=submit]');
-    if(btn) btn.disabled=true;
-    try{
-      const ok=await onSubmit(new FormData(form),form);
-      if(ok!==false) await close();
-    }finally{
-      if(btn && document.body.contains(btn)) btn.disabled=false;
-    }
+    if(btn)btn.disabled=true;
+    let shouldClose=false;
+    try{shouldClose=(await onSubmit(new FormData(form),form))!==false;}
+    catch(error){console.error('Dialog action failed',error);toast(friendlyError(error),'error');}
+    finally{busy=false;if(btn&&document.body.contains(btn))btn.disabled=false;}
+    if(shouldClose)await close();
   });
   return {close,element:back,form};
 }
-export function confirmBox(message, yes='نعم'){ return new Promise(resolve=>{const m=modal({title:'تأكيد',body:`<div class="notice rose">${esc(message)}</div>`,submitText:yes,onSubmit:async()=>{resolve(true);return true;}}); const old=m.close;m.close=()=>{resolve(false);old()}; m.element.querySelector('.x-btn').onclick=m.close;m.element.querySelector('.cancel').onclick=m.close;}); }
+
+// Resolve false on any dismissal, including clicking outside the dialog.
+export function confirmBox(message,yes='\u0646\u0639\u0645'){
+  return new Promise(resolve=>{
+    let decided=false;
+    const finish=value=>{if(!decided){decided=true;resolve(value);}};
+    modal({
+      title:'\u062a\u0623\u0643\u064a\u062f',
+      body:`<div class="notice rose">${esc(message)}</div>`,
+      submitText:yes,
+      onSubmit:async()=>{finish(true);return true;},
+      onClose:()=>finish(false),
+    });
+  });
+}
