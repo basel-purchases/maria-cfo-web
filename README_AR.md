@@ -1,4 +1,4 @@
-Maria CFO Web v0.27. See README_v027_AR.md for release and deployment instructions.
+Maria CFO Web v0.27.2 — إصلاح مطابقة وحدات الوصفات. راجع README_v0272_AR.md.
 
 **الإصدار الحالي: Maria CFO Web v0.25 — راجع README_v025_AR.md للتحديث والتشغيل والاختبارات.**
 

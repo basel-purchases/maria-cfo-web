@@ -4,6 +4,7 @@ import {esc} from './utils.js?v=0.27';
 import {toast,loader,friendlyError} from './ui.js?v=0.27';
 import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=0.27';
 import {parseRecipesV027} from './recipe-import-parser-v027.js?v=0.27';
+import {alignRecipeLinesToCatalog} from './recipe-unit-match-v0272.js?v=0.27.2';
 export {parseRecipesV027};
 
 const TXT={
@@ -32,24 +33,16 @@ async function verifyMenuCatalog(parsed){
   const [menu,materials,units]=await Promise.all([
     api.catalogRows('menu_items','id,name'),
     api.catalogRows('materials','id,name,base_unit_id'),
-    api.catalogRows('units','id,name'),
+    api.catalogRows('units','id,name,code,is_material_specific'),
   ]);
   // Must agree with SQL v0.27: trim/whitespace/case only, no approximate Arabic aliases.
   const exact=safeText=>String(safeText??'').trim().toLocaleLowerCase('ar').replace(/\s+/g,' ');
   const menuNames=new Map();for(const r of menu){const k=exact(r.name);menuNames.set(k,(menuNames.get(k)||0)+1);}
   const stockNames=new Map();for(const r of materials){const k=exact(r.name);if(!stockNames.has(k))stockNames.set(k,[]);stockNames.get(k).push(r);}
-  const unitsById=new Map(units.map(x=>[String(x.id),String(x.name)]));
   const missingMenu=parsed.recipes.filter(r=>menuNames.get(exact(r.menuName))!==1).map(r=>r.menuName);
-  const unexpected=parsed.lines.filter(x=>!stockNames.has(exact(x.materialName))&&!x.newMaterial).map(x=>x.materialName);
-  const unitMismatch=parsed.lines.filter(x=>{
-    const matches=stockNames.get(exact(x.materialName));
-    if(!matches?.length)return false;
-    if(matches.length!==1)return true;
-    const expected=unitsById.get(String(matches[0].base_unit_id));
-    return !expected||exact(expected)!==exact(x.baseUnit);
-  }).map(x=>`${x.materialName}: ${x.baseUnit}`);
+  const matched=alignRecipeLinesToCatalog(parsed.lines,materials,units);
   const missingStock=parsed.newMaterials.filter(n=>!stockNames.has(exact(n)));
-  return {missingMenu,unexpected,missingStock,unitMismatch,menu,menuNames};
+  return {missingMenu,missingStock,menu,menuNames,...matched};
 }
 
 function blockScreen(){
@@ -90,7 +83,7 @@ export async function renderRecipeImportV027(root){
    const hash=await sha256Hex(workbook.buffer);
    // An absent menu label is not an absent ingredient. Let the owner explicitly
    // associate the Excel recipe with an EXISTING menu item without changing DB names.
-   const issues=[...check.unexpected.map(x=>'مادة غير موجودة: '+x),...new Set(check.unitMismatch)];
+   const issues=[...check.unexpected.map(x=>'مادة غير موجودة: '+x),...check.unitMismatch];
    const menuOptions=check.menu.filter(r=>check.menuNames.get(String(r.name??'').trim().toLocaleLowerCase('ar').replace(/\s+/g,' '))===1);
    const missingSet=new Set(check.missingMenu);
    const usedExact=new Set(parsed.recipes.filter(r=>!missingSet.has(r.menuName)).map(r=>String(r.menuName).trim().toLocaleLowerCase('ar').replace(/\s+/g,' ')));
@@ -105,6 +98,7 @@ export async function renderRecipeImportV027(root){
     <div class="card"><strong>${check.missingStock.length}</strong><p>${TXT.created}</p></div></div>
     <p class="metric-note">${TXT.assumed}: ${parsed.estimates}</p>
     ${mappingMarkup}
+    ${check.unitAliases.length?`<div class="notice green"><strong>تم التعرف على مسميات وحدات متكافئة دون تحويل أو تعديل أي كمية.</strong><p>${check.unitAliases.map(x=>esc(x)).join(' · ')}</p></div>`:''}
     ${issues.length?`<div class="notice rose"><strong>توجد أخطاء مواد أو وحدات يجب تصحيحها قبل الاستيراد.</strong><ul>${issues.slice(0,20).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:
     `${check.missingMenu.length?'':'<div class="notice green">جميع أسماء الوجبات متطابقة مع القاعدة.</div>'}`}
     <label class="recipe-confirm-check"><input type="checkbox" id="recipe-v027-replace"> ${TXT.replaced}</label>
@@ -135,7 +129,7 @@ export async function renderRecipeImportV027(root){
     submit.disabled=true;const release=blockScreen();
     try{
      const result=await api.rpc('import_menu_recipes_v027',{
-      p_sha256:hash,p_recipes:resolvedRecipes,p_lines:parsed.lines,p_replace_existing:true
+      p_sha256:hash,p_recipes:resolvedRecipes,p_lines:check.canonicalLines,p_replace_existing:true
      });
      previewHost.innerHTML=`<div class="card notice green"><h3>${result.duplicateFile?TXT.already:TXT.done}</h3>
       <p>${TXT.total}: ${esc(result.recipesImported||75)} | ${TXT.created}: ${esc(result.materialsCreated??0)}</p></div>`;

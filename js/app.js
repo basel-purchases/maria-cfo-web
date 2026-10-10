@@ -24,7 +24,7 @@ import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
 import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.27';
-import {renderRecipeImportV027} from './recipe-import-v027.js?v=0.27.1';
+import {renderRecipeImportV027} from './recipe-import-v027.js?v=0.27.2';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 
 const app = document.querySelector('#app');
@@ -108,7 +108,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.27</div>
+        <div class="sidebar-foot">Web v0.27.2</div>
       </aside>
 
       <main class="main">
