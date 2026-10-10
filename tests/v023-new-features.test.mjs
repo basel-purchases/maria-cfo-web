@@ -80,7 +80,7 @@ test('single transaction, dependant functions created after their backing table'
 test('old functional routes remain present',()=>{
   const app=read('js/app.js');
   for(const route of ['renderMaterials','renderExpenses','renderOrders','renderOrderDetail','renderImages','renderAssistant','renderAssets','renderAdvances'])assert.match(app,new RegExp(route));
-  assert.match(app,/Web v0\.24/);
+  assert.match(app,/Web v0\.25/);
   assert.ok(existsSync(join(root,'supabase/functions/ocr-space/index.ts')));
   assert.ok(existsSync(join(root,'supabase/functions/assistant/index.ts')));
 });

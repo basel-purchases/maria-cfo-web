@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=0.24';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.24';
-import { esc, money, unitDisplay, num } from '../utils.js?v=0.24';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.24';
+import * as api from '../api.js?v=0.25';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.25';
+import { esc, money, unitDisplay, num } from '../utils.js?v=0.25';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.25';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.25';
 
 function menuPrice(row){
   return row.manual_price_original ?? row.manual_price ?? row.price ?? row.suggested_price_rounded ?? row.suggested_price ?? null;
@@ -42,53 +43,89 @@ function materialBaseCost(row){
 }
 
 export async function renderMenu(root){
-  root.innerHTML=loader();
-  try{
-    const [rows,mats,units,categories]=await Promise.all([api.menuItems(),api.materials(),api.units(),api.menuCategoriesV023()]);
-    root.innerHTML=`
-      <div class="page-head">
-        <div>
-          <h2>الوجبات والوصفات</h2>
-          <p>أضف الوجبة وحدد سعرها ووصفاتها. تكلفة الطعام تُحسب من مكونات الوصفة وأسعار المواد.</p>
+ root.innerHTML=loader();
+ try{
+  const categories=await api.menuCategoriesV023();
+  const categoryMap=new Map(categories.map(c=>[String(c.id),c.name]));
+  const state={page:1,categoryId:'',query:'',sequence:0};
+  root.innerHTML=`
+    <div class="page-head"><div>
+      <h2>الوجبات والوصفات</h2>
+      <p>استعرض الوجبات صفحة بصفحة، وابحث عنها بالاسم أو التصنيف؛ تكلفة الطعام تُحسب من الوصفة.</p>
+    </div><button class="btn add">إضافة وجبة</button></div>
+    <div class="list-toolbar">
+      <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off"></div>
+      <select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+      <span class="list-count" id="menu-count"></span>
+    </div>
+    <div id="menu-results" aria-live="polite"></div>`;
+  root.querySelector('.add').onclick=()=>addMenu(root,categories);
+  const host=root.querySelector('#menu-results');
+  const draw=async()=>{
+   const call=++state.sequence;
+   host.innerHTML=loader();
+   try{
+    let response=await api.menuItemsPageV025({page:state.page,pageSize:PAGE_SIZES.menu,
+      categoryId:state.categoryId,query:state.query});
+    if(call!==state.sequence)return;
+    let meta=pageInfo(response.total,state.page,PAGE_SIZES.menu);
+    if(state.page!==meta.page){
+      state.page=meta.page;
+      response=await api.menuItemsPageV025({page:state.page,pageSize:PAGE_SIZES.menu,
+        categoryId:state.categoryId,query:state.query});
+      if(call!==state.sequence)return;
+      meta=pageInfo(response.total,state.page,PAGE_SIZES.menu);
+    }
+    const rows=response.rows;
+    root.querySelector('#menu-count').textContent=`${meta.total} وجبة`;
+    host.innerHTML=`${rows.length?`<div id="menu-listing" class="grid cols-3">
+       ${rows.map(r=>`<div class="card section-card menu-card">
+        <span class="tag menu-category-name">${esc(categoryMap.get(String(r.category_id))|| (r.has_missing_cost?'تكلفة ناقصة':'وجبة'))}</span>
+        <h3>${esc(r.name)}</h3>
+        <div class="menu-summary">
+          <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
+          ${menuDiscount(r)>0?`<div class="menu-net-price"><span>سعر البيع بعد الخصم</span><strong>${money(effectiveSalePrice(r))}</strong></div>`:''}
+          <div><span>تكلفة الوصفة</span><strong>${r.recipe_cost_base!=null?money(r.recipe_cost_base):'—'}</strong></div>
+          <div><span>Food Cost</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
+          <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
+          <div><span>وحدة البيع من الأمين</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
         </div>
-        <button class="btn add">إضافة وجبة</button>
-      </div>
-      ${rows.length?`
-        <div class="list-toolbar"><select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
-        <div id="menu-listing" class="grid cols-3">
-          ${rows.map(r=>`
-            <div class="card section-card menu-card">
-              <span class="tag menu-category-name" data-category-id="${esc(r.category_id||'')}">${r.has_missing_cost?'تكلفة ناقصة':'وجبة'}</span>
-              <h3>${esc(r.name)}</h3>
-              <div class="menu-summary">
-                <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
-                ${menuDiscount(r)>0?`<div class="menu-net-price"><span>سعر البيع بعد الخصم</span><strong>${money(effectiveSalePrice(r))}</strong></div>`:''}
-                <div><span>تكلفة الوصفة</span><strong>${r.recipe_cost_base!=null?money(r.recipe_cost_base):'—'}</strong></div>
-                <div><span>${menuDiscount(r)>0?'Food Cost بعد الخصم':'Food Cost'}</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
-                <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
-              </div>
-              <div class="menu-card-actions">
-                <button class="btn secondary recipe" data-id="${esc(r.id)}" data-name="${esc(r.name)}">إدارة الوصفة</button>
-                <button class="btn soft edit-menu" data-id="${esc(r.id)}">تعديل الوجبة</button>
-              </div>
-            </div>`).join('')}
-        </div>`:
-        `<div class="card empty">
-          <strong>أضف أول وجبة</strong>
-          <div>بعد إضافة المواد، أنشئ الوجبة وحدد مكوناتها.</div>
-          <br><button class="btn add">إضافة وجبة</button>
-        </div>`}`;
-
-    root.querySelectorAll('.add').forEach(b=>b.onclick=()=>addMenu(root,categories));
-    root.querySelector('#menu-category-filter')?.addEventListener('change',e=>{const id=e.target.value;root.querySelectorAll('.menu-card').forEach(card=>{const key=card.querySelector('.menu-category-name')?.dataset.categoryId;card.hidden=Boolean(id&&key!==id);});});
-    root.querySelectorAll('.recipe').forEach(b=>b.onclick=()=>recipeDialog(root,b.dataset.id,b.dataset.name,mats,units));
-    root.querySelectorAll('.edit-menu').forEach(b=>{
-      const row=rows.find(x=>String(x.id)===String(b.dataset.id));
-      if(row) b.onclick=()=>editMenu(root,row,categories);
+        <div class="menu-card-actions">
+          <button class="btn secondary recipe" data-id="${esc(r.id)}">إدارة الوصفة</button>
+          <button class="btn soft edit-menu" data-id="${esc(r.id)}">تعديل الوجبة</button>
+        </div>
+       </div>`).join('')}</div>`:
+       '<div class="card empty"><strong>لا توجد وجبات مطابقة</strong><div>غيّر البحث أو التصنيف، أو أضف وجبة.</div></div>'}
+       ${meta.pages>1?`<div class="pagination-bar">
+        <button class="mini-btn page-prev" ${meta.page<=1?'disabled':''}>السابق</button>
+        <span>${meta.from}–${meta.to} من ${meta.total} · صفحة ${meta.page} من ${meta.pages}</span>
+        <button class="mini-btn page-next" ${meta.page>=meta.pages?'disabled':''}>التالي</button>
+       </div>`:''}`;
+    host.querySelectorAll('.recipe').forEach(b=>b.onclick=async()=>{
+      const r=rows.find(x=>String(x.id)===b.dataset.id);
+      if(!r)return;
+      try{
+       b.disabled=true;
+       const [mats,units]=await Promise.all([api.materials(),api.units()]);
+       await recipeDialog(root,r.id,r.name,mats,units);
+      }catch(e){toast(friendlyError(e),'error');}
+      finally{b.disabled=false;}
     });
-  }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
-  }
+    host.querySelectorAll('.edit-menu').forEach(b=>{
+      const r=rows.find(x=>String(x.id)===b.dataset.id);
+      if(r)b.onclick=()=>editMenu(root,r,categories);
+    });
+    host.querySelector('.page-prev')?.addEventListener('click',()=>{state.page=Math.max(1,state.page-1);draw();});
+    host.querySelector('.page-next')?.addEventListener('click',()=>{state.page=Math.min(meta.pages,state.page+1);draw();});
+   }catch(e){if(call===state.sequence)host.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
+  };
+  let delay;
+  root.querySelector('#menu-search').addEventListener('input',e=>{
+    state.query=e.target.value.trim();state.page=1;clearTimeout(delay);delay=setTimeout(draw,240);
+  });
+  root.querySelector('#menu-category-filter').onchange=e=>{state.categoryId=e.target.value;state.page=1;draw();};
+  await draw();
+ }catch(e){root.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
 }
 
 function menuFormBody(row={},categories=[]){

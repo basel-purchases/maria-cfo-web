@@ -1,12 +1,13 @@
-import * as api from '../api.js?v=0.24';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.24';
-import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.24';
-import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.24';
-import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.24';
-import { downloadXlsx } from '../xlsx-export.js?v=0.24';
-import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.24';
-import { renderFilteredExpenses } from './expenses-batch.js?v=0.24';
-import { calculateOrderTotals } from '../order-totals.js?v=0.24';
+import * as api from '../api.js?v=0.25';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.25';
+import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.25';
+import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.25';
+import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.25';
+import { downloadXlsx } from '../xlsx-export.js?v=0.25';
+import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.25';
+import { renderFilteredExpenses } from './expenses-batch.js?v=0.25';
+import { calculateOrderTotals } from '../order-totals.js?v=0.25';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.25';
 
 function inventoryMinimum(r){
   const keys=[
@@ -242,7 +243,10 @@ async function enqueueOrderImages(files){
 export async function renderOrders(root){
   root.innerHTML=loader();
   try{
-    const [rows,boxes,jobs]=await Promise.all([api.orders(),api.cashboxes(),api.aiJobs({limit:100}).catch(()=>[])]);
+    const [firstPage,boxes,jobs]=await Promise.all([
+      api.ordersPageV025(1,PAGE_SIZES.orders), api.cashboxes(), api.aiJobs({limit:100}).catch(()=>[])
+    ]);
+    const state={page:1,total:firstPage.total};
     const orderJobs=jobs.filter(j=>j.job_type==='order_ocr');
     const pending=orderJobs.filter(j=>['queued','processing'].includes(j.status));
     const review=orderJobs.filter(j=>j.status==='needs_review' && !j.seen_at);
@@ -264,21 +268,39 @@ export async function renderOrders(root){
       </div>`:''}
       ${review.length?`<div class="card ai-review-card"><h3>نتائج تحتاج مراجعة</h3><p>لم نسجل بيانات غير مؤكدة. افتح كل نتيجة وصحح المطابقة ثم أنشئ المسودة.</p><div class="ai-review-list">${review.map(j=>`<button type="button" class="ai-review-item" data-review-job="${esc(j.id)}"><span>${esc(j.title||'صورة أوردر')}</span><strong>مراجعة ←</strong></button>`).join('')}</div></div><div style="height:16px"></div>`:''}
       ${ready.length?`<div class="card"><h3>مسودات جاهزة من الصور</h3><p>تم التعرف على الأصناف وحفظ كل صورة كمسودة مستقلة.</p><div class="ai-review-list">${ready.map(j=>`<button type="button" class="ai-review-item" data-ready-job="${esc(j.id)}"><span>${esc(j.title||'أوردر')}</span><strong>فتح المسودة ←</strong></button>`).join('')}</div></div><div style="height:16px"></div>`:''}
-      ${rows.length?`
-        <div class="table-wrap table-fit"><table class="table">
-          <thead><tr><th>التاريخ</th><th>رقم الأوردر</th><th>الحالة</th><th>الإجمالي</th><th></th></tr></thead>
-          <tbody>${rows.map(r=>`
-            <tr class="clickable" data-id="${esc(r.id)}">
+      <div id="orders-paged-host"></div>`;
+
+    const pagedHost=root.querySelector('#orders-paged-host');
+    const drawOrderPage=async(data=null)=>{
+      pagedHost.innerHTML=loader();
+      try{
+        const result=data||await api.ordersPageV025(state.page,PAGE_SIZES.orders);
+        const meta=pageInfo(result.total,state.page,PAGE_SIZES.orders);
+        state.page=meta.page;state.total=meta.total;
+        pagedHost.innerHTML=`
+          <div class="list-toolbar"><span class="list-count">${meta.total} أوردر · تظهر ${meta.from}–${meta.to}</span></div>
+          ${result.rows.length?`<div class="table-wrap table-fit"><table class="table">
+            <thead><tr><th>التاريخ</th><th>رقم الأوردر</th><th>الحالة</th><th>الإجمالي</th><th>التفاصيل</th></tr></thead>
+            <tbody>${result.rows.map(r=>`<tr class="clickable" data-id="${esc(r.id)}">
               <td>${dateOnly(r.occurred_at||r.business_date)}</td>
               <td>${esc(r.external_order_number||r.order_number||'—')}</td>
               <td>${statusBadge(r.status)}</td>
               <td>${money(r.net_total_original??r.total_original??0,r.currency_code||'SYP')}</td>
-              <td>فتح ←</td>
-            </tr>`).join('')}</tbody>
-        </table></div>`:'<div class="card empty"><strong>لا توجد مبيعات بعد</strong><div>يمكنك إنشاء أوردر أو رفع صور أوردرات دفعة واحدة.</div></div>'}`;
+              <td>فتح ←</td></tr>`).join('')}</tbody></table></div>`:
+            '<div class="card empty"><strong>لا توجد مبيعات في هذه الصفحة</strong><div>أنشئ أوردرًا جديدًا أو ارفع صور أوردرات.</div></div>'}
+          ${meta.pages>1?`<div class="pagination-bar">
+            <button class="mini-btn orders-prev" ${meta.page<=1?'disabled':''}>السابق</button>
+            <span>صفحة ${meta.page} من ${meta.pages}</span>
+            <button class="mini-btn orders-next" ${meta.page>=meta.pages?'disabled':''}>التالي</button>
+          </div>`:''}`;
+        pagedHost.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);
+        pagedHost.querySelector('.orders-prev')?.addEventListener('click',()=>{state.page--;drawOrderPage();});
+        pagedHost.querySelector('.orders-next')?.addEventListener('click',()=>{state.page++;drawOrderPage();});
+      }catch(e){pagedHost.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
+    };
+    await drawOrderPage(firstPage);
 
     root.querySelector('.new')?.addEventListener('click',()=>newOrder(boxes));
-    root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);
 
     const fileInput=root.querySelector('.batch-order-files');
     root.querySelector('.batch-orders')?.addEventListener('click',()=>fileInput?.click());

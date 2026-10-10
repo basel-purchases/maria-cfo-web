@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.24';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.24';
-import { esc, money, dateOnly, todayISO } from '../utils.js?v=0.24';
-import { employeeName } from '../payroll-ui.js?v=0.24';
+import * as api from '../api.js?v=0.25';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.25';
+import { esc, money, dateOnly, todayISO } from '../utils.js?v=0.25';
+import { employeeName } from '../payroll-ui.js?v=0.25';
 
 const SIZE=15;
 export async function renderAdvances(root){

@@ -1,9 +1,11 @@
-import * as api from '../api.js?v=0.24';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.24';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.24';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.24';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.24';
-import { formatSmartStock } from '../material-stock-display.js?v=0.24';
+import * as api from '../api.js?v=0.25';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.25';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.25';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.25';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.25';
+import { formatSmartStock } from '../material-stock-display.js?v=0.25';
+import {sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.25';
+import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.25';
 
 const PAGE_SIZE=10;
 
@@ -65,7 +67,12 @@ function filterRows(rows,query){
 export async function renderMaterials(root) {
   root.innerHTML = loader();
   try {
-    let [rows, units, categories] = await Promise.all([api.materials(), api.units(), api.materialCategoriesV023()]);
+    let [rows, units, categories, imported, purchasePrices] = await Promise.all([
+      api.materials(), api.units(), api.materialCategoriesV023(),
+      api.allAmeenInventoryV025().catch(e=>{console.warn('Al-Ameen stock reference not available',e);return []; }),
+      api.latestMaterialPurchasePrices().catch(()=>new Map()),
+    ]);
+    const importedIndex=sourceIndex(imported,'material');
     rows = await api.ensureMaterialCodes(rows);
     await Promise.all(rows.map(r=>api.ensureStandardMaterialUnits(r,units).catch(()=>null)));
     let materialLinks=[];
@@ -117,7 +124,7 @@ export async function renderMaterials(root) {
       const shown=filtered.slice(start,start+PAGE_SIZE);
       count.textContent=`${filtered.length} مادة`;
       list.innerHTML=`
-        ${shown.length ? table(shown, units, materialLinks,categoryMap) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
+        ${shown.length ? table(shown, units, materialLinks,categoryMap,importedIndex,purchasePrices) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
         ${filtered.length>PAGE_SIZE ? pagination(state.page,pages) : ''}`;
 
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
@@ -127,6 +134,10 @@ export async function renderMaterials(root) {
       list.querySelectorAll('[data-material-units]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialUnits);
         if (row) b.onclick = () => manageMaterialUnits(root, units, row);
+      });
+      list.querySelectorAll('[data-material-source]').forEach((b)=>{
+        const row=rows.find(r=>String(r.id)===b.dataset.materialSource);
+        if(row)b.onclick=()=>showImportedSourceDialog(row.name,importedRowsFor(row,importedIndex));
       });
       list.querySelector('[data-page-prev]')?.addEventListener('click',()=>{state.page=Math.max(1,state.page-1);draw();});
       list.querySelector('[data-page-next]')?.addEventListener('click',()=>{state.page=Math.min(pages,state.page+1);draw();});
@@ -153,9 +164,9 @@ function pagination(page,pages){
     </div>`;
 }
 
-function table(rows, units, materialLinks=[],categoryMap=new Map()) {
+function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex=null,purchasePrices=new Map()) {
   return `
-    <div class="table-wrap table-fit">
+    <div class="table-wrap materials-table-scroll">
       <table class="table materials-table">
         <thead>
           <tr>
@@ -165,7 +176,9 @@ function table(rows, units, materialLinks=[],categoryMap=new Map()) {
             <th>الكود</th>
             <th>الرصيد الموجود</th>
             <th>الحد الأدنى قبل التنبيه</th>
-            <th>آخر سعر معروف</th>
+            <th>آخر سعر شراء معروف</th>
+            <th>المستودع والكمية في آخر جرد مستورد</th>
+            <th>سعر الأمين (مرجعي)</th>
             <th>إجراء</th>
           </tr>
         </thead>
@@ -173,7 +186,9 @@ function table(rows, units, materialLinks=[],categoryMap=new Map()) {
           ${rows.map((r) => {
             const unit = materialUnit(r, units);
             const target = targetOf(r);
-            const price = priceOf(r);
+            const price = purchasePrices.get(String(r.id)) ?? priceOf(r);
+            const source=importedRowsFor(r,importedIndex);
+            const sourcePrice=importedPrice(source);
             const shownStock=formatSmartStock(r,units,materialLinks,stockOf(r));
             const shownTarget=target==null?null:formatSmartStock(r,units,materialLinks,target);
             return `
@@ -185,10 +200,13 @@ function table(rows, units, materialLinks=[],categoryMap=new Map()) {
                 <td><strong class="smart-stock-main" title="${esc(shownStock.original)}">${esc(shownStock.text)}</strong>${shownStock.converted?`<small class="smart-stock-sub">الأساس: ${esc(shownStock.original)}<span> · ${esc(shownStock.relationship)}</span></small>`:''}</td>
                 <td>${target == null ? '—' : `<span title="${esc(shownTarget.original)}">${esc(shownTarget.text)}</span>`}</td>
                 <td>${price != null ? `${money(price)} / ${esc(unit || 'وحدة')}` : '—'}</td>
+                <td><span class="source-stock-summary">${esc(importedStockSummary(source))}</span>${importedRowHasWarning(source)?'<span class="badge yellow">مراجعة</span>':''}</td>
+                <td>${sourcePrice != null ? money(sourcePrice,'SYP') : '—'}</td>
                 <td>
                   <div class="material-actions">
                     <button class="mini-btn" type="button" data-material-edit="${esc(r.id)}">تعديل المادة</button>
                     <button class="mini-btn" type="button" data-material-units="${esc(r.id)}">الوحدات والتحويل</button>
+                    ${source.length?`<button class="mini-btn" type="button" data-material-source="${esc(r.id)}">تفاصيل جرد الأمين</button>`:''}
                   </div>
                 </td>
               </tr>`;

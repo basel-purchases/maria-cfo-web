@@ -152,3 +152,13 @@
 - Supplier statements are stored as source balances/entries without new financial transactions.
 - Owner-only atomic import RPC, SHA256 + source-key idempotency, snapshot reconciliation and posting guards.
 - Vendored JSZip (MIT) and v0.24 database migration. See `README_v024.md` for deployment limitations.
+
+## Web v0.25 — Tables, pagination and full Al-Ameen statement visibility
+
+- Corrected material-list column compression (button labels no longer stack vertically).
+- Unified RTL dropdown styling across application forms.
+- Server-side pagination for menu (18/page) and orders (25/page), plus client pagination for essentials and suppliers.
+- Show imported warehouse snapshots and reference prices in materials/essentials, with complete source detail dialogs.
+- Unified supplier table and supplier statement balances, supporting overdue-positive-balance filters and source movement drill-down.
+- New nullable `uncollected_papers_v025` report field, populated from Excel via owner-checked `import_ameen_v024` and safe same-file supplementary-field refresh.
+- No automatic supplier payment or order posting is added.

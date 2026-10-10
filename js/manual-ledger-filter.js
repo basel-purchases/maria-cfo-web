@@ -1,6 +1,6 @@
 // Manual cashbox ledger only: never include sales, purchases, salaries or expenses.
-import {datePeriod,dateInRange} from './date-range-batch.js?v=0.24';
-import {todayISO} from './utils.js?v=0.24';
+import {datePeriod,dateInRange} from './date-range-batch.js?v=0.25';
+import {todayISO} from './utils.js?v=0.25';
 export function isManualCashTransaction(tx){
   const kind=String(tx.transaction_type||'').toLowerCase();
   const ref=String(tx.reference_type||'').toLowerCase();

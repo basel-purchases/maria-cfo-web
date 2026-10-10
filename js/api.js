@@ -1,7 +1,7 @@
-import { supabase, configured } from './supabase.js?v=0.24';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.24';
-import { isVagueContextualName } from './unit-catalog.js?v=0.24';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.24';
+import { supabase, configured } from './supabase.js?v=0.25';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.25';
+import { isVagueContextualName } from './unit-catalog.js?v=0.25';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.25';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -378,6 +378,28 @@ export async function menuItems(){
   return master.map(m=>({...m,...(costMap[String(m.id)]||{}),...m}));
 }
 
+// Keep recipe costs for just the visible page; the menu can contain thousands of meals.
+export async function menuItemsPageV025({page=1,pageSize=18,categoryId='',query=''}={}){
+  const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||18));
+  const from=(Math.max(1,Math.trunc(page)||1)-1)*size;
+  let request=need().from('menu_items').select('*',{count:'exact'});
+  if(categoryId)request=request.eq('category_id',categoryId);
+  if(String(query||'').trim()){
+    const term=String(query).trim().replace(/[\%_]/g,s=>'\\'+s);
+    request=request.ilike('name',`%${term}%`);
+  }
+  const {data,error,count}=await request.order('name',{ascending:true}).order('id',{ascending:true})
+    .range(from,from+size-1);
+  if(error)throw error;
+  const master=data||[],ids=master.map(r=>r.id);
+  if(!ids.length)return {rows:master,total:count??0};
+  let costs=[];
+  try{costs=await dataOrThrow(need().from('menu_item_costs').select('*').in('id',ids));}
+  catch(e){console.info('Menu cost view not available for visible-page enrichment.',e?.code||'');}
+  const costById=new Map(costs.map(r=>[String(r.id),r]));
+  return {rows:master.map(r=>({...costById.get(String(r.id)),...r})),total:count??(from+master.length)};
+}
+
 export async function createMenuItem({name,price=null,foodCost=null,discount=null,categoryId=null}){
   const payload={
     name:String(name||'').trim(),
@@ -710,6 +732,17 @@ export const setOrderRates=(orderId,discount,monthlyTax,localTax)=>rpc('set_orde
 });
 
 export const orders=()=>list('orders',{order:'occurred_at',limit:500});
+// Database-side pagination: never load all historical orders just to display 25 rows.
+export async function ordersPageV025(page=1,pageSize=25){
+  const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||25));
+  const from=(Math.max(1,Math.trunc(page)||1)-1)*size;
+  const {data,error,count}=await need().from('orders').select('*',{count:'exact'})
+    .order('occurred_at',{ascending:false,nullsFirst:false}).order('id',{ascending:true})
+    .range(from,from+size-1);
+  if(error)throw error;
+  return {rows:data||[],total:count??(from+(data?.length||0))};
+}
+
 export const orderItems=id=>list('order_items',{order:'created_at',ascending:true,eq:{order_id:id},limit:300});
 export const employees=()=>list('employees',{order:'name',ascending:true,limit:500});
 
@@ -1074,5 +1107,28 @@ export const ameenWarehousesV024=()=>list('ameen_warehouses_v024',{order:'name',
 export const ameenInventoryV024=()=>list('ameen_inventory_rows_v024',{order:'name',ascending:true,limit:1500});
 export const ameenSupplierBalancesV024=()=>list('ameen_supplier_balances_v024',{order:'supplier_name',ascending:true,limit:1000});
 export const ameenSupplierEntriesV024=(account)=>list('ameen_supplier_entries_v024',{order:'occurred_at',eq:{external_account:account},limit:1000});
+// Page through read-only Al-Ameen rows. Supabase has a configurable max-row response cap.
+export async function allAmeenInventoryV025(){
+  const rows=[],size=400;
+  for(let offset=0;offset<10000;offset+=size){
+    const {data,error}=await need().from('ameen_inventory_rows_v024').select('*')
+      .order('source_key',{ascending:true}).range(offset,offset+size-1);
+    if(error)throw error;
+    rows.push(...(data||[]));
+    if((data||[]).length<size)return rows;
+  }
+  throw new Error('AMEEN_IMPORT_TOO_MANY_ROWS_FOR_DISPLAY');
+}
+export async function ameenSupplierEntriesPageV025(account,page=1,pageSize=30){
+  const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||30));
+  const offset=(Math.max(1,Math.trunc(page)||1)-1)*size;
+  const {data,error,count}=await need().from('ameen_supplier_entries_v024')
+    .select('*',{count:'exact'}).eq('external_account',account)
+    .order('occurred_at',{ascending:false}).order('source_key',{ascending:true})
+    .range(offset,offset+size-1);
+  if(error)throw error;
+  return {rows:data||[],total:count??(offset+(data?.length||0))};
+}
+
 export const ameenOrderImportsV024=()=>list('ameen_order_snapshots_v024',{order:'occurred_at',limit:1000});
 export const approveAmeenOrderV024=(orderId)=>rpc('approve_ameen_order_v024',{p_order_id:orderId});

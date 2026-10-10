@@ -1,29 +1,29 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.24';
-import * as api from './api.js?v=0.24';
-import { esc } from './utils.js?v=0.24';
-import { toast, friendlyError, modal } from './ui.js?v=0.24';
-import { renderDashboard } from './pages/dashboard.js?v=0.24';
-import { renderHub } from './pages/hubs.js?v=0.24';
-import { renderMaterials } from './pages/materials.js?v=0.24';
-import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.24';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.24';
-import { renderMenu } from './pages/menu.js?v=0.24';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.25';
+import * as api from './api.js?v=0.25';
+import { esc } from './utils.js?v=0.25';
+import { toast, friendlyError, modal } from './ui.js?v=0.25';
+import { renderDashboard } from './pages/dashboard.js?v=0.25';
+import { renderHub } from './pages/hubs.js?v=0.25';
+import { renderMaterials } from './pages/materials.js?v=0.25';
+import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.25';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.25';
+import { renderMenu } from './pages/menu.js?v=0.25';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.24';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.24';
-import { renderEvents } from './pages/events.js?v=0.24';
-import { renderReports } from './pages/reports.js?v=0.24';
-import { renderAssistant } from './pages/assistant.js?v=0.24';
-import { renderImages } from './pages/images.js?v=0.24';
-import { renderSettings } from './pages/settings.js?v=0.24';
-import { renderAssets } from './pages/assets.js?v=0.24';
-import { renderAdvances } from './pages/advances.js?v=0.24';
-import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.24';
+} from './pages/daily.js?v=0.25';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.25';
+import { renderEvents } from './pages/events.js?v=0.25';
+import { renderReports } from './pages/reports.js?v=0.25';
+import { renderAssistant } from './pages/assistant.js?v=0.25';
+import { renderImages } from './pages/images.js?v=0.25';
+import { renderSettings } from './pages/settings.js?v=0.25';
+import { renderAssets } from './pages/assets.js?v=0.25';
+import { renderAdvances } from './pages/advances.js?v=0.25';
+import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.25';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -105,7 +105,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.24</div>
+        <div class="sidebar-foot">Web v0.25</div>
       </aside>
 
       <main class="main">

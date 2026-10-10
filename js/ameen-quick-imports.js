@@ -1,7 +1,7 @@
-import * as api from './api.js?v=0.24';
-import {esc} from './utils.js?v=0.24';
-import {modal,toast,friendlyError,loader} from './ui.js?v=0.24';
-import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.24';
+import * as api from './api.js?v=0.25';
+import {esc} from './utils.js?v=0.25';
+import {modal,toast,friendlyError,loader} from './ui.js?v=0.25';
+import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.25';
 
 const browserSupport=()=>typeof window.showDirectoryPicker==='function';
 const DB='maria-ameen-folder-v024',STORE='settings',KEY='import-folder';

@@ -146,7 +146,9 @@ function parseSuppliers(rows,at,errors){
   const summaryDebit=columns('مدين')[0]!=null?num(r[columns('مدين')[0]],0):0;
   const summaryCredit=columns('دائن')[0]!=null?num(r[columns('دائن')[0]],0):0;
   suppliers.add(accountCode);
-  records.push({key,accountCode,name,previousBalance:num(from(r,rows.__header,'الرصيد السابق'),0),summaryDebit,summaryCredit,currentBalance:num(from(r,rows.__header,'الرصيد الحالي'),0),occurredAt:ts,document:source,debit:entryDebit,credit:entryCredit,note,sourceRow:i+1});
+  records.push({key,accountCode,name,previousBalance:num(from(r,rows.__header,'الرصيد السابق'),0),summaryDebit,summaryCredit,
+    uncollectedPapers:num(from(r,rows.__header,'رصيد الأوراق التجارية غير المحصلة'),0),
+    currentBalance:num(from(r,rows.__header,'الرصيد الحالي'),0),occurredAt:ts,document:source,debit:entryDebit,credit:entryCredit,note,sourceRow:i+1});
  }
  if(!records.length)throw new Error('لا توجد حركات موردين صالحة في الكشف.');
  return {records,stats:{records:records.length,suppliers:suppliers.size}};
