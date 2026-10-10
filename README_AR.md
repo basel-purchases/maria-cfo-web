@@ -64,3 +64,5 @@ node --test tests/*.test.mjs
 ```
 
 هذه الفحوص تختبر صحة منطق JavaScript والملفات وتواقيع الربط وبعض ضمانات الأمان، **وليست بديلًا عن اختبار Supabase الحية وGemini الفعلي**.
+
+Web v0.24: see README_v024.md for Excel import deployment and staging safety requirements.

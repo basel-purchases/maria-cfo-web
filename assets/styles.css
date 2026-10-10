@@ -930,3 +930,26 @@ textarea:focus{border-color:var(--plum);box-shadow:0 0 0 3px rgba(111,71,101,.08
 .category-section{margin-top:20px;padding-top:12px;border-top:1px solid var(--line,#ded5dc);}
 .category-section .table{margin-top:8px;}
 .report-mode{margin:18px 0;}
+
+/* Maria CFO v0.24 / Al-Ameen Excel imports */
+.brand-actions{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.ameen-brand-refresh{font-size:12px;border-radius:12px;border:1px solid rgba(255,255,255,.28);padding:8px 10px;color:inherit;background:rgba(255,255,255,.11);cursor:pointer;white-space:nowrap}
+.ameen-brand-refresh:hover{background:rgba(255,255,255,.24)}
+.ameen-top-refresh{font-size:12px;padding:9px 12px}
+.ameen-upload-card{margin-bottom:18px}
+.ameen-preview-card{margin:16px 0;display:grid;gap:15px}
+.ameen-preview-table{min-width:600px}
+.ameen-warnings{border:1px solid #ead4aa;background:#fffaf0;padding:14px;border-radius:14px}
+.ameen-warnings summary{cursor:pointer;font-weight:700}
+.ameen-warnings ul{max-height:190px;overflow:auto;margin-bottom:0;padding-right:24px}
+.ameen-found-list{display:grid;gap:10px;margin-bottom:16px}
+.ameen-found-row{display:grid;grid-template-columns:minmax(130px,.9fr) 1.7fr auto;gap:14px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:13px}
+.ameen-found-row span{overflow-wrap:anywhere}
+.ameen-found-row small{color:var(--muted)}
+.ameen-import-blocker{position:fixed;inset:0;background:rgba(33,23,31,.82);backdrop-filter:blur(6px);z-index:2000;display:grid;place-items:center;padding:18px}
+.ameen-block-card{background:white;border-radius:24px;max-width:490px;width:100%;padding:28px;text-align:center;box-shadow:0 26px 95px #0005}
+.ameen-block-card h3{margin:8px 0}.ameen-block-card p{line-height:1.7}
+.ameen-block-card progress{width:100%;height:16px;accent-color:#68465e}.ameen-block-card small{display:block;color:var(--muted);margin-top:13px;line-height:1.6}
+.ameen-summary{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;background:#eef7f0;border-radius:12px;padding:12px;margin:10px 0}
+.ameen-supplier-box{margin-top:20px}
+@media(max-width:820px){.ameen-top-refresh{padding:7px 8px;font-size:11px}.ameen-found-row{grid-template-columns:1fr;gap:5px}}

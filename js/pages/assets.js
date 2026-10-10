@@ -1,6 +1,6 @@
-import * as api from '../api.js?v=0.23';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.23';
-import { esc } from '../utils.js?v=0.23';
+import * as api from '../api.js?v=0.24';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.24';
+import { esc } from '../utils.js?v=0.24';
 
 export async function renderAssets(root){
  root.innerHTML=loader();
@@ -31,12 +31,12 @@ export async function renderAssets(root){
    title:row?'\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a':'\u0625\u0636\u0627\u0641\u0629 \u0623\u0633\u0627\u0633\u064a\u0627\u062a',
    body:`<div class="form-grid"><div class="field full"><label>\u0627\u0644\u0627\u0633\u0645</label><input name="name" required maxlength="120" value="${esc(row?.name||'')}"></div>
     <div class="field"><label>\u0627\u0644\u062a\u0635\u0646\u064a\u0641</label><select name="category"><option value="">\u0628\u0644\u0627 \u062a\u0635\u0646\u064a\u0641</option>${categories.map(c=>`<option value="${esc(c.id)}" ${c.id===row?.category_id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
-    <div class="field"><label>\u0627\u0644\u0639\u062f\u062f</label><input name="quantity" type="number" min="0" step="1" required value="${esc(row?.quantity??0)}"></div>
-    <div class="field"><label>\u062d\u062f \u0627\u0644\u062a\u0646\u0628\u064a\u0647</label><input name="minimum" type="number" min="0" step="1" required value="${esc(row?.minimum_quantity??0)}"></div>
+    <div class="field"><label>\u0627\u0644\u0639\u062f\u062f</label><input name="quantity" type="number" min="0" step="any" required value="${esc(row?.quantity??0)}"></div>
+    <div class="field"><label>\u062d\u062f \u0627\u0644\u062a\u0646\u0628\u064a\u0647</label><input name="minimum" type="number" min="0" step="any" required value="${esc(row?.minimum_quantity??0)}"></div>
     <div class="field full"><label>\u0645\u0644\u0627\u062d\u0638\u0629</label><textarea name="notes" rows="2">${esc(row?.notes||'')}</textarea></div></div>`,
    onSubmit:async fd=>{try{
     const quantity=Number(fd.get('quantity')),minimum=Number(fd.get('minimum'));
-    if(!Number.isSafeInteger(quantity)||quantity<0||!Number.isSafeInteger(minimum)||minimum<0)throw Error('INVALID_ASSET_QUANTITY');
+    if(!Number.isFinite(quantity)||quantity<0||!Number.isFinite(minimum)||minimum<0)throw Error('INVALID_ASSET_QUANTITY');
     const payload={name:String(fd.get('name')).trim(),category_id:fd.get('category')||null,quantity,minimum_quantity:minimum,notes:fd.get('notes')||null};
     if(!payload.name)throw Error('ASSET_NAME_REQUIRED');
     if(row)await api.updateRestaurantAssetV023(row.id,payload);else await api.createRestaurantAssetV023(payload);

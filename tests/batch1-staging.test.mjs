@@ -68,7 +68,7 @@ test('dismissed confirmations resolve false and block backdrop during submission
  assert.match(ui,/if\(closed\|\|busy\)return/);
 });
 test('financial migration uses ledger RPCs not direct client updates',()=>{
- const sql=file('database/Maria_CFO_Web_v0.23_Batch1_DRAFT.sql');
+ const sql=file('database/Maria_CFO_Web_v0.23_Migration.sql');
  for(const expected of ['public.post_order(p_order_id,false)','public.record_cashbox_transaction(','public.record_inventory_movement(','ORDER_INVENTORY_REVERSAL_MISMATCH']){
   assert.ok(sql.includes(expected),expected);
  }

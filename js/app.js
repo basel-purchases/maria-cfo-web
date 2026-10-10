@@ -1,28 +1,29 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.23';
-import * as api from './api.js?v=0.23';
-import { esc } from './utils.js?v=0.23';
-import { toast, friendlyError, modal } from './ui.js?v=0.23';
-import { renderDashboard } from './pages/dashboard.js?v=0.23';
-import { renderHub } from './pages/hubs.js?v=0.23';
-import { renderMaterials } from './pages/materials.js?v=0.23';
-import { renderSuppliers } from './pages/suppliers.js?v=0.23';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.23';
-import { renderMenu } from './pages/menu.js?v=0.23';
+import { supabase, configured, configurationMessage } from './supabase.js?v=0.24';
+import * as api from './api.js?v=0.24';
+import { esc } from './utils.js?v=0.24';
+import { toast, friendlyError, modal } from './ui.js?v=0.24';
+import { renderDashboard } from './pages/dashboard.js?v=0.24';
+import { renderHub } from './pages/hubs.js?v=0.24';
+import { renderMaterials } from './pages/materials.js?v=0.24';
+import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.24';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.24';
+import { renderMenu } from './pages/menu.js?v=0.24';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.23';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.23';
-import { renderEvents } from './pages/events.js?v=0.23';
-import { renderReports } from './pages/reports.js?v=0.23';
-import { renderAssistant } from './pages/assistant.js?v=0.23';
-import { renderImages } from './pages/images.js?v=0.23';
-import { renderSettings } from './pages/settings.js?v=0.23';
-import { renderAssets } from './pages/assets.js?v=0.23';
-import { renderAdvances } from './pages/advances.js?v=0.23';
+} from './pages/daily.js?v=0.24';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.24';
+import { renderEvents } from './pages/events.js?v=0.24';
+import { renderReports } from './pages/reports.js?v=0.24';
+import { renderAssistant } from './pages/assistant.js?v=0.24';
+import { renderImages } from './pages/images.js?v=0.24';
+import { renderSettings } from './pages/settings.js?v=0.24';
+import { renderAssets } from './pages/assets.js?v=0.24';
+import { renderAdvances } from './pages/advances.js?v=0.24';
+import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.24';
 
 const app = document.querySelector('#app');
 let currentSession = null;
@@ -33,6 +34,7 @@ const aiJobState = new Map();
 const nav = [
   ['#/dashboard', 'الرئيسية'],
   ['#/basic', 'الإدخالات الأساسية'],
+  ['#/quick-imports', 'الإدخالات السريعة'],
   ['#/daily', 'التشغيل اليومي'],
   ['#/employees', 'الموظفون والرواتب'],
   ['#/events', 'الحفلات'],
@@ -93,7 +95,7 @@ function shell() {
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-mark">M</div>
+          <div class="brand-actions"><div class="brand-mark">M</div><button id="ameen-brand-refresh" type="button" class="ameen-brand-refresh" title="تحديث ملفات الأمين" aria-label="تحديث ملفات الأمين">↻ تحديث</button></div>
           <h1>Maria CFO</h1>
           <p>المدير المالي الذكي</p>
         </div>
@@ -103,7 +105,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.23</div>
+        <div class="sidebar-foot">Web v0.24</div>
       </aside>
 
       <main class="main">
@@ -113,6 +115,7 @@ function shell() {
             <div class="title" id="top-title">Maria CFO</div>
           </div>
           <div class="topbar-actions">
+            <button class="btn secondary ameen-top-refresh" type="button" id="ameen-top-refresh" title="تحديث ملفات الأمين">↻ تحديث</button>
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
               <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
             </button>
@@ -131,6 +134,8 @@ function shell() {
   };
 
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
+  app.querySelector('#ameen-brand-refresh').onclick = desktopRefresh;
+  app.querySelector('#ameen-top-refresh').onclick = desktopRefresh;
 
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
@@ -267,7 +272,7 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    'quick-imports':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees',
     'events-list': 'events', reports: 'reports-hub', images: 'images',
@@ -294,6 +299,7 @@ async function route() {
   const titles = {
     dashboard: 'الرئيسية',
     basic: 'الإدخالات الأساسية',
+    'quick-imports': 'الإدخالات السريعة',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
     events: 'الحفلات',
@@ -328,6 +334,7 @@ async function route() {
     switch (key) {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
+      case 'quick-imports': return renderQuickImports(root);
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');

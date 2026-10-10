@@ -1,12 +1,12 @@
-import * as api from '../api.js?v=0.23';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.23';
-import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.23';
-import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.23';
-import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.23';
-import { downloadXlsx } from '../xlsx-export.js?v=0.23';
-import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.23';
-import { renderFilteredExpenses } from './expenses-batch.js?v=0.23';
-import { calculateOrderTotals } from '../order-totals.js?v=0.23';
+import * as api from '../api.js?v=0.24';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.24';
+import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.24';
+import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.24';
+import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.24';
+import { downloadXlsx } from '../xlsx-export.js?v=0.24';
+import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.24';
+import { renderFilteredExpenses } from './expenses-batch.js?v=0.24';
+import { calculateOrderTotals } from '../order-totals.js?v=0.24';
 
 function inventoryMinimum(r){
   const keys=[

@@ -1,7 +1,7 @@
 // Maria CFO v0.19: one descriptive label for each material-specific quantity.
 // Data is read from the original units, material_units and unit_conversions.
-import { unitDisplay } from './utils.js?v=0.23';
-import { prettyRelation } from './unit-display-conversion.js?v=0.23';
+import { unitDisplay } from './utils.js?v=0.24';
+import { prettyRelation } from './unit-display-conversion.js?v=0.24';
 
 const GENERAL_CODES = new Set(['KG','G','L','ML','PCS','PC','UNIT','DOZ','DOZEN']);
 export const CONTEXTUAL_UNIT_CODES = new Set([

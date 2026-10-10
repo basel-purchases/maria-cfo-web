@@ -1,5 +1,5 @@
 // Maria CFO v0.20 — presentation only: never change inventory ledgers or snapshots.
-import { unitDisplay } from './utils.js?v=0.23';
+import { unitDisplay } from './utils.js?v=0.24';
 
 const METRIC_SMALL={KG:'G',L:'ML'};
 const METRIC_LARGE={G:'KG',ML:'L'};

@@ -1,7 +1,7 @@
-import { supabase, configured } from './supabase.js?v=0.23';
-import { sleep, todayISO, unitLabel } from './utils.js?v=0.23';
-import { isVagueContextualName } from './unit-catalog.js?v=0.23';
-import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.23';
+import { supabase, configured } from './supabase.js?v=0.24';
+import { sleep, todayISO, unitLabel } from './utils.js?v=0.24';
+import { isVagueContextualName } from './unit-catalog.js?v=0.24';
+import { buildEmployeePayload, buildAttendanceArgs, buildEventArgs } from './business-rules.js?v=0.24';
 
 function need(){
   if(!configured || !supabase) throw new Error('SUPABASE_NOT_CONFIGURED');
@@ -1064,3 +1064,15 @@ export async function deleteCatalogCategoryV023(kind,id){
   return remove(table,id);
 }
 export const payrollStatisticsV023=(start,end)=>rpc('get_payroll_statistics_v023',{p_start_date:start,p_end_date:end});
+
+// v0.24: one authenticated and atomic RPC per Al-Ameen report.
+export const importAmeenV024=({kind,fileName,sha256,records})=>rpc('import_ameen_v024',{
+  p_kind:kind,p_filename:fileName,p_sha256:sha256,p_records:records,
+});
+export const ameenImportHistoryV024=()=>list('ameen_import_runs_v024',{order:'created_at',limit:70});
+export const ameenWarehousesV024=()=>list('ameen_warehouses_v024',{order:'name',ascending:true,limit:80});
+export const ameenInventoryV024=()=>list('ameen_inventory_rows_v024',{order:'name',ascending:true,limit:1500});
+export const ameenSupplierBalancesV024=()=>list('ameen_supplier_balances_v024',{order:'supplier_name',ascending:true,limit:1000});
+export const ameenSupplierEntriesV024=(account)=>list('ameen_supplier_entries_v024',{order:'occurred_at',eq:{external_account:account},limit:1000});
+export const ameenOrderImportsV024=()=>list('ameen_order_snapshots_v024',{order:'occurred_at',limit:1000});
+export const approveAmeenOrderV024=(orderId)=>rpc('approve_ameen_order_v024',{p_order_id:orderId});

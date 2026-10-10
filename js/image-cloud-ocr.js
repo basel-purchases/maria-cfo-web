@@ -1,8 +1,8 @@
 // OCR.space through the authenticated Supabase Edge Function.
 // No OCR API key is ever shipped to the browser. Images are NOT stored in Supabase.
-import {supabase} from './supabase.js?v=0.23';
+import {supabase} from './supabase.js?v=0.24';
 
-import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=0.23';
+import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=0.24';
 async function edge(body){
   if(!supabase)throw new Error('SUPABASE_NOT_CONFIGURED');
   const {data,error}=await supabase.functions.invoke('ocr-space',{body});

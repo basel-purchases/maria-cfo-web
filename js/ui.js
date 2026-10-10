@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=0.23';
+import { esc } from './utils.js?v=0.24';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }
@@ -9,6 +9,13 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('failed to fetch')||msg.includes('network')||msg.includes('socket')) return 'تعذر الاتصال بالخدمة. تحقق من الإنترنت ثم حاول مرة أخرى.';
   if(msg.includes('401')||msg.includes('jwt')||msg.includes('session')) return 'انتهت جلسة الدخول. سجّل الدخول من جديد.';
   if(msg.includes('403')||msg.includes('access denied')) return 'ليست لديك صلاحية لتنفيذ هذه العملية.';
+  if(msg.includes('ameen_order_review_required')) return 'هذا الأوردر مستورد من الأمين. راجع الصندوق والصافي واعتمد المطابقة أولًا من صفحة الإدخالات السريعة.';
+  if(msg.includes('ameen_order_total_mismatch')) return 'صافي الأوردر لا يطابق صافي الأمين؛ صحح المبلغ أو اتركه للمراجعة.';
+  if(msg.includes('ameen_order_items_changed_reapproval_required')) return 'تغيّرت أصناف الأوردر بعد الاعتماد. يجب إعادة مراجعتها واعتمادها قبل النشر.';
+  if(msg.includes('ameen_order_cashbox_required')) return 'حدد صندوق هذا الأوردر قبل اعتماد بيانات الأمين.';
+  if(msg.includes('ameen_source_conflict')) return 'يوجد تعارض بين الأوردر وسجل الأمين ويحتاج مراجعة يدوية.';
+  if(msg.includes('ameen_item_mapping_changed_review_required')) return 'تغيّرت مطابقة مادة مستوردة. لم نكتب على مادة أخرى تلقائيًا؛ راجع الاسم والوحدة.';
+  if(msg.includes('ameen_')) return 'توقفت عملية الاستيراد حفاظًا على السجلات. راجع بيانات الملف وتحديث قاعدة Maria CFO v0.24.';
   if(msg.includes('recipe_unit_not_configured')) return 'هذه الوحدة غير مربوطة بالمادة بعد. اضغط «تحويل وحدة» وحدد العلاقة ثم حاول مجددًا.';
   if(msg.includes('purchase unit conversion not configured')) return 'تم تعريف الوحدة للمادة، لكن قاعدة البيانات ما زالت على منطق الشراء القديم. شغّل تحديث v0.10 مرة واحدة في Supabase ثم أعد المحاولة.';
   if(msg.includes('document_ocr_not_deployed')||msg.includes('document-ocr')&&msg.includes('not found')) return 'ميزة تحليل صورة الفاتورة لم تُنشر على Supabase بعد. انشر Edge Function باسم document-ocr ثم أعد المحاولة.';

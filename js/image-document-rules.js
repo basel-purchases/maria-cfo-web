@@ -1,4 +1,4 @@
-import { parseColumnarOcrItems } from "./image-column-parser.js?v=0.23";
+import { parseColumnarOcrItems } from "./image-column-parser.js?v=0.24";
 // Deterministic extraction hints and validation; AI does not invent required values.
 const LETTERS=/[\p{L}]/u;
 export function normalizeArabicNumbers(value){

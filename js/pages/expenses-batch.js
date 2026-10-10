@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.23';
-import {toast,loader,friendlyError,modal} from '../ui.js?v=0.23';
-import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.23';
-import {datePeriod,dateInRange} from '../date-range-batch.js?v=0.23';
-import {downloadXlsx} from '../xlsx-export.js?v=0.23';
+import * as api from '../api.js?v=0.24';
+import {toast,loader,friendlyError,modal} from '../ui.js?v=0.24';
+import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.24';
+import {datePeriod,dateInRange} from '../date-range-batch.js?v=0.24';
+import {downloadXlsx} from '../xlsx-export.js?v=0.24';
 
 const L={
  title:'\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a',newExpense:'\u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641',

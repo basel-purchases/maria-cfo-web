@@ -143,3 +143,12 @@
 - تحديث مسار التحويلات داخل صفحة المواد ليستخدم RPC ذرية للوحدات المخصصة بدل إنشاء وحدة غامضة ثم ربطها لاحقًا.
 - إبقاء بيانات المبيعات والمشتريات المنشورة والتكاليف التاريخية والصناديق دون تغيير.
 - هذا الإصدار لا يتطلب تحديث `assistant` أو `document-ocr`، ولا يتضمن `config.js` أو ملفات Git.
+
+## Web v0.24 - Al-Ameen Excel quick imports
+- New Quick Imports page: manual XLSX, mandatory type check, preview, confirmation, progress, recent imports.
+- New toolbar Refresh with permission-based Chrome/Edge desktop folder selection.
+- Inventory sections map to menu/material/essential-assets catalogs, preserving three source warehouses.
+- Daily orders are staged as review-required drafts, never posted or paid automatically.
+- Supplier statements are stored as source balances/entries without new financial transactions.
+- Owner-only atomic import RPC, SHA256 + source-key idempotency, snapshot reconciliation and posting guards.
+- Vendored JSZip (MIT) and v0.24 database migration. See `README_v024.md` for deployment limitations.

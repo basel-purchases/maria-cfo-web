@@ -1,7 +1,7 @@
-import * as api from '../api.js?v=0.23';
-import { loader, friendlyError } from '../ui.js?v=0.23';
-import { money, esc, todayISO } from '../utils.js?v=0.23';
-import { financialCard, financialRowTable, qualityMessages, barTrend, finalProfitValue, simpleInfo } from '../finance-ui.js?v=0.23';
+import * as api from '../api.js?v=0.24';
+import { loader, friendlyError } from '../ui.js?v=0.24';
+import { money, esc, todayISO } from '../utils.js?v=0.24';
+import { financialCard, financialRowTable, qualityMessages, barTrend, finalProfitValue, simpleInfo } from '../finance-ui.js?v=0.24';
 
 function periodStart(kind){
   const today=todayISO();const d=new Date(today+'T12:00:00');

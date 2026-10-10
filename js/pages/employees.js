@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.23';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.23';
-import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.23';
-import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.23';
+import * as api from '../api.js?v=0.24';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.24';
+import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.24';
+import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.24';
 
-import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.23';
+import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.24';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
 const ATTENDANCE_LABELS = {
   full: 'دوام كامل', partial: 'دوام جزئي', absent: 'غياب',
@@ -324,7 +324,7 @@ async function renderSalaryLedger(root,employeeMap,boxMap){
   const now=todayISO();
   let kind='day',day=now,page=0,period;
   const fetchPage=async()=>{
-    const bounds=(await import('../payroll-policy-v023.js?v=0.23')).salaryPeriod(kind,day);
+    const bounds=(await import('../payroll-policy-v023.js?v=0.24')).salaryPeriod(kind,day);
     period=bounds;
     const result=await api.salaryPaymentPage(bounds.start,bounds.end,page*25,25);
     const rows=Array.isArray(result?.rows)?result.rows:[];
