@@ -1,3 +1,5 @@
+Maria CFO Web v0.27. See README_v027_AR.md for release and deployment instructions.
+
 **الإصدار الحالي: Maria CFO Web v0.25 — راجع README_v025_AR.md للتحديث والتشغيل والاختبارات.**
 
 # الإصدار الحالي: Maria CFO Web v0.23

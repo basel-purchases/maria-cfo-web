@@ -1,3 +1,5 @@
+Maria CFO v0.27 - from v0.25: 75 recipe import, transaction-safe recipes and filtered Excel/PDF table exports.
+
 # Maria CFO Web v0.23 — الدفعتان الأولى والثانية
 
 - إضافة مواد بوحدات عامة مختلفة، وإغلاق النوافذ بالنقر خارجها.

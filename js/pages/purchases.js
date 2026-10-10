@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.25';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.25';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.25';
-import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.25';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.27';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
+import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.27';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';

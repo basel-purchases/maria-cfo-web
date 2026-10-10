@@ -1,4 +1,4 @@
-import {todayISO} from './utils.js?v=0.25';
+import {todayISO} from './utils.js?v=0.27';
 
 export function datePeriod(mode='day',anchor=todayISO()){
   const text=/^\d{4}-\d{2}-\d{2}$/.test(String(anchor))?anchor:todayISO();

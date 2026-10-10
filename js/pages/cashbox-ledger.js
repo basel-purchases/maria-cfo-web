@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.25';
-import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.25';
-import {toast,friendlyError} from '../ui.js?v=0.25';
-import {datePeriod,dateInRange} from '../date-range-batch.js?v=0.25';
-import {downloadXlsx} from '../xlsx-export.js?v=0.25';
-import {filteredManualTransactions} from '../manual-ledger-filter.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
+import {toast,friendlyError} from '../ui.js?v=0.27';
+import {datePeriod,dateInRange} from '../date-range-batch.js?v=0.27';
+import {downloadXlsx} from '../xlsx-export.js?v=0.27';
+import {filteredManualTransactions} from '../manual-ledger-filter.js?v=0.27';
 
 const Z='\u2014';
 const message={

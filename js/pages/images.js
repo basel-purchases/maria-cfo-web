@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.25';
-import { esc, unitDisplay, todayISO } from '../utils.js?v=0.25';
-import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.25';
-import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.25';
-import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.25';
-import {usageSummary} from '../image-cloud-rules.js?v=0.25';
-import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { esc, unitDisplay, todayISO } from '../utils.js?v=0.27';
+import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.27';
+import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.27';
+import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.27';
+import {usageSummary} from '../image-cloud-rules.js?v=0.27';
+import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.27';
 
 const T={
   fast:'\u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0633\u0631\u064a\u0639 - Engine 1',

@@ -85,7 +85,7 @@ test('SQL stores Excel negotiable-paper balance without changing historical paid
  assert.equal((sql.match(/^COMMIT;/mg)||[]).length,1);
 });
 test('v0.25 keeps the Al-Ameen import, OCR and legacy routes intact',()=>{
- assert.match(read('js/app.js'),/Web v0\.25/);
+ assert.match(read('js/app.js'),/Web v0\.27/);
  assert.match(read('js/app.js'),/renderQuickImports/);
  assert.match(read('js/app.js'),/renderImages/);
  assert.match(read('js/app.js'),/renderSuppliersWithAmeen/);

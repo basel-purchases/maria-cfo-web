@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=0.25';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.25';
-import {esc,money} from '../utils.js?v=0.25';
-import {PAGE_SIZES,paginateArray,sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.25';
-import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.27';
+import {esc,money} from '../utils.js?v=0.27';
+import {registerTableExport} from '../table-export-v027.js?v=0.27';
+import {PAGE_SIZES,paginateArray,sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.27';
+import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.27';
 
 export async function renderAssets(root){
  root.innerHTML=loader();
@@ -86,6 +87,11 @@ export async function renderAssets(root){
       <span>${info.from}–${info.to} من ${info.total} · صفحة ${info.page} من ${info.pages}</span>
       <button class="mini-btn page-next" ${info.page>=info.pages?'disabled':''}>التالي</button>
      </div>`:''}</div>`;
+   registerTableExport(root.querySelector('.asset-details-table'),()=>({
+    title:'الأساسيات - حسب التصفية',
+    headers:['الاسم','التصنيف','الوحدة','العدد الحالي','حد التنبيه','كمية جرد الأمين','سعر الأمين','ملاحظات'],
+    rows:filtered.map(x=>{const sr=importedRowsFor(x,source);const pr=importedPrice(sr);return [x.name,names.get(String(x.category_id))||'',x.ameen_unit_v024||sr[0]?.unit_name||'',x.quantity,x.minimum_quantity,importedStockSummary(sr),pr==null?'':pr,x.notes||''];})
+   }));
    root.querySelectorAll('.asset-edit').forEach(b=>b.onclick=()=>assetForm(items.find(x=>String(x.id)===b.dataset.id)));
    root.querySelectorAll('.asset-source').forEach(b=>b.onclick=()=>{
     const x=items.find(x=>String(x.id)===b.dataset.id);if(x)showImportedSourceDialog(x.name,importedRowsFor(x,source));

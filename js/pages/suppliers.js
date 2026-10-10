@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=0.25';
-import {modal,toast,loader,friendlyError} from '../ui.js?v=0.25';
-import {esc,money} from '../utils.js?v=0.25';
-import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import {modal,toast,loader,friendlyError} from '../ui.js?v=0.27';
+import {esc,money} from '../utils.js?v=0.27';
+import {registerTableExport} from '../table-export-v027.js?v=0.27';
+import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=0.27';
 
 const amount=value=>value===null||value===undefined?'—':money(value,'SYP');
 const reportValue=value=>esc(amount(value));
@@ -68,6 +69,16 @@ async function showLedger(account){
      <span>${info.from}–${info.to} من ${info.total} · صفحة ${info.page} من ${info.pages}</span>
      <button class="mini-btn ledger-next" ${info.page>=info.pages?'disabled':''}>التالي</button>
     </div>`:''}`;
+   registerTableExport(host.querySelector('.supplier-ledger-table'),async()=>{
+    let all=[],pageIndex=1,more=true;const size=100;
+    while(more){const res=await api.ameenSupplierEntriesPageV025(account.external_account,pageIndex,size);
+      all.push(...res.rows);more=all.length<res.total&&res.rows.length>0;pageIndex++;
+      if(pageIndex>3000)throw Error('SUPPLIER_LEDGER_EXPORT_LIMIT');
+    }
+    return {title:`كشف مورد ${account.supplier_name}`,
+      headers:['التاريخ','أصل السند','مدين','دائن','البيان'],
+      rows:all.map(x=>[String(x.occurred_at||'').slice(0,10),x.source_document||'',x.debit??'',x.credit??'',x.description||''])};
+   });
    host.querySelector('.ledger-prev')?.addEventListener('click',()=>{page=Math.max(1,page-1);draw();});
    host.querySelector('.ledger-next')?.addEventListener('click',()=>{page=Math.min(info.pages,page+1);draw();});
   }catch(e){if(seq===sequence&&m.element.isConnected)host.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
@@ -137,6 +148,11 @@ export async function renderSuppliersWithAmeen(root){
       <span>${info.from}–${info.to} من ${info.total} · صفحة ${info.page} من ${info.pages}</span>
       <button class="mini-btn suppliers-next" ${info.page>=info.pages?'disabled':''}>التالي</button>
     </div>`:''}`;
+   registerTableExport(root.querySelector('.supplier-full-table'),()=>({
+     title:'الموردون - حسب البحث والفلتر',
+     headers:['المورد','رقم حساب الأمين','الهاتف','جهة الاتصال','الرصيد السابق','مدين إجمالي','دائن إجمالي','أوراق تجارية','الرصيد الحالي','الحالة'],
+     rows:filtered.map(s=>{const a=s.account;return [s.name,s.code||'',s.phone||'',s.contact||'',a?.previous_balance??'',a?.total_debit??'',a?.total_credit??'',a?.uncollected_papers_v025??'',a?.current_balance??'',supplierBalanceState(a)];})
+   }));
    root.querySelectorAll('.view-supplier-ledger').forEach(b=>b.onclick=()=>{
     const a=accounts.find(x=>String(x.external_account)===b.dataset.code);
     if(a)showLedger(a);

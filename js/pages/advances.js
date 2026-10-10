@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=0.25';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.25';
-import { esc, money, dateOnly, todayISO } from '../utils.js?v=0.25';
-import { employeeName } from '../payroll-ui.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.27';
+import { esc, money, dateOnly, todayISO } from '../utils.js?v=0.27';
+import { employeeName } from '../payroll-ui.js?v=0.27';
+import {registerTableExport} from '../table-export-v027.js?v=0.27';
 
 const SIZE=15;
 export async function renderAdvances(root){
@@ -38,6 +39,11 @@ export async function renderAdvances(root){
       <div class="table-wrap"><table class="table"><thead><tr><th>\u0627\u0644\u0645\u0648\u0638\u0641</th><th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u0633\u0644\u0641\u0629</th><th>\u062e\u0635\u0645 \u0645\u0646 \u0627\u0644\u0631\u0627\u062a\u0628</th><th>\u0627\u0644\u0645\u0637\u0628\u0642</th><th>\u0627\u0644\u0628\u0627\u0642\u064a</th><th>\u0627\u0644\u0635\u0646\u062f\u0648\u0642</th></tr></thead><tbody>
       ${show.map(r=>{const e=em.get(String(r.employee_id));return `<tr><td>${employeeName(e?.name||'?',e?.pay_type)}</td><td>${dateOnly(r.occurred_at)}</td><td>${money(r.principal_original,r.currency_code)}</td><td>${r.repayment_mode==='installments'?money(r.installment_amount_original,r.currency_code):r.repayment_mode==='manual'?'\u064a\u062f\u0648\u064a':'\u0627\u0644\u062f\u0641\u0639\u0629 \u0627\u0644\u0642\u0627\u062f\u0645\u0629'}</td><td>${money(deductionByAdvance.get(String(r.id))||0,r.currency_code)}</td><td><strong>${money(r.remaining_original,r.currency_code)}</strong></td><td>${esc(bm.get(String(r.cashbox_id))||'\u2014')}</td></tr>`;}).join('')||'<tr><td colspan="7">\u0644\u0627 \u062a\u0648\u062c\u062f \u0633\u0644\u0641</td></tr>'}</tbody></table></div>
       <div class="pagination-bar"><button class="mini-btn" id="adv-prev" ${state.page<=1?'disabled':''}>\u0627\u0644\u0633\u0627\u0628\u0642</button><span>${state.page} / ${pageCount} \u2014 ${items.length}</span><button class="mini-btn" id="adv-next" ${state.page>=pageCount?'disabled':''}>\u0627\u0644\u062a\u0627\u0644\u064a</button></div>`;
+      registerTableExport(out.querySelector('table'),()=>({
+        title:'سلف الموظفين - حسب الفلتر',
+        headers:['الموظف','التاريخ','السلفة','الخصم من الراتب','المطبق','الباقي','الصندوق'],
+        rows:items.map(r=>{const e=em.get(String(r.employee_id));return [employeeName(e?.name||'?',e?.pay_type),dateOnly(r.occurred_at),Number(r.principal_original||0),r.repayment_mode==='installments'?Number(r.installment_amount_original||0):r.repayment_mode==='manual'?'يدوي':'الراتب القادم',Number(deductionByAdvance.get(String(r.id))||0),Number(r.remaining_original||0),bm.get(String(r.cashbox_id))||''];})
+      }));
       out.querySelector('#adv-prev').onclick=()=>{state.page--;draw();};
       out.querySelector('#adv-next').onclick=()=>{state.page++;draw();};
     };

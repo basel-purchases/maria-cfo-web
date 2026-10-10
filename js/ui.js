@@ -1,4 +1,4 @@
-import { esc } from './utils.js?v=0.25';
+import { esc } from './utils.js?v=0.27';
 export function loader(){ return '<div class="loader" aria-label="جاري التحميل"></div>'; }
 export function empty(title, message='', action=''){ return `<div class="empty"><strong>${esc(title)}</strong>${message?`<div>${esc(message)}</div>`:''}${action}</div>`; }
 export function toast(message, type=''){ let box=document.querySelector('.toast-box'); if(!box){box=document.createElement('div');box.className='toast-box';document.body.appendChild(box);} const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=message;box.appendChild(t);setTimeout(()=>t.remove(),4500); }

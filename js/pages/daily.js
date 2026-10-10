@@ -1,13 +1,14 @@
-import * as api from '../api.js?v=0.25';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.25';
-import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.25';
-import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.25';
-import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.25';
-import { downloadXlsx } from '../xlsx-export.js?v=0.25';
-import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.25';
-import { renderFilteredExpenses } from './expenses-batch.js?v=0.25';
-import { calculateOrderTotals } from '../order-totals.js?v=0.25';
-import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
+import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.27';
+import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.27';
+import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.27';
+import { downloadXlsx } from '../xlsx-export.js?v=0.27';
+import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.27';
+import { renderFilteredExpenses } from './expenses-batch.js?v=0.27';
+import { calculateOrderTotals } from '../order-totals.js?v=0.27';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.27';
+import {registerTableExport} from '../table-export-v027.js?v=0.27';
 
 function inventoryMinimum(r){
   const keys=[
@@ -293,6 +294,17 @@ export async function renderOrders(root){
             <span>صفحة ${meta.page} من ${meta.pages}</span>
             <button class="mini-btn orders-next" ${meta.page>=meta.pages?'disabled':''}>التالي</button>
           </div>`:''}`;
+        const table=pagedHost.querySelector('table');
+        if(table)registerTableExport(table,async()=>{
+          const all=[];let p=1,total=Infinity;
+          while(all.length<total){const resp=await api.ordersPageV025(p,100);
+            total=resp.total;all.push(...resp.rows);if(!resp.rows.length)break;p++;
+            if(p>10000)throw Error('ORDERS_EXPORT_LIMIT');
+          }
+          return {title:'الأوردرات والمبيعات',
+            headers:['التاريخ','رقم الأوردر','الحالة','الإجمالي','العملة'],
+            rows:all.map(r=>[dateOnly(r.occurred_at||r.business_date),r.external_order_number||r.order_number||'',r.status||'',Number(r.net_total_original??r.total_original??0),r.currency_code||'SYP'])};
+        });
         pagedHost.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>location.hash='#/order/'+tr.dataset.id);
         pagedHost.querySelector('.orders-prev')?.addEventListener('click',()=>{state.page--;drawOrderPage();});
         pagedHost.querySelector('.orders-next')?.addEventListener('click',()=>{state.page++;drawOrderPage();});

@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=0.25';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.25';
-import { esc, money, unitDisplay, num } from '../utils.js?v=0.25';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.25';
-import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.27';
+import { esc, money, unitDisplay, num } from '../utils.js?v=0.27';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.27';
+import {downloadXlsx,exportDatasetPdf} from '../table-export-v027.js?v=0.27';
 
 function menuPrice(row){
   return row.manual_price_original ?? row.manual_price ?? row.price ?? row.suggested_price_rounded ?? row.suggested_price ?? null;
@@ -52,11 +53,13 @@ export async function renderMenu(root){
     <div class="page-head"><div>
       <h2>الوجبات والوصفات</h2>
       <p>استعرض الوجبات صفحة بصفحة، وابحث عنها بالاسم أو التصنيف؛ تكلفة الطعام تُحسب من الوصفة.</p>
-    </div><button class="btn add">إضافة وجبة</button></div>
+    </div><div class="page-head-actions"><a class="btn secondary" href="#/recipes-import">استيراد الوصفات</a><button class="btn add">إضافة وجبة</button></div></div>
     <div class="list-toolbar">
       <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off"></div>
       <select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
       <span class="list-count" id="menu-count"></span>
+      <button class="mini-btn" type="button" id="menu-export-excel">⇩ Excel</button>
+      <button class="mini-btn" type="button" id="menu-export-pdf">⇩ PDF</button>
     </div>
     <div id="menu-results" aria-live="polite"></div>`;
   root.querySelector('.add').onclick=()=>addMenu(root,categories);
@@ -124,6 +127,25 @@ export async function renderMenu(root){
     state.query=e.target.value.trim();state.page=1;clearTimeout(delay);delay=setTimeout(draw,240);
   });
   root.querySelector('#menu-category-filter').onchange=e=>{state.categoryId=e.target.value;state.page=1;draw();};
+  const filteredMenuDataset=async()=>{
+    const all=[];let page=1,total=Infinity;
+    const snapshot={categoryId:state.categoryId,query:state.query};
+    while(all.length<total){
+      const result=await api.menuItemsPageV025({page,pageSize:100,...snapshot});
+      total=result.total;all.push(...result.rows);
+      if(!result.rows.length)break;page++;
+      if(page>10000)throw Error('MENU_EXPORT_LIMIT');
+    }
+    return {title:'الوجبات - حسب البحث والتصنيف',
+      headers:['اسم الوجبة','التصنيف','سعر البيع','تكلفة الوصفة','Food Cost %','الخصم الافتراضي %','وحدة البيع'],
+      rows:all.map(r=>[r.name,categoryMap.get(String(r.category_id))||'',menuPrice(r)??'',r.recipe_cost_base??'',displayedFoodCost(r)??'',menuDiscount(r),r.ameen_sale_unit_v024||''])};
+  };
+  root.querySelector('#menu-export-excel').onclick=async e=>{
+    const btn=e.currentTarget;btn.disabled=true;
+    try{const dataset=await filteredMenuDataset();downloadXlsx('Maria-CFO-Menu-Filtered-v027.xlsx',dataset.headers,dataset.rows,'Menu');}
+    catch(err){toast(friendlyError(err),'error');}finally{btn.disabled=false;}
+  };
+  root.querySelector('#menu-export-pdf').onclick=()=>exportDatasetPdf(filteredMenuDataset);
   await draw();
  }catch(e){root.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
 }

@@ -1,6 +1,6 @@
-import {modal} from './ui.js?v=0.25';
-import {esc,money} from './utils.js?v=0.25';
-import {numericValue} from './table-presenter-v025.js?v=0.25';
+import {modal} from './ui.js?v=0.27';
+import {esc,money} from './utils.js?v=0.27';
+import {numericValue} from './table-presenter-v025.js?v=0.27';
 
 export function importedStockSummary(rows=[]){
  if(!rows.length)return '—';

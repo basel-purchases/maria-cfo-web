@@ -1,7 +1,7 @@
-import * as api from './api.js?v=0.25';
-import {esc} from './utils.js?v=0.25';
-import {modal,toast,friendlyError,loader} from './ui.js?v=0.25';
-import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.25';
+import * as api from './api.js?v=0.27';
+import {esc} from './utils.js?v=0.27';
+import {modal,toast,friendlyError,loader} from './ui.js?v=0.27';
+import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.27';
 
 const browserSupport=()=>typeof window.showDirectoryPicker==='function';
 const DB='maria-ameen-folder-v024',STORE='settings',KEY='import-folder';
@@ -111,6 +111,7 @@ function compactSample(kind,parsed){
 }
 export async function renderQuickImports(root){
  root.innerHTML=`<div class="page-head"><div><h2>الإدخالات السريعة من برنامج الأمين</h2><p>رفع Excel ومراجعة بيانات الجرد والأوردرات وكشف الموردين. يمنع البرنامج التكرار تلقائيًا.</p></div><button class="btn secondary" id="ameen-refresh-in-page">↻ تحديث من المجلد</button></div>
+  <div class="card"><a class="btn secondary" href="#/recipes-import">استيراد وصفات المنيو من Excel</a></div>
   <div class="card ameen-upload-card"><h3>استيراد ملف يدويًا</h3><div class="form-grid"><div class="field"><label>نوع الإدخال <strong>*</strong></label><select id="ameen-kind" required><option value="">— اختر النوع —</option>${Object.entries(AMEEN_TYPES).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div><div class="field"><label>ملف Excel بصيغة .xlsx</label><input id="ameen-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div></div><div class="quick-actions"><button class="btn" type="button" id="ameen-preview-button">معاينة الملف</button></div><p class="metric-note">لا يُرفع الملف إلى Supabase قبل معاينته وتأكيد الاستيراد. تُقرأ البيانات محليًا داخل المتصفح أولًا.</p></div>
   <div id="ameen-preview" hidden></div><div id="ameen-last-result"></div><div id="ameen-history">${loader()}</div>
   <div class="card"><div class="quick-actions"><button class="btn secondary" type="button" id="ameen-show-warehouses">عرض الجرد بحسب المستودع</button><button class="btn secondary" type="button" id="ameen-show-orders">عرض الأوردرات المستوردة</button></div><div id="ameen-imported-details"></div></div>

@@ -1,11 +1,12 @@
-import * as api from '../api.js?v=0.25';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.25';
-import { esc, unitDisplay, money, num } from '../utils.js?v=0.25';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.25';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.25';
-import { formatSmartStock } from '../material-stock-display.js?v=0.25';
-import {sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.25';
-import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.25';
+import * as api from '../api.js?v=0.27';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.27';
+import { esc, unitDisplay, money, num } from '../utils.js?v=0.27';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
+import { isVagueContextualName } from '../unit-catalog.js?v=0.27';
+import { formatSmartStock } from '../material-stock-display.js?v=0.27';
+import {sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.27';
+import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.27';
+import {registerTableExport} from '../table-export-v027.js?v=0.27';
 
 const PAGE_SIZE=10;
 
@@ -127,6 +128,12 @@ export async function renderMaterials(root) {
         ${shown.length ? table(shown, units, materialLinks,categoryMap,importedIndex,purchasePrices) : '<div class="card empty"><strong>لا توجد نتائج</strong><div>جرّب اسمًا أو كودًا آخر.</div></div>'}
         ${filtered.length>PAGE_SIZE ? pagination(state.page,pages) : ''}`;
 
+      if(list.querySelector('.materials-table')) registerTableExport(list.querySelector('.materials-table'),()=>({
+        title:'المواد - حسب الفلتر',
+        headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','جرد الأمين','سعر الأمين'],
+        rows:filtered.map(x=>{const source=importedRowsFor(x,importedIndex),price=purchasePrices.get(String(x.id))??priceOf(x);const sprice=importedPrice(source);
+          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',importedStockSummary(source),sprice??''];})
+      }));
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
         if (row) b.onclick = () => editMaterial(root, units, row,categories);
