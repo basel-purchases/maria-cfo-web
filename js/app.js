@@ -6,7 +6,7 @@ import { renderDashboard } from './pages/dashboard.js?v=0.27';
 import { renderHub } from './pages/hubs.js?v=0.27';
 import { renderMaterials } from './pages/materials.js?v=0.27';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.27';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.27';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.29-final';
 import { renderMenu } from './pages/menu.js?v=0.28';
 import {
   renderInventory,
@@ -23,11 +23,13 @@ import { renderImages } from './pages/images.js?v=0.27';
 import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
-import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.27';
-import {renderRecipeImportV028} from './recipe-import-v028.js?v=0.28';
+import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.29-final';
+import {renderRecipeImportV029} from './recipe-import-v029.js?v=0.29-final';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
+import {installSearchableSelectsV029} from './searchable-select-v029.js?v=0.29';
 
 const app = document.querySelector('#app');
+installSearchableSelectsV029();
 let currentSession = null;
 let aiJobTimer = null;
 let aiJobsInitialized = false;
@@ -108,7 +110,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.28</div>
+        <div class="sidebar-foot">Web v0.29</div>
       </aside>
 
       <main class="main">
@@ -340,7 +342,7 @@ async function route() {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImports(root);
-      case 'recipes-import': return renderRecipeImportV028(root);
+      case 'recipes-import': return renderRecipeImportV029(root);
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');

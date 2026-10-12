@@ -365,7 +365,7 @@ export async function ensureMaterialCodes(rows){
 }
 
 export const suppliers=()=>list('suppliers',{order:'name',ascending:true,limit:500});
-export const purchases=()=>list('purchase_invoices',{order:'occurred_at',limit:500});
+export const purchases=()=>list('purchase_invoices',{order:'occurred_at',limit:1000});
 export const purchaseItems=id=>list('purchase_invoice_items',{order:'id',ascending:true,eq:{invoice_id:id},limit:500});
 
 export async function menuItems(){

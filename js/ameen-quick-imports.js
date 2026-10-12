@@ -2,6 +2,8 @@ import * as api from './api.js?v=0.27';
 import {esc} from './utils.js?v=0.27';
 import {modal,toast,friendlyError,loader} from './ui.js?v=0.27';
 import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.27';
+import {filterInventoryV029} from './import-policy-v029.js?v=0.29-final';
+import {installMaterialPurchaseImportV029} from './material-purchase-import-v029.js?v=0.29-final';
 
 const browserSupport=()=>typeof window.showDirectoryPicker==='function';
 const DB='maria-ameen-folder-v024',STORE='settings',KEY='import-folder';
@@ -52,7 +54,7 @@ function askFiles(files,ignored=[]){return new Promise(resolve=>{
   subtitle:'راجع الملفات التي وجدها النظام قبل البدء. ستُعالج كل منها مرة واحدة بأمان.',
   body:`<div class="ameen-found-list">${files.map(({kind,file})=>`<div class="ameen-found-row"><strong>${esc(AMEEN_TYPES[kind])}</strong><span>${esc(file.name)}</span><small>${(file.size/1024).toFixed(1)} KB</small></div>`).join('')}</div>
   ${ignored.length?`<p class="metric-note">تم تجاهل ${ignored.length} ملفات غير مطابقة أو نسخ أقدم في المجلد.</p>`:''}
-  <div class="notice">سيُحفظ تعريف المنيو فقط، ويُراجع اختلاف صافي الأوردر قبل نشره. عمليات الموردين المستوردة لا تنشئ سحبًا أو دفعًا نقديًا.</div>`,
+  <div class="notice">v0.29: مواد الجرد تتطلب مستودعًا ورصيدًا موجبًا وسعرًا موجبًا من Excel أو سعرًا موجودًا في قاعدة البيانات. الوجبات تتطلب سعر بيع موجبًا، والأساسيات تتطلب مستودعًا ورصيدًا موجبًا. العناصر المستبعدة لا تُنشأ.</div>`,
   onSubmit:async()=>{resolve(true);return true;},
   onClose:()=>resolve(false),
  });
@@ -68,7 +70,12 @@ async function prepare({file,kind}){
  const sheet=findReportSheet(workbook,kind);
  const parsed=parseAmeenRows(kind,sheet.rows);
  const hash=await sha256Hex(workbook.buffer);
- return {kind,file,parsed,hash,sheet:sheet.name};
+ let filtered=null;
+ if(kind==='inventory'){
+  const catalog=await api.catalogRows('materials','id,name,last_purchase_unit_cost_base');
+  filtered=filterInventoryV029(parsed.records,catalog);
+ }
+ return {kind,file,parsed,filtered,hash,sheet:sheet.name};
 }
 export async function runAmeenFiles(files){
  if(busy)throw new Error('عملية استيراد أخرى جارية.');
@@ -79,10 +86,14 @@ export async function runAmeenFiles(files){
    const {file,kind}=files[i];
    block.update(Math.round(i/files.length*100),`الملف ${i+1}/${files.length}: قراءة «${file.name}»`);
    const prepared=await prepare({file,kind});
-   block.update(Math.round((i+.2)/files.length*100),`تسجيل ${prepared.parsed.records.length} سجلًا من «${file.name}» في Supabase…`);
+   const allowed=prepared.filtered?.records??prepared.parsed.records;
+   if(!allowed.length)throw new Error('لا توجد سجلات تستوفي شروط v0.29؛ لن ينفذ أي استيراد.');
+   block.update(Math.round((i+.2)/files.length*100),`تسجيل ${allowed.length} سجلًا مؤهلًا من «${file.name}» في Supabase…`);
    // Never automatically repeat a potentially committed RPC after a lost HTTP response.
-   const result=await api.importAmeenV024({kind,fileName:file.name,sha256:prepared.hash,records:prepared.parsed.records});
-   outputs.push({name:file.name,kind,result,localWarnings:prepared.parsed.warningCount});
+   const result=await api.rpc('import_ameen_v029',{p_kind:kind,p_filename:file.name,
+      p_sha256:prepared.hash,p_records:allowed});
+   outputs.push({name:file.name,kind,result,localWarnings:prepared.parsed.warningCount,
+     skippedByPolicy:prepared.filtered?.rejected.length??0});
    block.update(Math.round((i+1)/files.length*100),`اكتمل الملف ${i+1} من ${files.length}`);
   }
   return outputs;
@@ -102,7 +113,7 @@ export async function desktopRefresh(){
  }catch(e){if(e?.name==='AbortError')return;
    toast(`فشل التحديث: ${friendlyError(e)}${e?.completedFiles?.length?` (${e.completedFiles.length} ملف اكتمل قبل الفشل)` :''}`,'error');}
 }
-function reportLine(x){const r=x.result;return `<div class="ameen-summary"><strong>${esc(x.name)}</strong><span>${r.duplicateFile?'هذا الملف سبق استيراده دون تغيير':`جديد: ${r.created??0}، تحديث: ${r.updated??0}، مراجعة: ${r.review??0}، تسويات مواد: ${r.stockAdjustments??0}`}</span></div>`;}
+function reportLine(x){const r=x.result;return `<div class="ameen-summary"><strong>${esc(x.name)}</strong><span>${r.duplicateFile?'هذا الملف سبق استيراده دون تغيير':`جديد: ${r.created??0}، تحديث: ${r.updated??0}، مراجعة: ${r.review??0}، تسويات مواد: ${r.stockAdjustments??0}`} · مستبعد وفق الشروط: ${x.skippedByPolicy??0}</span></div>`;}
 function compactSample(kind,parsed){
  const rows=parsed.records.slice(0,7);
  const headers=kind==='inventory'?['الصنف','النوع','المستودع','الكمية','الوحدة']:kind==='orders'?['رقم الأوردر','التاريخ','الأصناف','الصافي','الفارق']:['المورد','السند','مدين','دائن','التاريخ'];
@@ -112,10 +123,18 @@ function compactSample(kind,parsed){
 export async function renderQuickImports(root){
  root.innerHTML=`<div class="page-head"><div><h2>الإدخالات السريعة من برنامج الأمين</h2><p>رفع Excel ومراجعة بيانات الجرد والأوردرات وكشف الموردين. يمنع البرنامج التكرار تلقائيًا.</p></div><button class="btn secondary" id="ameen-refresh-in-page">↻ تحديث من المجلد</button></div>
   <div class="card"><a class="btn secondary" href="#/recipes-import">استيراد وصفات المنيو من Excel</a></div>
+  <div class="card"><h3>استيراد فواتير شراء مواد المطبخ من حركة مادة</h3>
+     <p>تستورد الفواتير التاريخية المكتملة الخاصة بمواد المطبخ مع الأسعار والتواريخ الأصلية، ثم تتطلب مطابقة الرصيد النهائي مع الجرد؛ لن يُحتسب مجموع المشتريات كمخزون متاح بعد التسوية. لا تسجّل دفعات أو ديونًا مجهولة.</p>
+     <div class="field"><label for="ameen-purchase-file">تقرير حركة مادة1.xlsx</label><input id="ameen-purchase-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
+     <div class="quick-actions"><button class="btn" type="button" id="ameen-purchase-preview">معاينة وفحص فواتير المطبخ</button>
+     <a class="btn secondary" href="./templates/Maria-CFO-Ameen-Material-Purchases-v0.29-Review.xlsx" download>ملف تدقيق الفواتير</a></div>
+     <div id="ameen-purchase-results" aria-live="polite"></div>
+  </div>
   <div class="card ameen-upload-card"><h3>استيراد ملف يدويًا</h3><div class="form-grid"><div class="field"><label>نوع الإدخال <strong>*</strong></label><select id="ameen-kind" required><option value="">— اختر النوع —</option>${Object.entries(AMEEN_TYPES).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div><div class="field"><label>ملف Excel بصيغة .xlsx</label><input id="ameen-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div></div><div class="quick-actions"><button class="btn" type="button" id="ameen-preview-button">معاينة الملف</button></div><p class="metric-note">لا يُرفع الملف إلى Supabase قبل معاينته وتأكيد الاستيراد. تُقرأ البيانات محليًا داخل المتصفح أولًا.</p></div>
   <div id="ameen-preview" hidden></div><div id="ameen-last-result"></div><div id="ameen-history">${loader()}</div>
   <div class="card"><div class="quick-actions"><button class="btn secondary" type="button" id="ameen-show-warehouses">عرض الجرد بحسب المستودع</button><button class="btn secondary" type="button" id="ameen-show-orders">عرض الأوردرات المستوردة</button></div><div id="ameen-imported-details"></div></div>
-  <div class="notice">تُنشأ الأوردرات كمسودات فقط دون مقبوض أو حركة مخزون. وكشف الموردين مرجعي ولا ينشئ سندات دفع. لا تُحوّل كميات قسم المنيو إلى أرصدة مخزون.</div>`;
+  <div class="notice">تُنشأ الأوردرات كمسودات فقط دون مقبوض أو حركة مخزون. يستبعد استيراد الجرد المواد ذات الرصيد الصفري أو بلا مستودع أو سعر موجب، ويستبعد الوجبات بلا سعر بيع موجب. لا تُخمن أسعار المواد. لا تُحوّل كميات قسم المنيو إلى أرصدة مخزون.</div>`;
+ installMaterialPurchaseImportV029(root);
  const preview=root.querySelector('#ameen-preview');
  root.querySelector('#ameen-refresh-in-page').onclick=desktopRefresh;
  root.querySelector('#ameen-preview-button').onclick=async()=>{
@@ -127,11 +146,13 @@ export async function renderQuickImports(root){
   try{
    const prepared=await prepare({kind,file});
    preview.hidden=false;
-   preview.innerHTML=`<div class="card ameen-preview-card"><div class="page-head"><div><h3>معاينة: ${esc(file.name)}</h3><p>${esc(AMEEN_TYPES[kind])} — الورقة «${esc(prepared.sheet)}» — ${prepared.parsed.records.length} سجل</p></div><button class="btn" id="ameen-commit">تأكيد الاستيراد</button></div>
-    <div class="grid cols-3"><div class="card"><strong>${prepared.parsed.records.length}</strong><span>سجل قابل للمعالجة</span></div><div class="card"><strong>${prepared.parsed.warningCount}</strong><span>تنبيهات للمراجعة</span></div><div class="card"><strong>${kind==='inventory'?prepared.parsed.stats.warehouses.length:kind==='orders'?prepared.parsed.stats.sourceRows:prepared.parsed.stats.suppliers}</strong><span>${kind==='inventory'?'مستودعات':'عناصر مرتبطة'}</span></div></div>
-    ${compactSample(kind,prepared.parsed)}${prepared.parsed.warnings.length?`<details class="ameen-warnings"><summary>عرض التنبيهات (${prepared.parsed.warningCount})</summary><ul>${prepared.parsed.warnings.slice(0,60).map(w=>`<li>السطر ${w.row}: ${esc(w.message)}</li>`).join('')}</ul></details>`:''}
+   preview.innerHTML=`<div class="card ameen-preview-card"><div class="page-head"><div><h3>معاينة: ${esc(file.name)}</h3><p>${esc(AMEEN_TYPES[kind])} — الورقة «${esc(prepared.sheet)}» — ${prepared.filtered?.records.length??prepared.parsed.records.length} سجل مؤهل</p></div><button class="btn" id="ameen-commit">تأكيد الاستيراد</button></div>
+    <div class="grid cols-3"><div class="card"><strong>${prepared.filtered?.records.length??prepared.parsed.records.length}</strong><span>سجل مؤهل للاستيراد</span></div><div class="card"><strong>${prepared.parsed.warningCount}</strong><span>تنبيهات للمراجعة</span></div><div class="card"><strong>${kind==='inventory'?prepared.parsed.stats.warehouses.length:kind==='orders'?prepared.parsed.stats.sourceRows:prepared.parsed.stats.suppliers}</strong><span>${kind==='inventory'?'مستودعات':'عناصر مرتبطة'}</span></div></div>
+    ${kind==='inventory'?`<div class="notice"><strong>معاينة شروط v0.29</strong>: مؤهل ${prepared.filtered.counts.accepted} · مستبعد ${prepared.filtered.counts.rejected} · وجبات بسعر بيع ${prepared.filtered.counts.menu} · مواد صالحة ${prepared.filtered.counts.material} · أساسيات ${prepared.filtered.counts.asset}. ${prepared.filtered.rejected.length?'يمكن مراجعة المستبعدات أدناه.':''}</div>${prepared.filtered.rejected.length?`<details><summary>عرض المستبعدات (${prepared.filtered.rejected.length})</summary><div class="table-wrap"><table class="table"><thead><tr><th>الاسم</th><th>السبب</th><th>المستودع</th><th>الرصيد</th><th>السعر</th></tr></thead><tbody>${prepared.filtered.rejected.slice(0,500).map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.skipReason)}</td><td>${esc(r.warehouse||'—')}</td><td>${esc(r.quantity)}</td><td>${esc(r.price??'—')}</td></tr>`).join('')}</tbody></table></div></details>`:''}`:''}
+    ${compactSample(kind,prepared.filtered?{records:prepared.filtered.records}:prepared.parsed)}${prepared.parsed.warnings.length?`<details class="ameen-warnings"><summary>عرض التنبيهات (${prepared.parsed.warningCount})</summary><ul>${prepared.parsed.warnings.slice(0,60).map(w=>`<li>السطر ${w.row}: ${esc(w.message)}</li>`).join('')}</ul></details>`:''}
     <p class="metric-note">تعتمد المطابقة على أسماء الأصناف وأرقام الطلبات وحسابات الموردين. لن يُنشر أي أوردر ماليًا عند الاستيراد.</p></div>`;
    preview.querySelector('#ameen-commit').onclick=async()=>{
+    if(prepared.filtered && !prepared.filtered.records.length){toast('لا توجد سجلات تستوفي شروط الاستيراد.','error');return;}
     if(!(await askFiles([{file,kind}])))return;
     try{
      const results=await runAmeenFiles([{file,kind}]);

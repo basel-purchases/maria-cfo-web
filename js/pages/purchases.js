@@ -5,7 +5,7 @@ import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '.
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
 
 function isDirectSupplier(supplier){
-  return !supplier || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
+  return !supplier || supplier?.code==='AMEEN_LEGACY_UNKNOWN_SOURCE_V029' || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
 }
 
 function invoiceStatus(invoice){
@@ -39,12 +39,12 @@ export async function renderPurchases(root){
                 <td>${dateOnly(r.invoice_date||r.occurred_at)}</td>
                 <td>${esc(supplierNameFor(r,supplierMap))}</td>
                 <td>${esc(r.invoice_number||'—')}</td>
-                <td>${invoiceStatus(r)}</td>
+                <td>${r.is_ameen_legacy_v029?'<span class="badge">شراء تاريخي مرجعي</span>':invoiceStatus(r)}</td>
                 <td>${money(r.is_voided ? (r.voided_original_total||0) : (r.total_original||0),r.currency_code||'SYP')}</td>
                 <td class="row-actions">
                   <button type="button" class="mini-action open-invoice" data-open="${esc(r.id)}">فتح</button>
                   ${r.status==='draft'?`<button type="button" class="mini-action danger delete-draft" data-delete="${esc(r.id)}">حذف</button>`:''}
-                  ${r.status==='posted'&&!r.is_voided?`<button type="button" class="mini-action danger void-posted" data-void="${esc(r.id)}">إلغاء</button>`:''}
+                  ${r.status==='posted'&&!r.is_voided&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action danger void-posted" data-void="${esc(r.id)}">إلغاء</button>`:''}
                 </td>
               </tr>`).join('')}</tbody>
           </table>
@@ -127,12 +127,12 @@ export async function renderPurchaseDetail(root,id){
     root.innerHTML=`
       <div class="page-head">
         <div>
-          <h2>تفاصيل الفاتورة</h2>
+          <h2>تفاصيل الفاتورة</h2>${invoice.is_ameen_legacy_v029?'<div class="notice">شراء تاريخي من الأمين؛ المورد والدفع غير معروفين، فلا يحتسب ضمن ديون الموردين ولا ينشئ حركة صندوق.</div>':''}
           <p>${direct?'شراء مباشر بدون مورد':`المورد: ${esc(supplier?.name||'—')}`}</p>
         </div>
         <div class="page-head-actions">
           ${draft?'<button class="btn secondary delete-draft-detail">حذف المسودة</button>':''}
-          ${posted?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
+          ${posted&&!invoice.is_ameen_legacy_v029?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
         </div>
       </div>
       <div class="grid cols-2">

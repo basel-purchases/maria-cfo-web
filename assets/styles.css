@@ -1030,3 +1030,14 @@ select option{background:#fff;color:var(--text);padding:8px}
 /* v0.27: consistent export controls for every data table */
 .table-export-bar-v027{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:10px 0 9px;direction:rtl}
 .table-export-bar-v027 .mini-btn{white-space:nowrap;min-width:83px;background:var(--card,#fff)}
+
+/* v0.29: searchable and alphabetical long selects (native select remains authoritative). */
+.maria-searchable-select-v029{display:flex;flex-direction:column;gap:6px;min-width:0;max-width:100%;width:100%;}
+.maria-select-search-v029{width:100%;box-sizing:border-box;padding:10px 12px;
+ border:1px solid #d9c3d2;border-radius:11px;background:#fff;color:#352235;
+ font:inherit;font-size:.93rem;text-align:right;}
+.maria-select-search-v029:focus{outline:2px solid #a56c92;outline-offset:1px;}
+.maria-searchable-select-v029 select{width:100%;max-width:100%;min-width:0;}
+.maria-searchable-select-v029 option[hidden]{display:none!important;}
+.maria-searchable-select-v029.maria-searching-v029 select{border-color:#a56c92;}
+@media (max-width:600px){.maria-select-search-v029{font-size:16px;}}

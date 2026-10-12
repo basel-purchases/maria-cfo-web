@@ -1,3 +1,19 @@
+## v0.29 FINAL / تحديث حركة مادة1 وجرد المطبخ
+- استيراد دفعات فواتير المطبخ التاريخية المعتمدة مع السعر وتاريخ الشراء وحماية التكرار.
+- عزل حالة سداد الفواتير غير المعروفة عن حساب الديون؛ بلا حركات صندوق افتراضية.
+- استثناء 397 سطر مواد خام في مستودع المطبخ من ملف الجرد، والإبقاء على جميع الصفوف الأخرى.
+- مطابقة الرصيد التاريخي النهائي بتسوية جرد منفصلة تتطلب تأكيدًا؛ تجنب تضخيم الرصيد بإجمالي المشتريات.
+- استثناء الوحدات غير المؤكدة ودبس رمان من تسوية الرصيد التلقائية.
+- كويري تصفير آمن افتراضيًا، مع فحص قبلي وكشف تدقيق بعد الاستيراد.
+
+## Web v0.29
+
+- Searchable alphabetized long selects; selection remains bound to native option.
+- Inventory preview and server policy: raw materials need warehouse, stock, and positive reference price (from source or already in live materials).
+- Full recipe import checks positive sale price and complete live ingredient costs and warehouse stock; never imports incomplete recipes.
+- Destructive full reset script updated for v0.24-v0.29 tables, disabled by default and validated against known schema.
+- Original source audit XLSX files and diagnostics supplied; no missing prices are invented.
+
 # Maria CFO Web v0.27.2 — إصلاح وحدات الوصفات
 
 - معالجة اختلاف مسميات وحدات الجرد العربية ورموزها الثابتة؛ مثال: «كغ» مع `KG` و«كيلوغرام`، و«مل» مع `ML`.

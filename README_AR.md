@@ -1,3 +1,7 @@
+**لإصدار v0.29 النهائي ومصدر مشتريات المطبخ الجديد اقرأ `README_v029_FINAL_AR.md` أولًا.**
+
+> v0.29: Read `README_v029_AR.md` for eligibility constraints and reset safety before using the site.
+
 # الإصدار الحالي: Maria CFO Web v0.28
 
 راجع `README_v028_AR.md` قبل رفع الموقع؛ يتطلب تحديث الوصفات تنفيذ ترحيل SQL جديد. لا تغير `config.js` الموجود على الاستضافة.
