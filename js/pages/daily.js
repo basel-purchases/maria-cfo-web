@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=0.27';
+import * as api from '../api.js?v=0.32';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
 import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.27';
 import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.27';

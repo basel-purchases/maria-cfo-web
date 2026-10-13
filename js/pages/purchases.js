@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=0.27';
+import * as api from '../api.js?v=0.32';
 import { isVagueContextualName } from '../unit-catalog.js?v=0.27';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
 import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.27';

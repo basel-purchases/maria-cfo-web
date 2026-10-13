@@ -1,5 +1,5 @@
 // Maria CFO v0.27: deterministic, one-time, fully validated recipe import for existing menu items.
-import * as api from './api.js?v=0.27';
+import * as api from './api.js?v=0.32';
 import {esc} from './utils.js?v=0.27';
 import {toast,loader,friendlyError} from './ui.js?v=0.27';
 import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=0.27';

@@ -1,7 +1,9 @@
-import * as api from '../api.js?v=0.27';
+import * as api from '../api.js?v=0.32';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=0.27';
 import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.27';
 import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.27';
+import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=0.32';
+import {openEmployeeBonusModal} from './bonuses.js?v=0.32';
 
 import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.27';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
@@ -15,69 +17,156 @@ export async function renderEmployees(root) {
   root.innerHTML = loader();
   try {
     const rows = await api.employees();
+    const activeCount = rows.filter(r=>r.status==='active').length;
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>الموظفون</h2><p>اختياري. تحتاج هذا القسم فقط إذا كنت ستستخدم الدوام والرواتب والسلف.</p></div>
-        <button class="btn add" type="button">إضافة موظف</button>
+        <div><h2>الموظفون</h2><p>اضغط على أي موظف لتعديل بياناته وراتبه أو مراجعة السلف والإجازات والمكافآت.</p></div>
+        <div class="quick-actions"><a class="btn secondary" href="#/bonuses">المكافآت</a><a class="btn secondary" href="#/advances">السلف</a><button class="btn add" type="button">+ موظف جديد</button></div>
       </div>
-      ${rows.length ? `<div class="table-wrap"><table class="table">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>رقم الموبايل</th><th>نوع الأجر</th><th>الأجر</th><th>العملة</th></tr></thead>
+      <div class="grid cols-3 staff-stats-grid">
+        <div class="card"><div class="metric-label">جميع الموظفين</div><div class="metric-value">${rows.length}</div></div>
+        <div class="card"><div class="metric-label">الموظفون النشطون</div><div class="metric-value">${activeCount}</div></div>
+        <div class="card"><div class="metric-label">الموظفون غير النشطين</div><div class="metric-value">${rows.length-activeCount}</div></div>
+      </div>
+      ${rows.length ? `<div class="card staff-directory-tools">
+       <div class="field"><label for="employee-search-v032">البحث باسم الموظف أو وظيفته أو رقم موبايله</label><input id="employee-search-v032" type="search" placeholder="ابحث بسرعة..."></div>
+       <span id="employee-match-count-v032" class="metric-note" aria-live="polite">${rows.length} موظف · اضغط على أي سطر للتعديل</span>
+      </div>
+      <div class="table-wrap"><table class="table staff-directory-table">
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>رقم الموبايل</th><th>نوع الأجر</th><th>الأجر</th><th>العملة</th><th>الحالة</th></tr></thead>
         <tbody>${rows.map(r => {
           const rate = r[EMPLOYEE_RATE_COLUMNS[r.pay_type]];
-          return `<tr>
-            <td><strong>${esc(r.name)}</strong></td>
+          return `<tr class="clickable employee-clickable" tabindex="0" role="button" aria-label="فتح تفاصيل ${esc(r.name)}" data-employee="${esc(r.id)}">
+            <td><strong>${esc(r.name)}</strong><small class="employee-edit-hint">اضغط للتعديل ↗</small></td>
             <td>${esc(r.job_title || '—')}</td>
             <td>${esc(r.residence_v031 || '—')}</td>
             <td dir="ltr">${esc(r.mobile_phone_v031 || '—')}</td>
             <td>${payTypeBadge(r.pay_type)}</td>
-            <td>${rate == null ? '—' : money(rate, r.wage_currency_code || 'SYP')}</td>
+            <td><strong>${rate == null ? '—' : money(rate, r.wage_currency_code || 'SYP')}</strong></td>
             <td>${esc(r.wage_currency_code || 'SYP')}</td>
+            <td><span class="badge ${r.status==='active'?'green':'yellow'}">${r.status==='active'?'نشط':'غير نشط'}</span></td>
           </tr>`;
         }).join('')}</tbody>
-      </table></div>` : '<div class="card empty"><strong>لا يوجد موظفون</strong><div>يمكنك تجاهل هذا القسم إذا لم تستخدم الرواتب.</div></div>'}`;
+      </table></div><div id="employee-no-match-v032" class="empty" hidden>لا يوجد موظفون مطابقون للبحث.</div>`
+        : '<div class="card empty"><strong>لا يوجد موظفون بعد</strong><div>أضف الموظفين يدويًا، أو استخدم الإدخالات السريعة لرفع جدول Excel.</div><a class="btn secondary" href="#/quick-imports">استيراد الموظفين</a></div>'}`;
     root.querySelector('.add').onclick = () => openEmployeeModal(root);
+    root.querySelectorAll('.employee-clickable').forEach(tr => {
+      const open=()=>{const employee=rows.find(e=>String(e.id)===tr.dataset.employee);if(employee)openEmployeeModal(root,employee);};
+      tr.addEventListener('click',open);
+      tr.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+    });
+    const search=root.querySelector('#employee-search-v032');
+    search?.addEventListener('input',()=>{
+      const query=search.value.trim().toLocaleLowerCase('ar');let count=0;
+      root.querySelectorAll('.employee-clickable').forEach(tr=>{
+        const hit=tr.textContent.toLocaleLowerCase('ar').includes(query);
+        tr.hidden=!hit;if(hit)count++;
+      });
+      root.querySelector('#employee-match-count-v032').textContent=`${count} من ${rows.length} موظف`;
+      root.querySelector('#employee-no-match-v032').hidden=count>0;
+    });
   } catch (e) {
     root.innerHTML = `<div class="notice">${esc(friendlyError(e))}</div>`;
   }
 }
 
-function openEmployeeModal(root) {
+function profileError(e){
+  const msg=String(e?.message||e||'').toUpperCase();
+  if(msg.includes('EMPLOYEE_NAME_ALREADY_USED_V032'))return 'هذا الاسم مستخدم لموظف آخر. لا يمكن إنشاء سجلين بالاسم نفسه.';
+  if(msg.includes('EMPLOYEE_PAY_BASIS_LOCKED_V032'))return 'لا يمكن تغيير نوع الأجر أو العملة لوجود سجل دوام أو سلفة أو راتب أو مكافأة. يمكنك تعديل مبلغ الراتب والبيانات الأخرى دون المساس بالتاريخ المالي.';
+  if(msg.includes('EMPLOYEE_PENDING_BONUS_V032'))return 'توجد مكافأة معلقة لهذا الموظف. عالجها في قسم المكافآت قبل تحويله إلى غير نشط.';
+  if(msg.includes('INVALID_EMPLOYEE_PROFILE_V032'))return 'راجع الاسم والمبلغ والهاتف والتواريخ، ثم حاول مرة أخرى.';
+  if(msg.includes('UPDATE_EMPLOYEE_PROFILE_V032')||msg.includes('PGRST202'))return 'شغّل تحديث SQL v0.32 على Supabase ثم أعد تحميل الموقع.';
+  return friendlyError(e);
+}
+
+function openEmployeeModal(root, employee=null) {
+  const editing=!!employee;
+  const rate=editing?employee[EMPLOYEE_RATE_COLUMNS[employee.pay_type]]:'';
+  const value=x=>esc(String(x??''));
   const m = modal({
-    title: 'إضافة موظف',
-    body: `<div class="form-grid">
-      <div class="field"><label>الاسم</label><input name="name" required></div>
-      <div class="field"><label>الوظيفة</label><input name="job"></div>
-      <div class="field"><label>نوع الأجر</label><select name="pay">
-        <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option><option value="fixed">مقطوع</option>
-      </select></div>
-      <div class="field"><label class="wage-label">الراتب الشهري</label>
-        <input name="wage" type="number" min="0.01" step="any" required inputmode="decimal">
+    title: editing ? `ملف الموظف · ${employee.name}` : 'إضافة موظف جديد',
+    subtitle: editing ? 'حدّث بياناته من هنا دون التأثير على الرواتب المصروفة سابقًا.' : 'أدخل البيانات الأساسية، ويمكنك إضافة السلف والمكافآت لاحقًا.',
+    submitText: editing ? 'حفظ التعديلات' : 'إضافة الموظف',wide:true,
+    body: `<div class="staff-dialog-sections">
+      <div class="staff-dialog-section-title">البيانات الشخصية والوظيفية</div>
+      <div class="form-grid">
+        <div class="field"><label>الاسم <span class="staff-required">*</span></label><input name="name" maxlength="250" required value="${value(employee?.name)}" autocomplete="off"></div>
+        <div class="field"><label>الوظيفة</label><input name="job" maxlength="250" value="${value(employee?.job_title)}" placeholder="مثال: شيف، كاشير"></div>
+        <div class="field"><label>القسم</label><input name="department" maxlength="250" value="${value(employee?.department)}" placeholder="مثال: المطبخ، الصالة"></div>
+        <div class="field"><label>السكن</label><input name="residence" maxlength="200" value="${value(employee?.residence_v031)}"></div>
+        <div class="field"><label>رقم الموبايل</label><input name="phone" dir="ltr" inputmode="tel" maxlength="40" value="${value(employee?.mobile_phone_v031)}" placeholder="09xxxxxxxx"></div>
+        <div class="field"><label>الحالة</label><select name="status"><option value="active" ${employee?.status!=='inactive'?'selected':''}>نشط</option><option value="inactive" ${employee?.status==='inactive'?'selected':''}>غير نشط</option></select></div>
       </div>
-      <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+      <div class="staff-dialog-section-title">الأجر والاستحقاق</div>
+      <div class="form-grid">
+        <div class="field"><label>نوع الأجر</label><select name="pay">
+          <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option><option value="fixed">مقطوع</option>
+        </select></div>
+        <div class="field"><label class="wage-label">الراتب الشهري</label><input name="wage" type="number" min="0.0001" step="any" required inputmode="decimal" value="${value(rate)}"></div>
+        <div class="field"><label>عملة الأجر</label><select name="currency"><option value="SYP">SYP · ليرة سورية</option><option value="USD">USD · دولار</option></select></div>
+        <div class="field"><label>تاريخ التعيين</label><input name="hire_date" type="date" value="${value(employee?.hire_date)}"></div>
+        <div class="field"><label>تاريخ انتهاء العمل (اختياري)</label><input name="termination_date" type="date" value="${value(employee?.termination_date)}"></div>
+        <div class="field full"><label>ملاحظات إدارية</label><textarea name="notes" maxlength="2000" rows="2">${value(employee?.notes)}</textarea></div>
+      </div>
+      ${editing?`<div class="staff-dialog-section-title">المتابعة المالية والدوام</div>
+         <div class="staff-profile-insights" data-employee-insights>${loader()}</div>
+         <div class="staff-dialog-links"><a class="btn secondary" href="#/advances">سلف الموظفين</a><a class="btn secondary" href="#/attendance">سجل الدوام والإجازات</a><a class="btn secondary" href="#/bonuses">سجل المكافآت</a>
+           ${employee.status==='active'&&employee.pay_type!=='fixed'?'<button type="button" class="btn staff-award-employee">+ منح مكافأة</button>':''}
+         </div>`:''}
+      <div class="notice rose staff-edit-warning">${editing?'تعديل الأجر يؤثر في المسيرات الجديدة فقط؛ الرواتب المعتمدة محفوظة كما صُرفت. تغيير نوع الأجر أو العملة قد يُمنع إن وُجدت عمليات مالية سابقة.':'لا يتم صرف أي راتب أو سلفة تلقائيًا عند إضافة الموظف.'}</div>
     </div>`,
-    onSubmit: async fd => {
+    onSubmit: async fd=>{
       try {
-        await api.createEmployee({
-          name: fd.get('name'),
-          jobTitle: fd.get('job'),
-          payType: fd.get('pay'),
-          wage: fd.get('wage'),
-          currency: fd.get('currency'),
-        });
-        toast('تمت إضافة الموظف', 'success');
+        const input=buildEmployeeProfileV032(fd);
+        if(editing){await api.updateEmployeeV032(employee.id,input);toast('تم تحديث بيانات الموظف بنجاح.','success');}
+        else {await api.createEmployee(input);toast('تمت إضافة الموظف.','success');}
         await renderEmployees(root);
         return true;
-      } catch (e) {
-        toast(friendlyError(e), 'error');
-        return false;
-      }
+      } catch (e) {toast(profileError(e),'error');return false;}
     },
   });
-  const pay = m.form.elements.namedItem('pay');
-  const label = m.form.querySelector('.wage-label');
-  const updateLabel = () => { label.textContent = WAGE_LABELS[pay.value] || 'الأجر'; };
-  pay.addEventListener('change', updateLabel);
-  updateLabel();
+  m.element.querySelector('.modal')?.classList.add('staff-employee-modal');
+  const pay=m.form.elements.namedItem('pay');
+  const currency=m.form.elements.namedItem('currency');
+  pay.value=employee?.pay_type||'monthly';
+  currency.value=employee?.wage_currency_code||'SYP';
+  const label=m.form.querySelector('.wage-label');
+  const updateLabel=()=>{label.textContent=WAGE_LABELS[pay.value]||'الأجر';};
+  pay.addEventListener('change',updateLabel);updateLabel();
+  if(editing){
+    m.form.querySelectorAll('.staff-dialog-links a').forEach(a=>a.addEventListener('click',()=>m.close()));
+    m.form.querySelector('.staff-award-employee')?.addEventListener('click',()=>{
+      api.employees().then(staff=>openEmployeeBonusModal({staff,employeeId:employee.id,onSaved:()=>loadEmployeeInsights(m,employee)}))
+        .catch(e=>toast(friendlyError(e),'error'));
+    });
+    loadEmployeeInsights(m,employee);
+  }
+}
+
+async function loadEmployeeInsights(m, employee){
+  const host=m.form.querySelector('[data-employee-insights]');if(!host)return;
+  const year=todayISO().slice(0,4);
+  const [advances,leaves,settings,bonuses]=await Promise.allSettled([
+    api.employeeAdvances(),api.paidLeaveUsed(year),api.payrollSettings(),api.employeeBonusesV032(),
+  ]);
+  if(!m.element.isConnected)return;
+  const good=entry=>entry.status==='fulfilled';
+  const allAdvances=good(advances)?advances.value:null;
+  const allLeaves=good(leaves)?leaves.value:null;
+  const allBonuses=good(bonuses)?bonuses.value:null;
+  const allowance=good(settings)?Number(settings.value.paid_leave_days_per_year_v023??0):null;
+  const ownedAdvance=allAdvances?.filter(a=>String(a.employee_id)===String(employee.id)&&a.status==='open')||[];
+  const totals=new Map();for(const a of ownedAdvance){const c=a.currency_code||'SYP';totals.set(c,(totals.get(c)||0)+Number(a.remaining_original||0));}
+  const advanceText=allAdvances==null?'تعذر التحميل':[...totals].map(([c,a])=>money(a,c)).join(' · ')||'لا توجد سلف مفتوحة';
+  const usedLeaves=allLeaves?.filter(a=>String(a.employee_id)===String(employee.id)).length;
+  const leaveText=allLeaves==null?'تعذر التحميل':`${usedLeaves} / ${allowance??'؟'} يوم (${year})`;
+  const ownedBonuses=allBonuses?.filter(b=>String(b.employee_id)===String(employee.id)&&b.status==='pending')||[];
+  const bonusAmount=ownedBonuses.reduce((n,b)=>n+Number(b.amount_original||0),0);
+  const bonusText=allBonuses==null?'تعذر التحميل':`${ownedBonuses.length} معلقة${bonusAmount?' · '+money(bonusAmount,employee.wage_currency_code):''}`;
+  host.innerHTML=`<div class="staff-insight"><span>السلف المفتوحة</span><strong>${esc(advanceText)}</strong></div>
+    <div class="staff-insight"><span>إجازات مدفوعة</span><strong>${esc(leaveText)}</strong></div>
+    <div class="staff-insight"><span>المكافآت</span><strong>${esc(bonusText)}</strong></div>`;
 }
 
 export async function renderAttendance(root) {
@@ -247,7 +336,7 @@ export async function renderPayroll(root) {
       balancesError=balancesResult.status==='rejected'?friendlyError(balancesResult.reason,'تعذّر تحميل المستحقات المعتمدة.'):'',
       paymentsError=paymentsResult.status==='rejected'?friendlyError(paymentsResult.reason,'تعذّر تحميل سجل المدفوعات.'):'';
     root.innerHTML=`
-      <div class="page-head"><div><h2>الرواتب والمستحقات</h2><p>تظهر أجور اليومي والساعي فور تسجيل الدوام. ولا تختفي الدفعة من السجل المالي بعد الصرف.</p></div><div class="quick-actions"><a class="btn secondary" href="#/advances">سلف الموظفين</a><a class="btn secondary" href="#/settings">إعداد صندوق الرواتب</a></div></div>
+      <div class="page-head"><div><h2>الرواتب والمستحقات</h2><p>تظهر أجور اليومي والساعي فور تسجيل الدوام. ولا تختفي الدفعة من السجل المالي بعد الصرف.</p></div><div class="quick-actions"><a class="btn secondary" href="#/advances">سلف الموظفين</a><a class="btn secondary" href="#/bonuses">المكافآت</a><a class="btn secondary" href="#/settings">إعداد صندوق الرواتب</a></div></div>
       ${!chosenBox?`<div class="notice"><strong>حدد صندوق دفع الرواتب أولًا.</strong> لا يمكن دفع راتب قبل اختيار صندوق نشط من <a href="#/settings" class="text-link">الإعدادات ← الرواتب</a>.</div>`:
       `<div class="notice green">صندوق دفع الرواتب: <strong>${esc(chosenBox.name)}</strong> · كل دفعة تُسجَّل في حركة الصندوق.</div>`}
       ${schemaError?`<div class="notice"><strong>خدمة احتساب الأجور اليومية غير مفعّلة:</strong> ${esc(schemaError)}<p>نفّذ Migration v0.14 في Supabase ثم حدّث الموقع.</p></div>`:''}
@@ -270,7 +359,7 @@ export async function renderPayroll(root) {
       <td><button class="btn pay-balance" data-id="${esc(b.payroll_item_id)}" ${!chosenBox?'disabled':''}>دفع</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">لا توجد أرصدة رواتب معتمدة وغير مدفوعة.</div>'}</section>
       <section class="card finance-section"><div class="finance-section-head"><div><h3>\u0627\u0644\u0623\u062c\u0648\u0631 \u0627\u0644\u0645\u0642\u0637\u0648\u0639\u0629</h3><p>\u062a\u064f\u0635\u0631\u0641 \u062f\u0648\u0646 \u0634\u0631\u0637 \u0627\u0644\u062f\u0648\u0627\u0645 \u0645\u0639 \u062e\u0635\u0645 \u0623\u0642\u0633\u0627\u0637 \u0627\u0644\u0633\u0644\u0641 \u0627\u0644\u0645\u0633\u062a\u062d\u0642\u0629.</p></div></div>
       ${fixedStaff.length?`<div class="table-wrap"><table class="table"><thead><tr><th>\u0627\u0644\u0645\u0648\u0638\u0641</th><th>\u0627\u0644\u0623\u062c\u0631</th><th>\u0631\u0635\u064a\u062f \u0627\u0644\u0633\u0644\u0641\u0629</th><th>\u0627\u0644\u062f\u0641\u0639</th></tr></thead><tbody>${fixedStaff.map(e=>`<tr><td>${employeeName(e.name,e.pay_type)}</td><td>${money(e.fixed_pay_original_v023,e.wage_currency_code)}</td><td>${money(outstanding.get(e.id)||0,e.wage_currency_code)}</td><td><button class="btn pay-fixed" data-id="${esc(e.id)}" ${!chosenBox?'disabled':''}>\u062f\u0641\u0639</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">\u0644\u0627 \u064a\u0648\u062c\u062f \u0645\u0648\u0638\u0641\u0648\u0646 \u0628\u0623\u062c\u0631 \u0645\u0642\u0637\u0648\u0639.</div>'}</section>
-      <section class="card finance-section"><div class="finance-section-head"><div><h3>الرواتب الشهرية</h3><p>تُثبت الرواتب الشهرية في مسير قابل للمراجعة والاعتماد، ولا يُخصم النقص تلقائيًا.</p></div><button type="button" class="btn create-month" ${!employees.some(e=>e.pay_type==='monthly')?'disabled':''}>إنشاء مسير شهري</button></div>
+      <section class="card finance-section"><div class="finance-section-head"><div><h3>الرواتب الشهرية</h3><p>تُثبت الرواتب الشهرية في مسير قابل للمراجعة والاعتماد، مع المكافآت المعتمدة للاستحقاق والسلف. لا يُخصم النقص تلقائيًا. عند إضافة مكافأة لمسودة قائمة اضغط «تحديث» قبل الاعتماد.</p></div><button type="button" class="btn create-month" ${!employees.some(e=>e.pay_type==='monthly')?'disabled':''}>إنشاء مسير شهري</button></div>
       ${monthlyRuns.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الفترة</th><th>الحالة</th><th>الموظفون</th><th>أيام دوام ناقصة</th><th>المبلغ بعد الحساب</th><th>إجراءات</th></tr></thead><tbody>
       ${monthlyRuns.map(r=>`<tr><td>${dateOnly(r.period_start)} — ${dateOnly(r.period_end)}</td><td>${statusBadge(r.status)}</td><td>${esc(r.employee_count)}</td><td>${esc(r.missing_attendance_days)}</td><td>${money(r.total_net_due_base||0)}</td><td>${r.status==='draft'?`<button class="btn secondary recalc-month" data-id="${esc(r.payroll_run_id)}">تحديث</button> <button class="btn approve-month" data-id="${esc(r.payroll_run_id)}" ${Number(r.missing_attendance_days)>0?'disabled':''}>اعتماد</button>`:'—'}</td></tr>`).join('')}
       </tbody></table></div>`:'<div class="empty">لم تُنشأ مسيرات رواتب شهرية حتى الآن.</div>'}</section>

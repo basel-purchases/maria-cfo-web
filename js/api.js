@@ -748,8 +748,33 @@ export const employees=()=>list('employees',{order:'name',ascending:true,limit:5
 
 export async function createEmployee(input){
   // Never retry with an incomplete employee record: DB requires a rate for pay_type.
-  return insert('employees', buildEmployeePayload(input));
+  const base = buildEmployeePayload(input);
+  return insert('employees', { ...base,
+    department: input.department || null, residence_v031: input.residence || null,
+    mobile_phone_v031: input.phone || null, status: input.status || 'active',
+    hire_date: input.hireDate || null, termination_date: input.terminationDate || null,
+    notes: input.notes || null,
+  });
 }
+export const updateEmployeeV032=(id, input)=>rpc('update_employee_profile_v032', {
+  p_employee_id:id, p_name:input.name, p_job_title:input.jobTitle || null,
+  p_department:input.department || null, p_residence:input.residence || null,
+  p_mobile_phone:input.phone || null, p_pay_type:input.payType,
+  p_wage:input.wage, p_currency:input.currency, p_status:input.status,
+  p_hire_date:input.hireDate, p_termination_date:input.terminationDate,
+  p_notes:input.notes || null,
+});
+export const employeeBonusesV032=()=>list('employee_payroll_adjustments', {
+  eq:{adjustment_type:'bonus'}, order:'created_at', limit:2000,
+});
+export const recordEmployeeBonusV032=(input)=>rpc('record_employee_bonus_v032', {
+  p_employee_id:input.employeeId, p_amount:input.amount,
+  p_effective_date:input.effectiveDate, p_reason:input.reason,
+  p_note:input.note || null,
+});
+export const voidEmployeeBonusV032=(id,reason)=>rpc('void_pending_employee_bonus_v032',{
+  p_bonus_id:id,p_reason:reason,
+});
 export const attendance=date=>list('employee_attendance',{order:'created_at',ascending:true,eq:{work_date:date},limit:500});
 export const payrollRuns=()=>list('payroll_run_summary',{order:'period_end',limit:100}).catch(()=>list('payroll_runs',{order:'period_end',limit:100}));
 export const events=()=>list('events',{order:'event_date',limit:300});

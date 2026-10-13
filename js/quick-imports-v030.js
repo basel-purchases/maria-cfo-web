@@ -1,11 +1,24 @@
-import * as api from './api.js?v=0.30';
+import * as api from './api.js?v=0.32';
 import {esc} from './utils.js?v=0.30';
-import {toast,friendlyError,modal,loader} from './ui.js?v=0.30';
+import {toast,friendlyError,modal,loader,confirmBox} from './ui.js?v=0.30';
 import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from './ameen-import-parser.js?v=0.30';
 import {parseMasterV030,QUICK_TYPES_V030 as TYPES} from './quick-import-parser-v030.js?v=0.31';
 import {parseEmployeesV031} from './employee-import-parser-v031.js?v=0.31';
 
 let importing=false;
+function confirmQuickImport({filename,kind,count}){
+ return new Promise(resolve=>{
+  let accepted=false;
+  modal({title:'تأكيد استيراد الملف',
+   subtitle:'راجع الملخص قبل حفظ الملف. لن يتم صرف أي مبلغ مالي تلقائيًا.',
+   submitText:'نعم، استيراد الملف',
+   body:`<div class="quick-confirm-overview"><div><span>نوع الإدخال</span><strong>${esc(kind)}</strong></div><div><span>اسم الملف</span><strong dir="ltr">${esc(filename)}</strong></div><div><span>السجلات</span><strong>${esc(count)} سجل</strong></div></div>
+    <div class="notice rose">ستُحفظ العملية في سجل الإدخالات، ويمكنك التراجع خلال 24 ساعة وفق شروط السلامة. اختر «إلغاء» للعودة إلى المعاينة دون أي تغيير.</div>`,
+   onSubmit:async()=>{accepted=true;return true;},onClose:()=>resolve(accepted),
+  });
+ });
+}
+
 const show=x=>esc(String(x??'—'));
 const clock=x=>{try{return new Date(x).toLocaleString('ar-SY');}catch{return String(x||'');}};
 function errorMessage(err){
@@ -67,7 +80,7 @@ export async function renderQuickImportsV030(root){
       <td>${r.undone_at?'تم التراجع':expired?'انتهت المهلة':r.id!==newestActive?'تراجع عن الملفات الأحدث أولًا':`<button class="mini-btn danger-lite" data-undo-run="${esc(r.id)}">تراجع</button><small> حتى ${show(clock(r.expires_at))}</small>`}</td></tr>`;
    }).join('')}</tbody></table></div>`:'<p>لا يوجد سجل استيراد بعد.</p>';
    host.querySelectorAll('[data-undo-run]').forEach(btn=>btn.addEventListener('click',async()=>{
-    const id=btn.dataset.undoRun;const confirmed=window.confirm('تراجع نهائي عن بيانات هذا الملف خلال 24 ساعة؟ لا يُسمح بالتراجع إذا استُخدمت البيانات أو تغيرت بعد الاستيراد.');
+    const id=btn.dataset.undoRun;const confirmed=await confirmBox('تراجع نهائي عن بيانات هذا الملف خلال 24 ساعة؟ لا يُسمح بالتراجع إذا استُخدمت البيانات أو تغيرت بعد الاستيراد.', 'تأكيد التراجع');
     if(!confirmed)return;
     btn.disabled=true;
     try{const result=await api.rpc(rows.find(r=>r.id===id)?.kind==='employees'?'quick_import_employees_undo_v031':'quick_import_undo_v030',{p_run_id:id});
@@ -107,8 +120,13 @@ export async function renderQuickImportsV030(root){
    preview.querySelector('#quick-confirm-v030').onclick=async()=>{
     if(importing)return;
     if(root.querySelector('#quick-kind-v030').value!==kind || root.querySelector('#quick-file-v030').files?.[0]!==file){toast('تغيّر الملف أو نوعه، يرجى إجراء معاينة جديدة.','error');preview.innerHTML='';return;}
-    if(!window.confirm(`تأكيد استيراد «${file.name}»؟ ستُحفظ نتيجة العملية في سجل الإدخالات.`))return;
-    importing=true;const submit=preview.querySelector('#quick-confirm-v030');submit.disabled=true;
+    const submit=preview.querySelector('#quick-confirm-v030');submit.disabled=true;
+    const confirmed=await confirmQuickImport({filename:file.name,kind:TYPES[kind],count:parsed.records.length});
+    if(!confirmed){submit.disabled=false;return;}
+    if(importing || root.querySelector('#quick-kind-v030').value!==kind || root.querySelector('#quick-file-v030').files?.[0]!==file){
+      submit.disabled=false;toast('تغيّر الملف خلال التأكيد. أعد المعاينة ثم حاول مجددًا.','error');return;
+    }
+    importing=true;
     try{
       const result=kind==='employees'
        ?await api.rpc('quick_import_employees_v031',{p_filename:file.name,p_sha256:hash,p_payload:payload})
