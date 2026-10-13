@@ -15,9 +15,10 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=0.27';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.33';
+import { renderEmployees, renderAttendance } from './pages/employees.js?v=0.33';
 import {renderBonusesV032} from './pages/bonuses.js?v=0.33';
-import { renderEvents } from './pages/events.js?v=0.27';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.34';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=0.34';
 import { renderReports } from './pages/reports.js?v=0.27';
 import { renderAssistant } from './pages/assistant.js?v=0.27';
 import { renderImages } from './pages/images.js?v=0.27';
@@ -109,7 +110,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.33</div>
+        <div class="sidebar-foot">Web v0.34</div>
       </aside>
 
       <main class="main">
@@ -326,6 +327,7 @@ async function route() {
     attendance: 'الدوام',
     payroll: 'الرواتب',
     'events-list': 'الحفلات والحجوزات',
+    event: 'تفاصيل الحفلة',
     reports: 'التقرير المالي',
   };
 
@@ -358,8 +360,9 @@ async function route() {
       case 'order': return renderOrderDetail(root, id);
       case 'employees-list': return renderEmployees(root);
       case 'attendance': return renderAttendance(root);
-      case 'payroll': return renderPayroll(root);
-      case 'events-list': return renderEvents(root);
+      case 'payroll': return renderPayrollV034(root);
+      case 'events-list': return renderEventsV034(root);
+      case 'event': return renderEventDetailV034(root,id);
       case 'reports': return renderReports(root);
       case 'assistant': return renderAssistant(root);
       case 'images': return renderImages(root);

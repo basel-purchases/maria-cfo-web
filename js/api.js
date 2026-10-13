@@ -1157,3 +1157,86 @@ export async function ameenSupplierEntriesPageV025(account,page=1,pageSize=30){
 
 export const ameenOrderImportsV024=()=>list('ameen_order_snapshots_v024',{order:'occurred_at',limit:1000});
 export const approveAmeenOrderV024=(orderId)=>rpc('approve_ameen_order_v024',{p_order_id:orderId});
+
+// v0.34 -- the server is the sole authority for payroll settlement and event cash movements.
+export const payrollReadyV034=month=>rpc('payroll_ready_v034',{p_month:month});
+export const payrollPaidV034=month=>rpc('payroll_paid_v034',{p_month:month});
+export const payApprovedSalaryV034=(itemId,amount,boxId,note='')=>rpc('pay_approved_salary_v034',{
+  p_payroll_item_id:itemId,p_amount:Number(amount),p_cashbox_id:boxId,p_note:note||null,
+});
+export const payDailyWageV034=(employeeId,workDate,boxId)=>rpc('pay_daily_wage_v034',{
+  p_employee_id:employeeId,p_work_date:workDate,p_cashbox_id:boxId,
+});
+export const eventV034=id=>one('events',id);
+export const eventTablesV034=id=>list('event_tables',{eq:{event_id:id},order:'display_order',ascending:true,limit:500});
+export const eventMenuRulesV034=id=>list('event_menu_rules',{eq:{event_id:id},order:'display_order',ascending:true,limit:500});
+export const eventMenuRequirementsV034=id=>list('event_menu_requirements',{eq:{event_id:id},limit:600});
+export const eventTableMenuV034=id=>list('event_table_menu_plan',{eq:{event_id:id},limit:2000});
+export const eventCostItemsV034=id=>list('event_costs',{eq:{event_id:id},limit:500});
+export const eventCostComparisonV034=id=>list('event_cost_comparison',{eq:{event_id:id},limit:500});
+export const eventLaborV034=id=>list('event_labor_entries',{eq:{event_id:id},limit:500});
+export const eventSummaryV034=id=>list('event_financial_summary_historical',{eq:{id},limit:1}).then(a=>a[0]||null);
+export const eventBookingBalancesV034=id=>list('event_booking_balances',{eq:{event_id:id},limit:500});
+export const eventExtrasV034=id=>list('event_extras_v034',{eq:{event_id:id},order:'created_at',ascending:true,limit:1000});
+export const eventWasteV034=id=>list('event_waste_v034',{eq:{event_id:id},order:'created_at',ascending:true,limit:500});
+export const eventExpenseEntriesV034=id=>list('expenses',{eq:{event_id:id},limit:500});
+export const menuCostsV034=()=>list('menu_item_costs',{order:'name',ascending:true,limit:1000});
+export const eventSavePlanV034=(id,guests,price,notes)=>rpc('save_event_plan_v034',{
+ p_event_id:id,p_guests:Number(guests),p_ticket_price:Number(price),p_notes:notes||null,
+});
+export const eventSetStatusV034=(id,status)=>rpc('set_event_status_v034',{p_event_id:id,p_status:status});
+export const eventSaveTableV034=(eventId,input)=>rpc('save_event_table_v034',{
+ p_event_id:eventId,p_table_id:input.id||null,p_label:input.label,
+ p_capacity:Number(input.capacity),p_guests:Number(input.guests),
+ p_actual_guests:input.actualGuests==null||input.actualGuests===''?null:Number(input.actualGuests),
+});
+export const eventSaveRuleV034=(id,input)=>rpc('save_event_rule_v034',{
+ p_event_id:id,p_rule_id:input.id||null,p_menu_item_id:input.menuItemId,
+ p_rule_type:input.type,p_qty:Number(input.quantity),
+ p_people:input.type==='per_n_people'?Number(input.people):null,
+});
+export const eventDeleteRuleV034=(id,ruleId)=>rpc('delete_event_rule_v034',{p_event_id:id,p_rule_id:ruleId});
+export const eventCreateBookingV034=(id,input)=>rpc('create_event_table_booking_v034',{
+ p_event_id:id,p_table_id:input.tableId||null,p_customer_name:input.name,
+ p_guests:Number(input.guests),p_amount:Number(input.amount),p_phone:input.phone||null,
+ p_note:input.note||null,
+});
+export const eventPayBookingV034=(bookingId,boxId,amount,currency)=>rpc('record_event_booking_payment',{
+ p_booking_id:bookingId,p_cashbox_id:boxId,p_amount:Number(amount),
+ p_payment_currency_code:currency,p_payment_type:'payment',p_occurred_at:new Date().toISOString(),
+ p_settled_booking_amount:Number(amount),p_note:'تحصيل حجز حفلة v0.34',
+});
+export const eventAddCostV034=(id,input)=>rpc('create_event_cost',{
+ p_event_id:id,p_title:input.title,p_planned_amount:Number(input.amount),
+ p_currency_code:input.currency,p_expense_category_id:null,p_payee:input.payee||null,p_notes:input.note||null,
+});
+export const eventPayExpenseV034=(id,input)=>rpc('record_event_expense',{
+ p_event_id:id,p_cashbox_id:input.boxId,p_amount:Number(input.amount),
+ p_title:input.title,p_currency_code:input.currency,p_category_id:null,
+ p_event_cost_id:input.costId||null,p_occurred_at:new Date().toISOString(),
+ p_payee:input.payee||null,p_description:input.note||null,p_receipt_storage_path:null,
+});
+export const eventAddExtraV034=(id,input)=>rpc('add_event_extra_v034',{
+ p_event_id:id,p_table_id:input.tableId,p_description:input.description,
+ p_quantity:Number(input.quantity),p_unit_price:Number(input.unitPrice),p_note:input.note||null,
+ p_menu_item_id:input.menuItemId||null,p_unit_cost_base:input.menuItemId?null:Number(input.unitCost||0),
+});
+export const eventPayExtraV034=(id,boxId)=>rpc('pay_event_extra_v034',{p_extra_id:id,p_cashbox_id:boxId});
+export const eventVoidExtraV034=(id,reason)=>rpc('void_event_extra_v034',{p_extra_id:id,p_reason:reason});
+export const eventRefundExtraV034=(id,reason)=>rpc('refund_event_extra_v034',{p_extra_id:id,p_reason:reason});
+export const eventAddWasteV034=(id,input)=>rpc('add_event_waste_v034',{
+ p_event_id:id,p_description:input.description,p_qty:Number(input.quantity),
+ p_unit_cost_base:Number(input.unitCost),p_reason:input.reason||null,
+});
+export const eventVoidWasteV034=(id,reason)=>rpc('void_event_waste_v034',{p_waste_id:id,p_reason:reason});
+export const eventCompleteV034=(id,note='')=>rpc('complete_event_safe_v034',{p_event_id:id,p_notes:note||null});
+
+export const eventPlannerV034=id=>list('event_planner_settings_v034',{eq:{event_id:id},limit:1}).then(a=>a[0]||{target_margin_percent:25,waste_reserve_percent:5});
+export const eventSavePlannerV034=(id,margin,waste)=>rpc('save_event_planner_v034',{
+ p_event_id:id,p_margin:Number(margin),p_waste:Number(waste),
+});
+
+export const eventActivityV034=id=>list('event_activity_v034',{eq:{event_id:id},order:'occurred_at',limit:1000});
+export const eventRecordActivityV034=(id,type,description)=>rpc('record_event_activity_v034',{
+ p_event_id:id,p_activity_type:type,p_description:description,
+});
