@@ -77,5 +77,6 @@ export const QUICK_TYPES_V030=Object.freeze({
   master:'01 · المواد والمنيو والوصفات',
   assets:'02 · الأساسيات',
   suppliers:'03 · حسابات الموردين',
-  orders:'04 · الأوردرات'
+  orders:'04 · الأوردرات',
+  employees:'05 · إضافة الموظفين (رواتب شهرية)'
 });

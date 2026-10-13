@@ -1,0 +1,70 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {parseEmployeesV031} from '../js/employee-import-parser-v031.js';
+import {QUICK_TYPES_V030} from '../js/quick-import-parser-v030.js';
+const base=join(dirname(fileURLToPath(import.meta.url)),'..');
+const src=name=>readFileSync(join(base,name),'utf8');
+const header=['الاسم','الصفة / المهنة','السكن','رقم الموبايل','الراتب'];
+const row1=['موظف تجريبي أول','كاشير','منطقة أ','0912345678',15000];
+const row2=['موظف تجريبي ثان','كوميك','منطقة ب','0987654321',900000];
+const row3=['موظف تجريبي ثالث','محاسب',null,null,20000];
+const workbook=(rows)=>({sheets:[{name:'ورقة1',rows:[header,...rows]}]});
+test('type five appears after the previous four without changing their order',()=>{
+ assert.deepEqual(Object.keys(QUICK_TYPES_V030),['master','assets','suppliers','orders','employees']);
+ assert.match(QUICK_TYPES_V030.employees,/05/);
+});
+test('employee parser maps the five columns and all wages are monthly SYP',()=>{
+ const data=parseEmployeesV031(workbook([row1,row2,row3,[],[null,null,null,null,935000]]));
+ assert.equal(data.stats.employees,3);
+ assert.equal(data.stats.missingPhones,1);
+ assert.equal(data.stats.missingResidences,1);
+ assert.deepEqual(data.records[0],{name:'موظف تجريبي أول',jobTitle:'كاشير',residence:'منطقة أ',phone:'0912345678',monthlySalary:15000,sourceRow:2});
+ assert.equal(data.records[1].monthlySalary,900000);
+ assert.ok(data.warnings.some(w=>w.message.includes('900,000')));
+ assert.equal(data.stats.ignored,2);
+});
+test('mismatched/duplicated/missing/nonpositive salary employee files are rejected',()=>{
+ assert.throws(()=>parseEmployeesV031({sheets:[{name:'sheet',rows:[['price','name'],[1,'x']]}]}),/الأعمدة المطلوبة/);
+ assert.throws(()=>parseEmployeesV031(workbook([row1,['موظف   تجريبي أول','طباخ','x','123',12000]])),/مكرر/);
+ assert.throws(()=>parseEmployeesV031(workbook([['غير معروف','مبيعات','','',null]])),/الراتب/);
+ assert.throws(()=>parseEmployeesV031(workbook([['غير معروف','مبيعات','','',0]])),/الراتب/);
+ assert.throws(()=>parseEmployeesV031(workbook([['غير معروف','مبيعات','','',-1]])),/الراتب/);
+ assert.throws(()=>parseEmployeesV031(workbook([[null,'طباخ','منطقة أ',null,1234]])),/دون اسم/);
+});
+test('trims extra spaces, handles Arabic digits and phone as string and detects column synonyms',()=>{
+ const book={sheets:[{name:'تجربة',rows:[['اسم الموظف','المهنة','العنوان','الجوال','الراتب الشهري'],[' شخص  تجريبي ','شيف','المنطقة أ','٠٩٩١٢٣٤٥٦٧','١٥٬٠٠٠']]}]};
+ const result=parseEmployeesV031(book);
+ assert.equal(result.records[0].name,'شخص تجريبي');
+ assert.equal(result.records[0].phone,'0991234567');
+ assert.equal(result.records[0].monthlySalary,15000);
+});
+test('UI fifth type has preview, routing to employee RPC, history and employee detail display',()=>{
+ const ui=src('js/quick-imports-v030.js'),page=src('js/pages/employees.js'),app=src('js/app.js');
+ assert.match(ui,/parseEmployeesV031/);
+ assert.match(ui,/quick_import_employees_v031/);
+ assert.match(ui,/quick_import_employees_undo_v031/);
+ assert.match(ui,/quick_import_v030/);
+ assert.match(ui,/quick_import_undo_v030/);
+ assert.match(ui,/راتب شهري/);
+ assert.match(page,/residence_v031/);
+ assert.match(page,/mobile_phone_v031/);
+ assert.match(app,/Web v0\.31/);
+});
+test('safe atomic backend migration keeps prior four paths and protects salary financial ledger',()=>{
+ const sql=src('database/Maria-CFO-Web-v0.31-Employee-Quick-Import.sql');
+ assert.match(sql,/BEGIN;[\s\S]+COMMIT;/);
+ assert.match(sql,/CHECK \(kind IN \('master','assets','suppliers','orders','employees'\)\)/);
+ assert.match(sql,/INSERT INTO public\.employees/);
+ assert.match(sql,/monthly_salary_original/);
+ assert.match(sql,/'monthly','SYP'/);
+ assert.match(sql,/quick_import_log_v030/);
+ assert.match(sql,/UNDO_24_HOUR_WINDOW_EXPIRED/);
+ assert.match(sql,/UNDO_NEWER_IMPORT_FIRST/);
+ assert.match(sql,/UNDO_EMPLOYEE_CHANGED_AFTER_IMPORT/);
+ assert.match(sql,/quick_import_employees_undo_v031/);
+ assert.match(sql,/IF NOT public\.is_app_owner\(\)/);
+ assert.doesNotMatch(sql,/post_order\(|record_cashbox_transaction\(|post_purchase_invoice\(|payroll_payment.*INSERT/i);
+});

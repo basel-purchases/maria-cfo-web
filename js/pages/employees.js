@@ -21,12 +21,14 @@ export async function renderEmployees(root) {
         <button class="btn add" type="button">إضافة موظف</button>
       </div>
       ${rows.length ? `<div class="table-wrap"><table class="table">
-        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>نوع الأجر</th><th>الأجر</th><th>العملة</th></tr></thead>
+        <thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>رقم الموبايل</th><th>نوع الأجر</th><th>الأجر</th><th>العملة</th></tr></thead>
         <tbody>${rows.map(r => {
           const rate = r[EMPLOYEE_RATE_COLUMNS[r.pay_type]];
           return `<tr>
             <td><strong>${esc(r.name)}</strong></td>
             <td>${esc(r.job_title || '—')}</td>
+            <td>${esc(r.residence_v031 || '—')}</td>
+            <td dir="ltr">${esc(r.mobile_phone_v031 || '—')}</td>
             <td>${payTypeBadge(r.pay_type)}</td>
             <td>${rate == null ? '—' : money(rate, r.wage_currency_code || 'SYP')}</td>
             <td>${esc(r.wage_currency_code || 'SYP')}</td>

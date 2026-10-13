@@ -15,7 +15,7 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=0.27';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.27';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.31';
 import { renderEvents } from './pages/events.js?v=0.27';
 import { renderReports } from './pages/reports.js?v=0.27';
 import { renderAssistant } from './pages/assistant.js?v=0.27';
@@ -23,7 +23,7 @@ import { renderImages } from './pages/images.js?v=0.27';
 import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
-import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.30';
+import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.31';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 import {installSearchableSelectsV029} from './searchable-select-v029.js?v=0.29';
 
@@ -108,7 +108,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.30</div>
+        <div class="sidebar-foot">Web v0.31</div>
       </aside>
 
       <main class="main">
