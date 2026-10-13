@@ -1,9 +1,10 @@
 import * as api from '../api.js?v=0.32';
-import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=0.32';
+import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=0.33';
 import {esc, money, dateOnly, todayISO} from '../utils.js?v=0.32';
 import {employeeName} from '../payroll-ui.js?v=0.32';
 import {BONUS_REASONS_V032, BONUS_STATUS_V032, validateBonusV032, bonusTotalsV032} from '../bonus-policy-v032.js?v=0.32';
-import {registerTableExport} from '../table-export-v027.js?v=0.32';
+import {registerTableExport} from '../table-export-v027.js?v=0.33';
+import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=0.33';
 
 const PAGE_SIZE=20;
 const niceError=e=>{
@@ -28,14 +29,14 @@ const niceError=e=>{
 export function openEmployeeBonusModal({staff=[],employeeId='',onSaved=()=>{}}={}){
  const eligible=staff.filter(e=>e.status==='active'&&e.pay_type!=='fixed');
  if(!eligible.length){toast('لا يوجد موظفون نشطون بنوع أجر مدعوم للمكافآت.','error');return;}
- const options=eligible.map(e=>`<option value="${esc(e.id)}">${esc(e.name)} · ${esc(e.wage_currency_code||'SYP')}</option>`).join('');
+ const options=eligible.map(e=>`<option value="${esc(e.id)}" data-search="${esc([e.job_title,e.department,e.residence_v031,e.mobile_phone_v031].filter(Boolean).join(' '))}">${esc(e.name)} · ${esc(e.wage_currency_code||'SYP')}</option>`).join('');
  const m=modal({
   title:'منح مكافأة موظف',
   subtitle:'تُضاف إلى مستحقات مسير الراتب المناسب، ولا تُصرف من الصندوق الآن.',
   submitText:'تسجيل المكافأة',
   body:`<div class="notice green">الخطوات: سجّل المكافأة ← راجعها في سجل المكافآت ← حدّث مسودة المسير إن وُجدت ← اعتمد الراتب واصرفه كالمعتاد.</div>
     <div class="form-grid">
-      <div class="field full"><label>الموظف</label><select name="employee" required>${options}</select></div>
+      <div class="field full"><label>الموظف</label><select name="employee" required>${options}</select><small class="hint">اكتب الاسم أو الوظيفة أو رقم الهاتف، ثم اختر الموظف من النتائج.</small></div>
       <div class="field"><label>المبلغ</label><input type="number" name="amount" min="0.0001" max="1000000000000" step="any" inputmode="decimal" required placeholder="0"></div>
       <div class="field"><label>العملة</label><div class="employee-bonus-currency" aria-live="polite"></div></div>
       <div class="field"><label>تاريخ الاستحقاق</label><input type="date" name="date" value="${todayISO()}" required></div>
@@ -59,7 +60,7 @@ export function openEmployeeBonusModal({staff=[],employeeId='',onSaved=()=>{}}={
  const badge=m.form.querySelector('.employee-bonus-currency');
  const sync=()=>{
   const employee=eligible.find(e=>String(e.id)===String(select.value));
-  badge.innerHTML=`<strong class="staff-currency-chip">${esc(employee?.wage_currency_code||'SYP')}</strong><small class="hint"> نفس عملة راتب الموظف </small>`;
+  badge.innerHTML=employee?`<strong class="staff-currency-chip">${esc(employee.wage_currency_code||'SYP')}</strong><small class="hint"> نفس عملة راتب الموظف </small>`:'<span class="hint">اختر الموظف لتحديد عملة راتبه.</span>';
  };
  select.addEventListener('change',sync);sync();
  return m;
@@ -70,7 +71,7 @@ export async function renderBonusesV032(root){
  try{
   const [staff,bonuses]=await Promise.all([api.employees(),api.employeeBonusesV032()]);
   const employeeById=new Map(staff.map(e=>[String(e.id),e]));
-  const state={employee:'',status:'all',month:'',page:1};
+  const state={employeeQuery:'',status:'all',month:'',page:1};
   root.innerHTML=`<div class="page-head"><div><h2>مكافآت الموظفين</h2><p>تُضاف المكافآت إلى مسير الرواتب ولا تُخرج نقودًا من الصندوق عند تسجيلها. كل تغيير يترك أثرًا واضحًا.</p></div>
     <div class="quick-actions"><button class="btn add-bonus" type="button">+ مكافأة جديدة</button><a class="btn secondary" href="#/payroll">مسيرات الرواتب</a></div></div>
     <div class="grid cols-3 staff-stats-grid">
@@ -79,7 +80,7 @@ export async function renderBonusesV032(root){
       <div class="card"><div class="metric-label">حالات المكافآت</div><div id="bonus-status-breakdown" class="staff-metric-values">—</div></div>
     </div>
     <div class="card staff-filter-card"><div class="form-grid">
-      <div class="field"><label>الموظف</label><select id="bonus-staff-filter"><option value="">جميع الموظفين</option>${staff.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="bonus-staff-filter">بحث عن الموظف</label><input type="search" id="bonus-staff-filter" autocomplete="off" placeholder="الاسم أو الوظيفة أو رقم الموبايل" aria-label="بحث عن الموظف في المكافآت"></div>
       <div class="field"><label>الحالة</label><select id="bonus-status-filter"><option value="all">كل الحالات</option><option value="pending">بانتظار المسير</option><option value="applied">ضمن راتب معتمد</option><option value="voided">ملغاة</option></select></div>
       <div class="field"><label>شهر الاستحقاق (اختياري)</label><input id="bonus-month-filter" type="month"></div>
       <div class="field staff-filter-guidance"><p class="metric-note">يمكنك التصفية ثم تصدير السجل إلى Excel أو PDF.</p></div>
@@ -88,7 +89,7 @@ export async function renderBonusesV032(root){
     <div class="notice rose"><strong>متى تُدفع المكافأة؟</strong> بعد إضافتها، تدخل في حساب مسير الشهر إذا كان الموظف شهريًا، أو في أجر اليوم المحدد إذا كان يوميًا/ساعيًا. إن كان مسير الشهر مسودة قديمة اضغط «تحديث» قبل «اعتماد». لا يحدث صرف مستقل من هذا القسم.</div>`;
 
   const draw=()=>{
-   const filtered=bonuses.filter(b=>(!state.employee||String(b.employee_id)===state.employee)
+   const filtered=bonuses.filter(b=>(!state.employeeQuery||employeeDirectoryScoreV033(employeeById.get(String(b.employee_id)),state.employeeQuery)>=0)
       &&(state.status==='all'||b.status===state.status)
       &&(!state.month||String(b.effective_date||'').startsWith(state.month)));
    const pending=filtered.filter(b=>b.status==='pending');
@@ -141,7 +142,8 @@ export async function renderBonusesV032(root){
    }));
   };
   const bind=(id,key)=>root.querySelector(id).addEventListener('change',e=>{state[key]=e.target.value;state.page=1;draw();});
-  bind('#bonus-staff-filter','employee');bind('#bonus-status-filter','status');bind('#bonus-month-filter','month');
+  root.querySelector('#bonus-staff-filter').addEventListener('input',e=>{state.employeeQuery=e.target.value;state.page=1;draw();});
+  bind('#bonus-status-filter','status');bind('#bonus-month-filter','month');
   root.querySelector('.add-bonus').onclick=()=>openEmployeeBonusModal({staff,onSaved:()=>renderBonusesV032(root)});
   draw();
  }catch(e){root.innerHTML=`<div class="notice">${esc(niceError(e))}</div><a class="btn secondary" href="#/employees-list">الموظفون</a>`;}

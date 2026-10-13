@@ -77,9 +77,10 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
 // Close all standard dialogs by backdrop, Escape, cancel or the close button.
 // Never close while submitting: an accidental click must not duplicate a write.
 export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638',onSubmit=async()=>true,wide=false,hideActions=false,onClose=null}){
+  const previouslyFocused=document.activeElement;
   const back=document.createElement('div');
   back.className='modal-backdrop';
-  back.innerHTML=`<div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button" aria-label="Close">\u00d7</button></div><form class="modal-form" autocomplete="off">${body}${hideActions?'':`<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">\u0625\u0644\u063a\u0627\u0621</button></div>`}</form></div>`;
+  back.innerHTML=`<div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-head"><div><h3>${esc(title)}</h3>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div><button class="x-btn" type="button" aria-label="إغلاق النافذة">\u00d7</button></div><form class="modal-form" autocomplete="off">${body}${hideActions?'':`<div class="modal-actions"><button class="btn" type="submit">${esc(submitText)}</button><button class="btn secondary cancel" type="button">\u0625\u0644\u063a\u0627\u0621</button></div>`}</form></div>`;
   document.body.appendChild(back);
   let closed=false,busy=false;
   const onKey=e=>{
@@ -93,11 +94,18 @@ export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638'
     closed=true;
     document.removeEventListener('keydown',onKey);
     back.remove();
+    if(previouslyFocused?.isConnected&&typeof previouslyFocused.focus==='function')previouslyFocused.focus({preventScroll:true});
     if(onClose){try{await onClose();}catch(e){console.error(e);}}
   };
   back.querySelector('.x-btn').addEventListener('click',()=>close());
   back.querySelector('.cancel')?.addEventListener('click',()=>close());
-  back.addEventListener('click',e=>{if(e.target===back)close();});
+  // Pointer-down on the dimmed area dismisses only the topmost dialog.
+  // This also works when a bonus dialog is opened above an employee profile.
+  back.addEventListener('pointerdown',e=>{
+    if(e.target!==back)return;
+    const stack=[...document.querySelectorAll('.modal-backdrop')];
+    if(stack[stack.length-1]===back)close();
+  },true);
   document.addEventListener('keydown',onKey);
   const form=back.querySelector('form');
   form.addEventListener('submit',async e=>{

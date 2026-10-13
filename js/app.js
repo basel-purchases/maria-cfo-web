@@ -1,7 +1,7 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=0.27';
 import * as api from './api.js?v=0.32';
 import { esc } from './utils.js?v=0.27';
-import { toast, friendlyError, modal } from './ui.js?v=0.27';
+import { toast, friendlyError, modal } from './ui.js?v=0.33';
 import { renderDashboard } from './pages/dashboard.js?v=0.27';
 import { renderHub } from './pages/hubs.js?v=0.32';
 import { renderMaterials } from './pages/materials.js?v=0.27';
@@ -15,8 +15,8 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=0.27';
-import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.32';
-import {renderBonusesV032} from './pages/bonuses.js?v=0.32';
+import { renderEmployees, renderAttendance, renderPayroll } from './pages/employees.js?v=0.33';
+import {renderBonusesV032} from './pages/bonuses.js?v=0.33';
 import { renderEvents } from './pages/events.js?v=0.27';
 import { renderReports } from './pages/reports.js?v=0.27';
 import { renderAssistant } from './pages/assistant.js?v=0.27';
@@ -26,10 +26,10 @@ import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.32';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
-import {installSearchableSelectsV029} from './searchable-select-v029.js?v=0.29';
+import {installSearchableSelectsV033} from './searchable-select-v033.js?v=0.33';
 
 const app = document.querySelector('#app');
-installSearchableSelectsV029();
+installSearchableSelectsV033();
 let currentSession = null;
 let aiJobTimer = null;
 let aiJobsInitialized = false;
@@ -109,7 +109,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.32</div>
+        <div class="sidebar-foot">Web v0.33</div>
       </aside>
 
       <main class="main">

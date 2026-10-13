@@ -1087,3 +1087,57 @@ select option{background:#fff;color:var(--text);padding:8px}
  .staff-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
  .staff-stats-grid>.card:last-child{grid-column:1/-1}
 }
+
+/* ============================================================
+   Maria CFO v0.33: one-field searchable combobox, attendance
+   exceptions with explicit applied/approved hour differences.
+   ============================================================ */
+.maria-combo-v033{position:relative;width:100%;min-width:0}
+.maria-combo-shell-v033{display:flex;align-items:center;min-width:0;direction:rtl;border:1px solid var(--line);border-radius:13px;background:#fff;overflow:hidden;transition:border-color .15s, box-shadow .15s}
+.maria-combo-v033.open .maria-combo-shell-v033,.maria-combo-shell-v033:focus-within{border-color:var(--rose);box-shadow:0 0 0 3px rgba(187,135,163,.12)}
+.field .maria-combo-input-v033,.maria-combo-input-v033{flex:1;min-width:0;width:100%;padding:11px 12px;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;font:inherit;color:var(--text);text-align:right}
+.maria-combo-input-v033:focus{outline:0!important}
+.maria-combo-toggle-v033{flex:0 0 36px;background:transparent;border:0;border-inline-start:1px solid var(--line);height:37px;font-size:22px;line-height:1;color:var(--plum);cursor:pointer}
+.maria-combo-v033.open .maria-combo-toggle-v033{transform:rotate(180deg);border-inline-start:none;border-inline-end:1px solid var(--line)}
+.maria-combo-v033 > select.maria-combo-native-v033{position:absolute!important;top:0;left:0;z-index:-1;width:1px!important;height:1px!important;padding:0!important;margin:0!important;border:0!important;opacity:0;pointer-events:none}
+.maria-combo-menu-v033{position:absolute;z-index:120;top:calc(100% + 5px);right:0;left:0;max-height:min(245px,38vh);overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:2px;padding:6px;border:1px solid #dccad6;border-radius:14px;background:#fff;box-shadow:0 17px 38px rgba(44,28,41,.2)}
+.maria-combo-menu-v033[hidden]{display:none!important}
+.maria-combo-option-v033{display:block;text-align:right;width:100%;border:0;border-radius:8px;background:#fff;color:var(--text);padding:10px 11px;cursor:pointer;font:inherit;font-size:13px;line-height:1.45;min-height:39px}
+.maria-combo-option-v033:hover,.maria-combo-option-v033.active{background:#f2e8ee;color:var(--plum-dark)}
+.maria-combo-option-v033[aria-selected=true]:before{content:'✓';float:left;color:var(--plum);font-weight:800;margin-right:5px}
+.maria-combo-empty-v033{color:var(--muted);font-size:12px;padding:14px 10px;text-align:center}
+.attendance-filter-bar-v033{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:13px;padding:13px 16px}
+.attendance-filter-bar-v033 .field{flex:1;max-width:310px;min-width:190px}
+.attendance-filter-status-v033{font-size:12px;color:var(--plum-dark);font-weight:800;padding-bottom:12px;white-space:nowrap}
+.attendance-filter-key-v033{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-bottom:10px}
+.attendance-audit-table-v033{min-width:1120px}
+.attendance-audit-table-v033 td,.attendance-audit-table-v033 th{white-space:normal;vertical-align:middle}
+.attendance-audit-table-v033 tr[hidden]{display:none!important}
+.attendance-audit-table-v033 .attendance-numeric{font-variant-numeric:tabular-nums;white-space:nowrap}
+.attendance-employee-v033{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.attendance-shortage-row-v033>td:first-child{border-right:3px solid #ca6570}
+.attendance-inline-hint-v033{display:block;font-size:10px;color:var(--muted);line-height:1.55;margin-top:4px;max-width:140px}
+.attendance-status-alert-v033{color:#a13c49;font-weight:700}
+.attendance-payroll-caution-v033{margin:11px 0 0;padding:0 3px}
+.attendance-leave-field-v033{margin-top:6px}
+.field .attendance-leave-label-v033{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--line);background:var(--surface-2);border-radius:13px;cursor:pointer;min-height:65px;color:var(--text);font-size:13px}
+.field .attendance-leave-label-v033 strong{display:block;color:var(--plum-dark);font-size:13px}
+.field .attendance-leave-label-v033 small{display:block;color:var(--muted);font-size:11px;margin-top:3px;line-height:1.6}
+.field .attendance-leave-label-v033 .attendance-leave-check{width:20px;height:20px;flex:0 0 20px;margin:0;cursor:pointer;accent-color:var(--plum)}
+@media(max-width:680px){
+ .maria-combo-input-v033{font-size:16px!important}
+ .attendance-filter-bar-v033 .field{max-width:none;min-width:100%}
+ .attendance-filter-status-v033,.attendance-filter-key-v033{padding-bottom:0}
+ .attendance-filter-key-v033{width:100%}
+ .attendance-audit-table-v033{min-width:1020px}
+}
+
+/* Keep Save / Cancel reachable in taller dialogs (especially mobile bonus entry). */
+.modal:not(.staff-employee-modal) .modal-actions{position:sticky;bottom:-22px;background:#fff;border-top:1px solid var(--line);padding:12px 0 20px;z-index:4;box-shadow:0 -12px 18px -18px rgba(0,0,0,.17)}
+
+/* On narrow screens the employee stays identified while the wide hour ledger scrolls. */
+@media(max-width:820px){
+ .attendance-audit-table-v033 th:first-child,.attendance-audit-table-v033 td:first-child{position:sticky;right:0;z-index:2;min-width:145px;border-left:1px solid var(--line);background:#fff}
+ .attendance-audit-table-v033 th:first-child{z-index:3;background:#faf7f8}
+ .attendance-shortage-row-v033>td:first-child{background:#fff9fa}
+}

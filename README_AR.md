@@ -1,3 +1,7 @@
+**الإصدار الحالي: Web v0.33** — تحسينات بحث الموظفين، الدوام والإضافي والنقص، فلاتر وتصدير، ونوافذ المكافآت. اقرأ [`README_v033_AR.md`](README_v033_AR.md). **لا يوجد SQL جديد** في هذا الإصدار، ولا يوجد `config.js` في حزمة النشر.
+
+---
+
 **لإصدار v0.29 النهائي ومصدر مشتريات المطبخ الجديد اقرأ `README_v029_FINAL_AR.md` أولًا.**
 
 > v0.29: Read `README_v029_AR.md` for eligibility constraints and reset safety before using the site.

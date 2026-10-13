@@ -1,9 +1,11 @@
 import * as api from '../api.js?v=0.32';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.27';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=0.33';
 import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.27';
 import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.27';
+import {employeeDirectoryScoreV033, attendanceSummaryV033, filterAttendanceV033} from '../staff-ux-v033.js?v=0.33';
+import {registerTableExport} from '../table-export-v027.js?v=0.33';
 import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=0.32';
-import {openEmployeeBonusModal} from './bonuses.js?v=0.32';
+import {openEmployeeBonusModal} from './bonuses.js?v=0.33';
 
 import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.27';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
@@ -57,11 +59,20 @@ export async function renderEmployees(root) {
     });
     const search=root.querySelector('#employee-search-v032');
     search?.addEventListener('input',()=>{
-      const query=search.value.trim().toLocaleLowerCase('ar');let count=0;
-      root.querySelectorAll('.employee-clickable').forEach(tr=>{
-        const hit=tr.textContent.toLocaleLowerCase('ar').includes(query);
-        tr.hidden=!hit;if(hit)count++;
-      });
+      const tbody=root.querySelector('.staff-directory-table tbody');
+      const query=search.value;
+      const byId=new Map([...tbody.querySelectorAll('.employee-clickable')].map(tr=>[tr.dataset.employee,tr]));
+      const ranked=rows.map((employee,index)=>({employee,index,score:employeeDirectoryScoreV033(employee,query)}));
+      ranked.sort((a,b)=>b.score-a.score||a.index-b.index);
+      let count=0;
+      for(const item of ranked){
+        // Look up by the stable employee ID; sorting must not alter row identity.
+        const target=byId.get(String(item.employee.id));
+        if(!target)continue;
+        target.hidden=item.score<0;
+        tbody.appendChild(target);
+        if(item.score>=0)count++;
+      }
       root.querySelector('#employee-match-count-v032').textContent=`${count} من ${rows.length} موظف`;
       root.querySelector('#employee-no-match-v032').hidden=count>0;
     });
@@ -176,31 +187,60 @@ export async function renderAttendance(root) {
 async function drawAttendance(root, day) {
   root.innerHTML = loader();
   try {
-    const [rows, employees, staffRules, usedLeave] = await Promise.all([api.attendance(day), api.employees(), api.payrollSettings(), api.paidLeaveUsed(day.slice(0,4))]);
-    const leaveCounts=new Map();for(const entry of usedLeave)leaveCounts.set(entry.employee_id,(leaveCounts.get(entry.employee_id)||0)+1);
+    const [rows, employees, staffRules, usedLeave] = await Promise.all([
+      api.attendance(day), api.employees(), api.payrollSettings(), api.paidLeaveUsed(day.slice(0,4))
+    ]);
+    const leaveCounts=new Map();
+    for(const entry of usedLeave)leaveCounts.set(String(entry.employee_id),(leaveCounts.get(String(entry.employee_id))||0)+1);
     const allowance=Number(staffRules.paid_leave_days_per_year_v023||0);
-    const employeeNames = Object.fromEntries(employees.map(e => [e.id, e.name]));
+    const employeeById=new Map(employees.map(e=>[String(e.id),e]));
+    const views=rows.map(row=>({row,summary:attendanceSummaryV033(row),employee:employeeById.get(String(row.employee_id))}));
+    const counts={all:views.length,issues:filterAttendanceV033(views,'issues').length,
+      shortage:filterAttendanceV033(views,'shortage').length,overtime:filterAttendanceV033(views,'overtime').length};
+    const number=amount=>String(Number(amount||0).toLocaleString('en-US',{maximumFractionDigits:2}));
+    const textDiff=summary=>summary.excused?'معذور':summary.actualDiff>0?`+${number(summary.actualDiff)} س`:
+       summary.actualDiff<0?`−${number(-summary.actualDiff)} س`:'متطابق';
+    const attendanceLabel=s=>ATTENDANCE_LABELS[s]||s||'—';
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>الدوام</h2><p>اعتمد الدوام الطبيعي للجميع ثم عدّل الاستثناءات فقط. الإجازات السنوية: ${allowance}.</p></div>
+        <div><h2>الدوام</h2><p>راقب الفرق بين المطلوب والفعلي، والإضافي المعتمد والنقص المطبق. الإجازات السنوية المدفوعة: ${allowance} يوم.</p></div>
         <div class="quick-actions">
-          <input id="att-date" type="date" value="${esc(day)}" style="padding:10px;border:1px solid var(--line);border-radius:12px">
+          <input id="att-date" type="date" value="${esc(day)}" aria-label="تاريخ الدوام" style="padding:10px;border:1px solid var(--line);border-radius:12px">
           <button type="button" class="btn init" ${!employees.length ? 'disabled' : ''}>اعتماد الطبيعي</button>
         </div>
       </div>
       ${!employees.length
         ? '<div class="notice">أضف الموظفين أولًا إذا كنت تريد استخدام الدوام.</div>'
         : rows.length
-          ? `<div class="table-wrap"><table class="table">
-               <thead><tr><th>الموظف</th><th>المطلوب</th><th>الفعلي</th><th>الحالة</th><th>إجازة / المسموح</th><th></th></tr></thead>
-               <tbody>${rows.map(r => `<tr>
-                 <td>${employeeName(employeeNames[r.employee_id], employees.find(e=>e.id===r.employee_id)?.pay_type)}</td>
-                 <td>${esc(r.expected_hours)}</td><td>${esc(r.worked_hours)}</td>
-                 <td>${esc(ATTENDANCE_LABELS[r.status] || r.status)}</td>
-                 <td>${leaveCounts.get(r.employee_id)||0} / ${allowance}</td>
+          ? `<div class="card attendance-filter-bar-v033">
+               <div class="field"><label for="attendance-filter-v033">عرض سجلات الدوام</label>
+                <select id="attendance-filter-v033" aria-label="فلتر الدوام">
+                 <option value="all">الكل (${counts.all})</option>
+                 <option value="issues">غير مكتمل / يحتاج مراجعة (${counts.issues})</option>
+                 <option value="shortage">لديه نقص / خصم ساعات (${counts.shortage})</option>
+                 <option value="overtime">لديه زيادة (${counts.overtime})</option>
+                </select></div>
+               <div class="attendance-filter-status-v033" aria-live="polite" id="attendance-visible-count-v033">عرض ${counts.all} من ${counts.all} موظف</div>
+               <div class="attendance-filter-key-v033"><span class="badge red">⚠ نقص</span><span class="badge green">+ إضافي</span><span class="badge yellow">بحاجة مراجعة</span></div>
+             </div>
+             <div class="table-wrap"><table class="table attendance-audit-table-v033">
+               <thead><tr><th>الموظف</th><th>المطلوب</th><th>الفعلي</th><th>فرق الساعات</th><th>الإضافي المعتمد</th><th>النقص المطبق</th><th>الحالة</th><th>الإجازات / المسموح</th><th>إجراء</th></tr></thead>
+               <tbody>${views.map(({row:r,summary:a,employee})=>`<tr class="${a.flaggedShortage?'attendance-shortage-row-v033':''}" data-attendance-row-v033="${esc(r.id)}">
+                 <td><div class="attendance-employee-v033">${a.flaggedShortage?'<span title="يوجد نقص بساعات الدوام" aria-label="نقص في الساعات">⚠️</span>':''}${employeeName(employee?.name||'موظف',employee?.pay_type)}</div></td>
+                 <td class="attendance-numeric">${number(a.expected)}</td>
+                 <td class="attendance-numeric">${number(a.worked)}</td>
+                 <td><span class="badge ${a.actualDiff<0?'red':a.actualDiff>0?'green':a.excused?'yellow':''}">${textDiff(a)}</span></td>
+                 <td>${a.overtimeEffective>0?`<span class="badge green">+${number(a.overtimeEffective)} س</span>`:
+                   a.overtimeUnapproved?`<span class="badge yellow">0 معتمد</span><small class="attendance-inline-hint-v033">${number(a.overtimeCalculated)} س زيادة غير معتمدة</small>`:'—'}</td>
+                 <td>${a.shortageEffective>0?`<span class="badge red">−${number(a.shortageEffective)} س</span>`:
+                   a.shortageWaived?`<span class="badge yellow">0 مطبق</span><small class="attendance-inline-hint-v033">${number(a.shortageComputed)} س نقص غير مطبق</small>`:'—'}</td>
+                 <td><span class="${['absent','unpaid_leave'].includes(a.status)?'attendance-status-alert-v033':''}">${esc(attendanceLabel(a.status))}</span></td>
+                 <td>${leaveCounts.get(String(r.employee_id))||0} / ${allowance}</td>
                  <td><button type="button" class="btn secondary edit" data-id="${esc(r.id)}">تعديل</button></td>
                </tr>`).join('')}</tbody>
-             </table></div>`
+             </table></div>
+             <div class="empty attendance-no-results-v033" hidden>لا توجد سجلات تطابق هذا الفلتر. جرّب «الكل».</div>
+             <p class="metric-note attendance-payroll-caution-v033">النقص المطبق هنا هو ساعات دوام، وليس خصمًا نقديًا تلقائيًا من راتب الموظف الشهري. ستجد السلف والخصومات المالية في المسير.</p>`
           : '<div class="card empty"><strong>لم يتم إنشاء دوام هذا اليوم</strong><div>اضغط اعتماد الطبيعي، ثم عدّل فقط الحالات المختلفة.</div></div>'}`;
 
     root.querySelector('#att-date').onchange = e => drawAttendance(root, e.target.value);
@@ -209,16 +249,36 @@ async function drawAttendance(root, day) {
         await api.initializeAttendance(day);
         toast('تم اعتماد الدوام الطبيعي', 'success');
         await drawAttendance(root, day);
-      } catch (e) {
-        toast(friendlyError(e), 'error');
-      }
+      } catch (e) {toast(friendlyError(e), 'error');}
     });
     root.querySelectorAll('.edit').forEach(button => {
       button.onclick = () => {
-        const row = rows.find(r => String(r.id) === button.dataset.id);
-        if (row) openAttendanceModal(root, day, row, employeeNames[row.employee_id]);
+        const found=views.find(x=>String(x.row.id)===String(button.dataset.id));
+        if (found) openAttendanceModal(root, day, found.row, found.employee?.name);
       };
     });
+    const filter=root.querySelector('#attendance-filter-v033');
+    const table=root.querySelector('.attendance-audit-table-v033');
+    if(filter&&table){
+      const exportData=()=>{
+        const current=filterAttendanceV033(views,filter.value);
+        const name=filter.selectedOptions[0]?.textContent?.replace(/\s*\([^)]*\)/g,'')||'الكل';
+        return {title:`دوام ${day} · ${name}`,headers:['الموظف','المطلوب (ساعة)','الفعلي (ساعة)','فرق الساعات','الإضافي المعتمد (ساعة)','النقص المطبق (ساعة)','الحالة','الإجازات المستخدمة','الإجازات المسموحة','ملاحظة'],
+          rows:current.map(({row:r,summary:a,employee})=>[
+            employee?.name||'موظف',a.expected,a.worked,a.excused?'معذور':a.actualDiff,a.overtimeEffective,
+            a.shortageEffective,attendanceLabel(a.status),leaveCounts.get(String(r.employee_id))||0,allowance,r.note||''
+          ])};
+      };
+      registerTableExport(table,exportData);
+      const apply=()=>{
+        const filtered=filterAttendanceV033(views,filter.value);
+        const ids=new Set(filtered.map(x=>String(x.row.id)));
+        table.querySelectorAll('[data-attendance-row-v033]').forEach(tr=>{tr.hidden=!ids.has(tr.dataset.attendanceRowV033);});
+        root.querySelector('#attendance-visible-count-v033').textContent=`عرض ${filtered.length} من ${views.length} موظف`;
+        root.querySelector('.attendance-no-results-v033').hidden=filtered.length!==0;
+      };
+      filter.addEventListener('change',apply);apply();
+    }
   } catch (e) {
     root.innerHTML = `<div class="notice">${esc(friendlyError(e))}</div>`;
   }
@@ -230,7 +290,6 @@ function openAttendanceModal(root, day, row, name) {
     title: name || 'موظف',
     subtitle: 'سجّل ساعات العمل الحقيقية، ثم اختر مقدار النقص الذي تريد تطبيقه إن وُجد.',
     body: `<div class="form-grid">
-      <div class="field"><label>إجازة مدفوعة</label><input type="checkbox" name="leave_flag" class="attendance-leave-check"></div>
       <div class="field"><label>الحالة</label><select name="status">
         ${Object.entries(ATTENDANCE_LABELS).map(([value, label]) =>
           `<option value="${value}">${label}</option>`).join('')}
@@ -245,6 +304,10 @@ function openAttendanceModal(root, day, row, name) {
         <input name="short" type="number" min="0" step="any" value="${esc(row.applied_shortage_hours ?? '')}" placeholder="اتركه فارغًا لحساب النقص تلقائيًا">
         <small class="hint" data-shortage-hint></small>
       </div>
+      <div class="field full attendance-leave-field-v033"><label class="attendance-leave-label-v033">
+        <input type="checkbox" name="leave_flag" class="attendance-leave-check">
+        <span><strong>إجازة مدفوعة</strong><small>فعّلها إذا كان اليوم إجازة مدفوعة ضمن الرصيد المتاح.</small></span>
+      </label></div>
       <div class="field full"><label>ملاحظة (اختياري)</label><input name="note" value="${esc(row.note || '')}"></div>
     </div>`,
     onSubmit: async fd => {
