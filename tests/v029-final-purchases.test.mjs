@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {parseMaterialPurchasesV029,purchaseChunksV029} from '../js/material-purchase-parser-v029.js';
-const wb=JSON.parse(fs.readFileSync('/mnt/data/ameen_source_test_fixture.json','utf8'));
-test('source movements are parsed without importing sales as purchases',()=>{
+const legacyFixture='/mnt/data/ameen_source_test_fixture.json';
+const wb=fs.existsSync(legacyFixture)?JSON.parse(fs.readFileSync(legacyFixture,'utf8')):null;
+test('source movements are parsed without importing sales as purchases',{skip:!wb&&'Historical 44,657-row external fixture is not bundled with the website release'},()=>{
  const x=parseMaterialPurchasesV029(wb);
  assert.equal(x.stats.invoiceCount,552);
  assert.equal(x.stats.readyInvoiceCount,538);

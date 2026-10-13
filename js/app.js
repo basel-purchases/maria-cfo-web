@@ -23,8 +23,7 @@ import { renderImages } from './pages/images.js?v=0.27';
 import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
-import { renderQuickImports, desktopRefresh } from './ameen-quick-imports.js?v=0.29-final';
-import {renderRecipeImportV029} from './recipe-import-v029.js?v=0.29-final';
+import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.30';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 import {installSearchableSelectsV029} from './searchable-select-v029.js?v=0.29';
 
@@ -38,14 +37,13 @@ const aiJobState = new Map();
 const nav = [
   ['#/dashboard', 'الرئيسية'],
   ['#/basic', 'الإدخالات الأساسية'],
-  ['#/quick-imports', 'الإدخالات السريعة'],
-  ['#/recipes-import', 'استيراد الوصفات'],
   ['#/daily', 'التشغيل اليومي'],
   ['#/employees', 'الموظفون والرواتب'],
   ['#/events', 'الحفلات'],
   ['#/reports-hub', 'الإحصائيات والتقارير'],
   ['#/assistant', 'المساعد الذكي'],
   ['#/images', 'الصور'],
+  ['#/quick-imports', 'الإدخالات السريعة'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -100,7 +98,7 @@ function shell() {
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-actions"><div class="brand-mark">M</div><button id="ameen-brand-refresh" type="button" class="ameen-brand-refresh" title="تحديث ملفات الأمين" aria-label="تحديث ملفات الأمين">↻ تحديث</button></div>
+          <div class="brand-actions"><div class="brand-mark">M</div></div>
           <h1>Maria CFO</h1>
           <p>المدير المالي الذكي</p>
         </div>
@@ -110,7 +108,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.29</div>
+        <div class="sidebar-foot">Web v0.30</div>
       </aside>
 
       <main class="main">
@@ -120,7 +118,6 @@ function shell() {
             <div class="title" id="top-title">Maria CFO</div>
           </div>
           <div class="topbar-actions">
-            <button class="btn secondary ameen-top-refresh" type="button" id="ameen-top-refresh" title="تحديث ملفات الأمين">↻ تحديث</button>
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
               <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
             </button>
@@ -140,8 +137,6 @@ function shell() {
 
   installTableExportV027();
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
-  app.querySelector('#ameen-brand-refresh').onclick = desktopRefresh;
-  app.querySelector('#ameen-top-refresh').onclick = desktopRefresh;
 
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
@@ -278,7 +273,7 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'quick-imports':'quick-imports', 'recipes-import':'recipes-import', assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees',
     'events-list': 'events', reports: 'reports-hub', images: 'images',
@@ -306,7 +301,6 @@ async function route() {
     dashboard: 'الرئيسية',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
-    'recipes-import': 'استيراد وصفات المنيو',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
     events: 'الحفلات',
@@ -341,8 +335,8 @@ async function route() {
     switch (key) {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
-      case 'quick-imports': return renderQuickImports(root);
-      case 'recipes-import': return renderRecipeImportV029(root);
+      case 'quick-imports': return renderQuickImportsV030(root);
+      case 'recipes-import': location.hash='#/quick-imports'; return;
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');

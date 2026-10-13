@@ -58,7 +58,7 @@ export async function renderMenu(root){
     <div class="page-head"><div>
       <h2>الوجبات والوصفات</h2>
       <p>استعرض الوجبات صفحة بصفحة، وابحث عنها بالاسم أو التصنيف؛ تكلفة الطعام تُحسب من الوصفة.</p>
-    </div><div class="page-head-actions"><a class="btn secondary" href="#/recipes-import">استيراد الوصفات</a><button class="btn add">إضافة وجبة</button></div></div>
+    </div><div class="page-head-actions"><button class="btn add">إضافة وجبة</button></div></div>
     <div class="list-toolbar">
       <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off"></div>
       <select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>

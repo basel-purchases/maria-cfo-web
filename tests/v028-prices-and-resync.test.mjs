@@ -75,7 +75,7 @@ test('v0.28 page calls new reimport RPC and displays incomplete pricing',()=>{
  assert.match(ui,/v028-replace/);
  assert.match(costUi,/row\.recipe_cost_base==null/);
  assert.match(costUi,/baseCost\*baseQty/);
- assert.match(app,/renderRecipeImportV029\(root\)/);
+ assert.match(app,/renderQuickImportsV030\(root\)/);
  assert.match(sql,/CREATE OR REPLACE FUNCTION public\.import_menu_recipes_v028/);
  assert.match(sql,/CREATE TABLE IF NOT EXISTS public\.recipe_import_backups_v028/);
  assert.match(sql,/v_unchanged:=v_unchanged\+1/);

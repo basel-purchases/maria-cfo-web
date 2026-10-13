@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: material requires warehouse, positive balance AND a confirmed price
+ok 1 - material requires warehouse, positive balance AND a confirmed price
+  ---
+  duration_ms: 0.971455
+  type: 'test'
+  ...
+# Subtest: menu needs positive selling price; assets are based on physical quantity/warehouse
+ok 2 - menu needs positive selling price; assets are based on physical quantity/warehouse
+  ---
+  duration_ms: 0.739766
+  type: 'test'
+  ...
+# Subtest: recipe must match every material, priced, positive stock and a real warehouse
+ok 3 - recipe must match every material, priced, positive stock and a real warehouse
+  ---
+  duration_ms: 0.296928
+  type: 'test'
+  ...
+# Subtest: the legacy 75-recipe workbook remains readable; new importer rejects unsupported data
+ok 4 - the legacy 75-recipe workbook remains readable; new importer rejects unsupported data
+  ---
+  duration_ms: 6.284668
+  type: 'test'
+  ...
+# Subtest: new SQL guards price and stock server-side, no unknown material auto-create
+ok 5 - new SQL guards price and stock server-side, no unknown material auto-create
+  ---
+  duration_ms: 0.416237
+  type: 'test'
+  ...
+# Subtest: reset safe-default not confirmed and new schemas included
+ok 6 - reset safe-default not confirmed and new schemas included
+  ---
+  duration_ms: 0.54422
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 72.458043
