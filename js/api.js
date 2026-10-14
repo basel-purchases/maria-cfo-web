@@ -1276,3 +1276,22 @@ export const eventCreateServingUnitV037=(menuItemId,input)=>rpc('create_event_se
  p_menu_item_id:menuItemId,p_label:String(input.name||'').trim(),p_yield:Number(input.yieldCount),
  p_material_id:input.materialId||null,p_quantity_in_base:input.materialId?Number(input.quantityInBase):null,
 });
+
+// v0.38: booking price corrections and event-only externally purchased catering.
+export const eventSetBookingAmountV038=(bookingId,amount)=>rpc('event_set_booking_amount_v038',{
+ p_booking_id:bookingId,p_amount:Number(amount),
+});
+export const eventExternalDishesV038=id=>list('event_external_dishes_v038',{eq:{event_id:id},order:'created_at',ascending:true,limit:500});
+export const eventExternalServingsV038=id=>list('event_external_servings_v038',{eq:{event_id:id},order:'created_at',ascending:true,limit:1000});
+export const eventAddExternalDishV038=(id,input)=>rpc('event_add_external_dish_v038',{
+ p_event_id:id,p_name:input.name,p_unit_label:input.unit,p_quantity:Number(input.quantity),
+ p_unit_cost_base:Number(input.unitCost),p_vendor:input.vendor||null,p_notes:input.note||null,
+});
+export const eventSaveExternalServingV038=(id,input)=>rpc('event_save_external_serving_v038',{
+ p_event_id:id,p_rule_id:input.id||null,p_dish_id:input.dishId,
+ p_group_id:input.groupId||null,p_rule_type:input.type,p_quantity:Number(input.quantity),
+ p_people:input.type==='per_n_people'?Number(input.people):null,
+});
+export const eventDeleteExternalServingV038=(id,ruleId)=>rpc('event_delete_external_serving_v038',{p_event_id:id,p_rule_id:ruleId});
+export const eventVoidExternalDishV038=(id,reason)=>rpc('event_void_external_dish_v038',{p_id:id,p_reason:reason});
+export const eventPayExternalDishV038=(id,boxId)=>rpc('event_pay_external_dish_v038',{p_id:id,p_cashbox_id:boxId});

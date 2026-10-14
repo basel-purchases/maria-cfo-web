@@ -53,7 +53,8 @@ function filename(title,extension){
 
 function printableHtml({title,headers,rows}){
  const heading=headers.map(x=>`<th>${escapeHtml(x)}</th>`).join('');
- const body=rows.map(r=>`<tr>${r.map(c=>`<td>${escapeHtml(c)}</td>`).join('')}</tr>`).join('');
+ const printCell=c=>typeof c==='number'&&Number.isFinite(c)?new Intl.NumberFormat('en-US',{maximumFractionDigits:4}).format(c):escapeHtml(c);
+ const body=rows.map(r=>`<tr>${r.map(c=>`<td>${printCell(c)}</td>`).join('')}</tr>`).join('');
  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title>
  <style>@page{size:A4 landscape;margin:13mm}*{box-sizing:border-box}body{font:12px/1.6 Tahoma,Arial,sans-serif;color:#26212b;direction:rtl}
  h1{font-size:19px;margin:0 0 6px}.meta{color:#666;margin-bottom:14px}table{width:100%;border-collapse:collapse;table-layout:auto}

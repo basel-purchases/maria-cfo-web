@@ -116,7 +116,7 @@ test('user-facing v0.34 routes contain salary desk, event map, activity log, rec
  assert.match(events,/tableInvoice\(/);
  assert.match(events,/event-activity-stream-v034/);
  assert.match(events,/registerTableExport\(/);
- assert.match(read('index.html'),/app\.js\?v=0\.(?:34|35|36|37)/);
+ assert.match(read('index.html'),/app\.js\?v=0\.(?:34|35|36|37|38)/);
 });
 test('release preserves all old functionality and omits config from editable project tree',()=>{
  assert.equal(fs.existsSync(path.join(root,'config.js')),false);

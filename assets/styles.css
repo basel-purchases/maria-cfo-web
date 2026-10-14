@@ -1311,3 +1311,58 @@ select option{background:#fff;color:var(--text);padding:8px}
 .event-unit-material-details-v037 small{font-size:12px;color:#716576;line-height:1.7}
 .event-named-group-v037 .event-plate-summary-v036{background:#f7eff4;border:1px solid #e9dce5;border-radius:12px}
 @media(max-width:780px){.event-named-group-v037 .event-main-actions-v036{display:flex;flex-wrap:wrap}.event-named-group-v037 .event-main-actions-v036 .event-ctrl-v036{flex:1 1 130px}}
+
+/* v0.38 — event ticket pricing, free table chooser and external hospitality. */
+.event-booking-form-v038{row-gap:16px}
+.event-table-combo-v038{position:relative;min-width:0}
+.event-table-combo-v038>input{padding-inline-end:40px!important;background:#fff!important}
+.event-table-combo-v038:after{content:'⌕';position:absolute;inset-inline-end:14px;top:7px;color:#775467;font-size:22px;pointer-events:none}
+.event-table-results-v038{position:absolute;top:calc(100% + 5px);right:0;left:0;z-index:35;background:#fff;max-height:236px;overflow:auto;border:1px solid #dbcbd6;border-radius:13px;box-shadow:0 14px 34px rgba(60,40,54,.18);padding:5px}
+.event-table-results-v038[hidden]{display:none!important}
+.event-table-results-v038 button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:#fff;border:0;border-radius:9px;cursor:pointer;text-align:right;padding:10px 12px;color:#352530;font:inherit;font-size:12px}
+.event-table-results-v038 button:hover,.event-table-results-v038 button:focus-visible{background:#f5edf2;outline:0}
+.event-table-results-v038 button span{font-size:11px;color:#816b78}
+.event-table-no-match-v038{padding:14px;color:#7e6675;font-size:12px}
+.event-booking-add-table-v038{display:flex;gap:10px;align-items:flex-start}
+.event-booking-add-table-v038>.event-table-combo-v038{flex:1}
+.event-booking-add-table-v038>.event-ctrl-v036{flex-shrink:0;min-height:43px}
+.event-allocation-editor-v038{background:#fbf8fa;border:1px solid #e9dfe5;border-radius:15px;padding:12px;min-height:74px}
+.event-allocation-rows-v038{display:grid;gap:9px}
+.event-allocation-row-v038{display:grid;grid-template-columns:minmax(115px,1fr) minmax(110px,180px) auto;align-items:center;gap:10px;background:white;padding:8px 11px;border:1px solid #ede2e9;border-radius:12px}
+.event-allocation-row-v038>strong{font-size:13px}
+.event-allocation-row-v038>label{font-size:11px;color:#826f7c;display:grid;gap:4px}
+.event-allocation-row-v038 input{width:100%;background:white;border:1px solid #e6d7e1;border-radius:9px;padding:8px 10px;color:#302532;font-size:13px}
+.event-allocation-row-v038 .event-ctrl-v036{min-height:34px;padding:7px 10px}
+.event-allocation-editor-v038 .event-booking-suggestion-v035{margin-top:10px;border-radius:10px}
+.event-allocation-editor-v038 [data-alloc-summary]{display:flex;flex-direction:column;gap:5px}
+.event-alloc-good-v038{font-weight:700;color:#225a3d}
+.event-booking-price-preview-v038{background:#f0e9ef;color:#51364c;border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.event-booking-price-preview-v038 small{color:#806c7a}
+.event-booking-actions-v038{display:flex;align-items:center;justify-content:flex-start;gap:6px;flex-wrap:wrap;min-width:145px}
+.event-booking-actions-v038 .event-ctrl-v036{font-size:11px;padding:6px 9px;min-height:32px}
+.event-booking-actions-v038 small{color:#a33f49}
+.event-guest-summary-v038{font-size:11px;color:#806679;line-height:1.7}
+.event-booking-pay-summary-v038,.event-price-live-v038{border:1px solid #e7dce4;background:#faf7f9;border-radius:14px;padding:12px;display:grid;gap:9px;margin-bottom:10px}
+.event-booking-pay-summary-v038>div,.event-price-live-v038>div{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;border-bottom:1px solid #ece1e8;padding-bottom:7px}
+.event-booking-pay-summary-v038>div:last-child,.event-price-live-v038>div:last-of-type{border-bottom:0}
+.event-booking-pay-summary-v038 span,.event-price-live-v038 span{color:#7c6975}
+.event-booking-pay-summary-v038 strong,.event-price-live-v038 strong{color:#53384b}
+.event-booking-pay-summary-v038 .event-pay-due-v038{background:#f2e6ef;border-radius:9px;padding:11px;border:0}
+.event-price-live-v038 small{font-size:11px;color:#826c7b;line-height:1.7}
+.event-external-kpis-v038{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:17px 0}
+.event-external-kpis-v038>div{padding:15px;border:1px solid #ebe0e7;border-radius:14px;background:#faf7f9;display:flex;flex-direction:column;gap:8px}
+.event-external-kpis-v038 span{color:#846f7c;font-size:12px}
+.event-external-kpis-v038 strong{font-size:16px;color:#51364c}
+.event-external-subtitle-v038{color:#694b62;font-weight:700;margin:12px 0 9px;font-size:12px}
+.event-external-rule-head-v038{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #eee3ea;margin-top:24px;padding-top:20px;flex-wrap:wrap}
+.event-external-rule-head-v038 h3{margin:0}
+.event-external-section-v038 .table-wrap{overflow-x:auto}
+.event-external-section-v038 .event-row-actions-v036{gap:5px;flex-wrap:wrap}
+.event-external-section-v038 .event-ctrl-v036{padding:8px 10px;min-height:35px}
+@media(min-width:700px){.modal:has(.event-booking-form-v038){width:min(900px,95vw)}}
+@media(max-width:700px){
+ .event-external-kpis-v038{grid-template-columns:1fr}
+ .event-allocation-row-v038{grid-template-columns:1fr auto}.event-allocation-row-v038>label{grid-column:1/2;grid-row:2}.event-allocation-row-v038 .event-ctrl-v036{grid-column:2/3;grid-row:1/3}
+ .event-booking-add-table-v038{flex-direction:column}.event-booking-add-table-v038>.event-table-combo-v038{width:100%}.event-booking-add-table-v038>.event-ctrl-v036{width:100%}
+ .event-booking-actions-v038{min-width:120px}.event-booking-price-preview-v038{flex-direction:column;align-items:stretch}
+}
