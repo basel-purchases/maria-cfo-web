@@ -1237,3 +1237,15 @@ select option{background:#fff;color:var(--text);padding:8px}
 @media(max-width:1150px){.payroll-filter-grid-v034{grid-template-columns:repeat(2,minmax(0,1fr))}.event-stage-line-v034{gap:4px;padding:10px}.event-stage-line-v034>div{font-size:10px}}
 @media(max-width:820px){.payroll-filter-grid-v034{grid-template-columns:repeat(2,minmax(0,1fr))}.payroll-filter-grid-v034 .field:nth-child(3){grid-column:1/-1}.payroll-toolbar-v034{grid-column:1/-1;padding-top:0}.payroll-controller-v034{padding:12px 12px 0}.payroll-flow-v034{justify-content:flex-start}.payroll-metrics-v034 .metric-value,.event-kpis-v034 .metric-value{font-size:21px}.event-stage-line-v034{display:flex;overflow:auto;gap:12px}.event-stage-line-v034>div{flex:0 0 auto;max-width:125px}.event-kpis-v034{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.event-kpis-v034 .card{padding:13px}.event-detail-head-v034 h2{font-size:22px}.event-tab-v034{padding:11px 12px}.event-occupancy-big-v034{grid-template-columns:auto 1fr auto 1fr}.event-final-review-v034{grid-template-columns:1fr}.event-today-actions-v034 .btn{flex:1 1 auto}}
 @media(max-width:450px){.payroll-filter-grid-v034{grid-template-columns:1fr 1fr}.payroll-filter-grid-v034 .field:nth-child(3),.payroll-toolbar-v034{grid-column:1/-1}.payroll-list-tools-v034 .field:nth-child(2){flex:1 1 140px}.event-seat-map-v034{grid-template-columns:1fr}.event-kpis-v034{grid-template-columns:1fr 1fr}.event-kpis-v034 .metric-value{font-size:17px}.event-stage-line-v034{font-size:10px}.event-occupancy-big-v034{gap:6px}.event-occupancy-big-v034 strong{font-size:22px}.event-list-card-v034{min-height:155px}}
+
+/* v0.35: event workflow, compact and accessible table actions */
+.event-table-actions-v034{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.event-action-v035{border-radius:10px!important;min-height:36px!important;min-width:0!important;font-size:12px!important;font-weight:750!important;border:1px solid #dfd1da!important;background:#fff!important;color:#59384f!important;transition:background .15s,border-color .15s,transform .15s}
+.event-action-v035:hover:not(:disabled){background:#f7ebf2!important;border-color:#a98da0!important;transform:translateY(-1px)}
+.event-action-v035.primary{background:#70506a!important;border-color:#70506a!important;color:#fff!important}
+.event-action-v035.accent{background:#f0f7f1!important;border-color:#bdd2c2!important;color:#386648!important}
+.event-action-v035:focus-visible{outline:3px solid #b988a7;outline-offset:2px}
+.event-booking-suggestion-v035{background:#f3f8f4;padding:12px 14px;border-radius:13px;border:1px solid #cdded0;line-height:1.8;font-size:13px}
+.event-booking-suggestion-v035 p{margin:4px 0 0;font-size:12px;color:#58675d}
+.event-booking-table-v034 small{display:block;max-width:320px;white-space:normal;line-height:1.65}
+@media(max-width:500px){.event-table-actions-v034{grid-template-columns:1fr 1fr}.event-action-v035{min-height:40px!important}.event-tabs-v034{position:relative}}

@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=0.34';
+import * as api from '../api.js?v=0.35';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.33';
 import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
 import {registerTableExport} from '../table-export-v027.js?v=0.33';
 import {EVENT_RULE_NAMES_V034,eventCostQuoteV034,eventActualResultV034} from '../event-cost-v034.js?v=0.34';
+import {proposeEventAllocationV035} from '../event-seating-v035.js?v=0.35';
 
 const fmt=(v,c='SYP')=>money(Number(v)||0,c);
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -14,6 +15,11 @@ const opts=(arr,selected)=>arr.map(([v,t])=>`<option value="${esc(v)}" ${String(
 const toError=e=>{
  const s=String(e?.message||'');
  const errors={
+ EVENT_BULK_INVALID:'تأكد من عدد الطاولات والكراسي.',
+ EVENT_GROUP_COUNT_MISMATCH:'عدد المقاعد الموزعة لا يطابق عدد الضيوف.',
+ EVENT_GROUP_TABLE_DUPLICATE:'لا يمكن وضع الطاولة نفسها مرتين في حجز واحد.',
+ EVENT_GROUP_BOOKING_INVALID:'راجع بيانات الحجز وعدد الأشخاص.',
+ EVENT_TABLES_ALREADY_EXIST:'الطاولات جاهزة بالفعل. اختر رقم بداية مختلفًا لإضافة مجموعة.',
  EVENT_EXTRA_ALREADY_SETTLED:'الفاتورة دُفعت أو ألغيت مسبقًا. حدّث الصفحة قبل تكرار العملية.',
  EVENT_HAS_UNPAID_EXTRAS:'توجد فواتير إضافية غير مدفوعة. يجب تحصيلها أو إلغاؤها قبل إقفال الحفلة.',
  EVENT_HAS_UNPAID_BOOKINGS:'توجد حجوزات لم تسدد بالكامل. راجع المستحقات قبل الإقفال.',
@@ -50,31 +56,31 @@ export async function renderEventsV034(root){
     <div class="field"><label>نوع الحفلة</label><select name="type"><option value="public">عامة · تذاكر</option><option value="private">خاصة · حجز</option></select></div>
     <div class="field"><label>عدد الضيوف المتوقع</label><input type="number" name="guests" min="1" max="100000" value="40" required></div>
     <div class="field"><label>عملة الحفلة</label><select name="currency"><option value="SYP">ليرة سورية SYP</option><option value="USD">دولار USD</option></select></div>
-    <div class="field full"><label>مصدر الإيراد</label><select name="mode"><option value="bookings">تذاكر وحجوزات</option><option value="both">حجوزات وأوردرات منفصلة</option><option value="orders">أوردرات فقط</option></select></div></div>`,
+    <div class="field"><label>عدد الطاولات</label><input type="number" name="tableCount" min="1" max="200" value="10" required></div><div class="field"><label>كراسي كل طاولة</label><input type="number" name="seatsPerTable" min="1" max="100" value="8" required></div><div class="field full"><label>مصدر الإيراد</label><select name="mode"><option value="bookings">تذاكر وحجوزات</option><option value="both">حجوزات وأوردرات منفصلة</option><option value="orders">أوردرات فقط</option></select></div></div>`,
    onSubmit:async fd=>{try{const result=await api.createEvent({name:fd.get('name'),date:fd.get('date'),type:fd.get('type'),guests:fd.get('guests'),currency:fd.get('currency'),revenueMode:fd.get('mode')});
-    toast('تم إنشاء الحفلة. ابدأ بضبط الخطة والطاولات.','success');location.hash=`#/event/${result}`;return true;
+    try{await api.eventBulkTablesV035(result,fd.get('tableCount'),fd.get('seatsPerTable'));toast('تم إنشاء الحفلة وجميع طاولاتها دفعة واحدة.','success');location.hash=`#/event/${result}`;return true;}catch(setupError){toast('تم إنشاء الحفلة لكن تعذّر تجهيز الطاولات: '+toError(setupError),'error');location.hash=`#/event/${result}`;return true;}
    }catch(e){toast(toError(e),'error');return false;}}
   });
  }catch(e){root.innerHTML=`<div class="notice">${esc(toError(e))}</div>`;}
 }
 
 export async function renderEventDetailV034(root,eventId){
- let tab='overview',state=null,busy=false;
+ let tab='tables',state=null,busy=false;
  root.innerHTML=loader();
  const reload=async()=>{
   if(busy)return;busy=true;root.innerHTML=loader();
   try{
-   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity]=await Promise.all([
+   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity,guests]=await Promise.all([
     api.eventV034(eventId),api.eventTablesV034(eventId),api.eventMenuRulesV034(eventId),
     api.eventMenuRequirementsV034(eventId),api.eventTableMenuV034(eventId),api.menuCostsV034(),
     api.eventCostItemsV034(eventId),api.eventCostComparisonV034(eventId),api.eventLaborV034(eventId),
     api.eventSummaryV034(eventId),api.eventBookings(eventId),api.eventBookingBalancesV034(eventId),
     api.eventExtrasV034(eventId),api.eventWasteV034(eventId),api.cashboxes(),
-    api.eventExpenseEntriesV034(eventId),api.eventPlannerV034(eventId),api.payrollSettings(),api.eventActivityV034(eventId),
+    api.eventExpenseEntriesV034(eventId),api.eventPlannerV034(eventId),api.payrollSettings(),api.eventActivityV034(eventId),api.eventGuestsV035(eventId),
    ]);
    if(!event)throw Error('EVENT_NOT_FOUND');
    state={event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary:summary||{},bookings,bookingBalances,
-    extras,waste,boxes,expenses,planner,settings,activity};
+    extras,waste,boxes,expenses,planner,settings,activity,guests};
    paint();
   }catch(e){root.innerHTML=`<div class="page-head"><h2>الحفلة</h2><a class="btn secondary" href="#/events-list">رجوع</a></div><div class="notice"><strong>تعذّر تحميل لوحة الحفلة</strong><p>${esc(toError(e))}</p></div>`;}
   finally{busy=false;}
@@ -99,7 +105,7 @@ export async function renderEventDetailV034(root,eventId){
  const moneyTicket=v=>fmt(v,priceCurrency());
  const stage=()=>state.event.status==='completed'?5:state.extras.some(x=>x.status==='pending')?4:state.rules.length&&state.tables.length?3:state.tables.length?2:1;
  const badge=stateName=>`<span class="badge ${stateName==='paid'||stateName==='completed'||stateName==='confirmed'?'green':stateName==='pending'?'red':'yellow'}">${esc(statusLabel[stateName]||stateName||'—')}</span>`;
- const tabNames=[['overview','نظرة عامة'],['tables','الطاولات والحجوزات'],['menu','قائمة الضيافة'],['costs','المصاريف والتجهيز'],['extras','فواتير الطاولات والهدر'],['activity','سجل الحفلة'],['report','التقرير الختامي']];
+ const tabNames=[['tables','① تجهيز الطاولات'],['menu','② مكونات الضيافة'],['costs','③ التكاليف العامة'],['bookings','④ الحجوزات'],['extras','⑤ فواتير وهدر'],['report','⑥ التقرير المالي'],['activity','سجل الحفلة'],['overview','نظرة عامة']];
  function paint(){
   const q=quote(),a=actual(),e=state.event;
   const pendingExtras=state.extras.filter(x=>x.status==='pending');
@@ -132,6 +138,7 @@ export async function renderEventDetailV034(root,eventId){
  }
  function tabHtml(){
   if(tab==='tables')return tablesHtml();
+  if(tab==='bookings')return bookingsHtml();
   if(tab==='menu')return menuHtml();
   if(tab==='costs')return costsHtml();
   if(tab==='extras')return extrasHtml();
@@ -177,26 +184,30 @@ export async function renderEventDetailV034(root,eventId){
   const e=state.event,readOnly=!editing(),q=quote();
   const active=state.tables.filter(t=>t.status!=='cancelled');
   const activeSeats=active.reduce((sum,t)=>sum+num(t.capacity),0);
-  const assigned=active.reduce((sum,t)=>sum+num(t.planned_guest_count),0);
-  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>مخطط الطاولات والمقاعد</h3><p>افتح طاولة جديدة أو غيّر عدد ضيوفها، فتتغير كميات الصحون المشتركة وتكلفة الحفلة.</p></div>${!readOnly?'<button class="btn" data-action="add-table">+ إضافة طاولة</button>':''}</div>
-   <div class="event-table-stats-v034"><span>🪑 الطاقة الكلية: <strong>${activeSeats}</strong> كرسي</span><span>👥 الموزع: <strong>${assigned}</strong> ضيف</span><span>🍽 تكلفة الطعام لكل شخص: <strong>${q.count?moneyBase(q.food/q.count):'—'}</strong></span></div>
+  const assigned=active.reduce((sum,t)=>sum+(t.booking_id?num(t.planned_guest_count):0),0);
+  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>مخطط الطاولات والمقاعد</h3><p>افتح طاولة جديدة أو غيّر عدد ضيوفها، فتتغير كميات الصحون المشتركة وتكلفة الحفلة.</p></div>${!readOnly?'<button class="btn" data-action="add-bulk">+ إنشاء طاولات دفعة واحدة</button><button class="btn secondary" data-action="add-table">+ طاولة منفردة</button>':''}</div>
+   <div class="event-table-stats-v034"><span>🪑 الطاقة الكلية: <strong>${activeSeats}</strong> كرسي</span><span>👥 المحجوز: <strong>${assigned}</strong> ضيف</span><span>🍽 تكلفة الطعام لكل شخص: <strong>${q.count?moneyBase(q.food/q.count):'—'}</strong></span></div>
    ${active.length?`<div class="event-seat-map-v034">${active.map(t=>{
-    const f=tableFoodCost(t),occupancy=num(t.planned_guest_count),capacity=num(t.capacity),due=state.extras.filter(x=>String(x.table_id)===String(t.id)&&x.status==='pending').reduce((a,x)=>a+num(x.amount_original),0);
+    const f=tableFoodCost(t),occupancy=t.booking_id?num(t.planned_guest_count):0,capacity=num(t.capacity),due=state.extras.filter(x=>String(x.table_id)===String(t.id)&&x.status==='pending').reduce((a,x)=>a+num(x.amount_original),0);
     const count=Math.min(18,capacity),seats=Array.from({length:count},(_,i)=>`<span class="${i<occupancy?'filled':'empty-seat'}" title="${i<occupancy?'مقعد مستخدم':'مقعد شاغر'}">●</span>`).join('');
     return `<article class="event-table-card-v034 ${due?'has-due':''}">
-     <div class="event-table-card-title-v034"><div><strong>${esc(t.table_label)}</strong><small>${esc(statusLabel[t.status]||t.status||'طاولة')}</small></div><button type="button" class="mini-btn" data-table-edit="${esc(t.id)}" ${readOnly?'disabled':''}>تعديل</button></div>
-     <div class="event-table-illustration-v034"><div class="event-table-disc-v034">${esc(occupancy)} / ${esc(capacity)}</div><div class="event-seat-dots-v034">${seats}</div></div>
+     <div class="event-table-card-title-v034"><div><strong>${esc(t.table_label)}</strong><small>${esc(statusLabel[t.status]||t.status||'طاولة')}</small></div><button type="button" class="mini-btn event-action-v035" data-table-edit="${esc(t.id)}" ${readOnly?'disabled':''}>تعديل</button></div>
+     <div class="event-table-illustration-v034"><div class="event-table-disc-v034">${esc(occupancy)} / ${esc(capacity)}</div><div class="event-seat-dots-v034">${seats}</div><small>مخطط للضيافة: ${esc(t.planned_guest_count||0)} ضيف</small></div>
      <div class="event-table-numbers-v034"><span>تكلفة طعام الطاولة</span><strong>${moneyBase(f.cost)} ${f.missing?'⚠':''}</strong></div>
      <div class="event-table-numbers-v034"><span>طعام لكل ضيف</span><strong>${occupancy?moneyBase(f.cost/occupancy):'—'}</strong></div>
      <div class="event-table-numbers-v034"><span>فاتورة خارج الباقة</span><strong class="${due?'payroll-danger-v034':''}">${moneyTicket(due)}</strong></div>
-     <div class="event-table-actions-v034">${!readOnly?`<button class="mini-btn" data-table-book="${esc(t.id)}" ${t.booking_id?'disabled':''}>${t.booking_id?'محجوزة':'حجز'}</button><button class="mini-btn" data-table-extra="${esc(t.id)}">+ طلب إضافي</button>`:''}<button class="mini-btn" data-table-invoice="${esc(t.id)}">كشف الطاولة ↗</button><button class="mini-btn" data-tab-switch="extras">الفواتير</button></div>
+     <div class="event-table-actions-v034">${!readOnly?`<button class="mini-btn event-action-v035 primary" data-table-book="${esc(t.id)}" ${t.booking_id?'disabled':''}>${t.booking_id?'محجوزة':'حجز'}</button><button class="mini-btn event-action-v035 accent" data-table-extra="${esc(t.id)}">+ طلب إضافي</button>`:''}<button class="mini-btn event-action-v035" data-table-invoice="${esc(t.id)}">كشف الطاولة ↗</button><button class="mini-btn event-action-v035" data-tab-switch="extras">الفواتير</button></div>
     </article>`;
    }).join('')}</div>`:empty('أضف أول طاولة لتظهر خريطة المقاعد.')}
-   <p class="metric-note">تكلفة طعام الطاولة تعتمد على حصصها فقط؛ الفرقة والمصاريف العامة تُوزع عند حساب إجمالي تكلفة الشخص. يظهر تحذير عند فقد وصفة أو سعر مادة.</p></section>
-  <section class="card finance-section"><div class="finance-section-head"><div><h3>حجوزات الضيوف والتحصيل</h3><p>الحجز يثبت إيرادًا متوقعًا؛ لا يظهر نقد في الصندوق حتى تضغط «تحصيل».</p></div>${!readOnly?'<button class="btn secondary" data-action="add-booking">+ حجز</button>':''}</div>
+   <p class="metric-note">تكلفة طعام الطاولة تعتمد على حصصها فقط؛ الفرقة والمصاريف العامة تُوزع عند حساب إجمالي تكلفة الشخص. يظهر تحذير عند فقد وصفة أو سعر مادة.</p></section>`;
+ }
+ function bookingsHtml(){
+  const readOnly=!editing();
+  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>الحجوزات وتوزيع الأسماء</h3><p>حجز واحد لشخص أو مجموعة، وتوزيعه على طاولة أو طاولتين متجاورتين عند الحاجة.</p></div>${!readOnly?'<button class="btn" data-action="add-booking">+ حجز جديد</button>':''}</div>
+<p class="metric-note">الحجز يثبت إيرادًا متوقعًا فقط؛ لا يظهر نقد في الصندوق حتى تضغط «تحصيل».</p>
   ${state.bookings.length?`<div class="table-wrap"><table class="table event-booking-table-v034"><thead><tr><th>الحجز</th><th>عدد الأشخاص</th><th>الطاولة</th><th>القيمة المتفق عليها</th><th>المقبوض</th><th>المتبقي</th><th>الحالة</th><th>تحصيل</th></tr></thead><tbody>
-   ${state.bookings.map(b=>{const balance=state.bookingBalances.find(x=>x.booking_id===b.id)||{},assignedTable=state.tables.find(t=>t.booking_id===b.id),due=num(balance.balance_original);
-    return `<tr><td><strong>${esc(b.customer_name)}</strong><small>${esc(b.customer_phone||'—')}</small></td><td>${esc(b.guest_count)}</td><td>${esc(assignedTable?.table_label||'بدون طاولة')}</td>
+   ${state.bookings.map(b=>{const balance=state.bookingBalances.find(x=>x.booking_id===b.id)||{},assignedTables=state.tables.filter(t=>t.booking_id===b.id),due=num(balance.balance_original);
+    return `<tr><td><strong>${esc(b.customer_name)}</strong><small>${esc(b.customer_phone||'—')}</small><small>${esc(state.guests.filter(g=>g.booking_id===b.id).map(g=>g.guest_name).join('، ')||'حجز قديم دون أسماء مفصلة')}</small></td><td>${esc(b.guest_count)}</td><td>${esc(assignedTables.map(t=>t.table_label).join(' + ')||'بدون طاولة')}</td>
     <td>${fmt(b.agreed_amount_original,b.currency_code)}</td><td>${fmt(balance.paid_original||0,b.currency_code)}</td><td><strong class="${due>0?'payroll-danger-v034':''}">${fmt(due,b.currency_code)}</strong></td><td>${esc(b.status||'حجز')}</td><td><button class="mini-btn" data-book-pay="${esc(b.id)}" ${!editing()||due<=0?'disabled':''}>تحصيل</button></td></tr>`;
    }).join('')}</tbody></table></div>`:empty('لا توجد حجوزات مسجلة. يمكن تسجيل حجز لطاولة واحدة أو لمجموعة.')}</section>`;
  }
@@ -254,6 +265,15 @@ export async function renderEventDetailV034(root,eventId){
     <div class="card"><div class="metric-label">النتيجة ${final?'النهائية':'المؤقتة'}</div><div class="metric-value ${a.profit<0?'payroll-danger-v034':''}">${moneyBase(a.profit)}</div></div>
     <div class="card"><div class="metric-label">تكلفة الشخص الفعلية / المقدّرة</div><div class="metric-value">${a.costPerPerson==null?'—':moneyBase(a.costPerPerson)}</div><small>حسب عدد الحضور ${a.guests||'غير مسجل'}</small></div>
    </div>
+   <section class="card finance-section"><h3>إحصاءات الحجوزات والمقاعد</h3>
+    <div class="grid cols-4 event-final-kpis-v034">
+    <div class="card"><div class="metric-label">عدد الحجوزات</div><div class="metric-value">${state.bookings.filter(b=>!['cancelled','no_show'].includes(b.status)).length}</div></div>
+    <div class="card"><div class="metric-label">مقاعد محجوزة</div><div class="metric-value">${state.tables.filter(t=>t.booking_id).reduce((v,t)=>v+num(t.planned_guest_count),0)} / ${state.tables.filter(t=>t.status!=='cancelled').reduce((v,t)=>v+num(t.capacity),0)}</div></div>
+    <div class="card"><div class="metric-label">محصّل من الحجوزات (${esc(priceCurrency())})</div><div class="metric-value">${moneyTicket(state.bookingBalances.filter(b=>!['cancelled','no_show'].includes(b.booking_status)).reduce((v,b)=>v+num(b.paid_original),0))}</div></div>
+    <div class="card"><div class="metric-label">متبقٍ من الحجوزات (${esc(priceCurrency())})</div><div class="metric-value ${a.bookingDue>0?'payroll-danger-v034':''}">${moneyTicket(a.bookingDue)}</div></div></div>
+    <p class="metric-note">هذه مبالغ قبض الحجوزات بعملة الحفلة، وليست نفس رقم الإيراد المكتسب بعملة الأساس. الفواتير الإضافية والهدر والمصاريف تظهر أيضًا في أقسامها وفي مقارنة الميزانية.</p>
+    <div class="event-today-actions-v034"><button class="btn secondary" data-nav="bookings">الحجوزات والأسماء ←</button><button class="btn secondary" data-nav="extras">الفواتير والهدر ←</button><button class="btn secondary" data-nav="costs">المصاريف والفرقة ←</button></div>
+   </section>
    <section class="card finance-section"><div class="finance-section-head"><div><h3>مقارنة الميزانية بالواقع</h3><p>يمكن تصدير هذا الكشف كاملًا Excel أو PDF لمراجعته بعد كل حفلة.</p></div></div>
     <div class="table-wrap"><table class="table event-report-table-v034"><thead><tr><th>البند</th><th>المخطط (عملة الأساس)</th><th>الفعلي/المسجل</th><th>التفسير</th></tr></thead><tbody>
      <tr><td>تكلفة الطعام</td><td>${moneyBase(q.food)}</td><td>${moneyBase(state.summary.included_food_cost_base??state.summary.estimated_actual_included_food_cost_base)}</td><td>${final?'تكلفة تاريخية مرحلة':'تقدير حسب القائمة حتى الإقفال'}</td></tr>
@@ -321,6 +341,13 @@ export async function renderEventDetailV034(root,eventId){
    }
   });
  }
+ function openBulkTables(){
+  const active=state.tables.filter(t=>t.status!=='cancelled');
+  modal({title:'تجهيز هيكل الحفلة دفعة واحدة',subtitle:'حدّد عدد الطاولات والكراسي لكل طاولة؛ ستظهر جميعها في المخطط فور الحفظ.',submitText:'إنشاء الطاولات',
+   body:`<div class="form-grid"><div class="field"><label>عدد الطاولات</label><input name="count" type="number" min="1" max="200" value="10" required></div><div class="field"><label>الكراسي في كل طاولة</label><input name="capacity" type="number" min="1" max="100" value="8" required></div><div class="field"><label>بادئة اسم الطاولة</label><input name="prefix" maxlength="30" value="طاولة" required></div><div class="field"><label>رقم أول طاولة</label><input name="start" type="number" min="1" max="10000" value="${active.length?Math.max(...active.map(t=>Number((t.table_label||'').match(/\d+$/)?.[0])||0))+1:1}" required></div></div><div class="notice green">تُضاف جميع الطاولات في عملية واحدة. لا تُنشأ حجوزات أو فواتير، ويمكن تعديل كل طاولة لاحقًا.</div>`,
+   onSubmit:async fd=>{const n=Number(fd.get('count')),cap=Number(fd.get('capacity')),start=Number(fd.get('start'));if(!Number.isInteger(n)||n<1||n>200||!Number.isInteger(cap)||cap<1||cap>100||!Number.isInteger(start)||start<1){toast('راجع عدد الطاولات والكراسي والرقم الأول.','error');return false;}return commit(()=>api.eventBulkTablesV035(eventId,n,cap,fd.get('prefix'),start),'تم تجهيز مخطط الحفلة بالكامل.');}
+  });
+ }
  function openTable(row=null){
   const editingRow=Boolean(row);
   modal({title:editingRow?`تعديل ${row.table_label}`:'إضافة طاولة إلى المخطط',subtitle:'عدد الضيوف الفعلي يساعدك على معرفة تكلفة الشخص بدقة أثناء الحفلة.',submitText:editingRow?'حفظ الطاولة':'إضافة الطاولة',
@@ -358,23 +385,22 @@ export async function renderEventDetailV034(root,eventId){
   type.addEventListener('change',sync);sync();
  }
  function openBooking(table=null){
-  const available=state.tables.filter(t=>t.status!=='cancelled'&&!t.booking_id);
-  const tableChoices=[['','بدون طاولة حتى الآن'],...available.map(t=>[t.id,`${t.table_label} · ${t.capacity} كراسي`])];
-  const dlg=modal({title:'تسجيل حجز حفلة',subtitle:'المبلغ هو إجمالي قيمة الحجز المتفق عليها، وليس سعر التذكرة الواحدة.',submitText:'تثبيت الحجز',
-   body:`<div class="form-grid"><div class="field full"><label>اسم صاحب الحجز</label><input name="name" maxlength="150" required></div>
-     <div class="field"><label>رقم الهاتف (اختياري)</label><input name="phone" type="tel" maxlength="40"></div>
-     <div class="field"><label>الطاولة</label><select name="table">${opts(tableChoices,table?.id||'')}</select></div>
-     <div class="field"><label>عدد الأشخاص</label><input name="guests" type="number" min="1" step="1" max="1000" value="${esc(table?.planned_guest_count||1)}" required></div>
-     <div class="field"><label>إجمالي قيمة الحجز (${esc(priceCurrency())})</label><input name="amount" type="number" min="0" step="any" value="${esc(num(state.event.default_price_original)*(num(table?.planned_guest_count)||1))}" required></div>
-     <div class="field full"><label>ملاحظات الحجز</label><textarea name="note" maxlength="500" rows="2" placeholder="مثال: طاولة قرب المسرح، حساسية غذائية"></textarea></div></div>
-     <p class="metric-note">بعد إنشاء الحجز سيظهر رصيده هنا. اضغط تحصيل عندما تستلم المال؛ لا يتم سحب نقد من الصندوق تلقائيًا.</p>`,
-   onSubmit:async fd=>commit(()=>api.eventCreateBookingV034(eventId,{tableId:fd.get('table'),name:fd.get('name'),phone:fd.get('phone'),guests:fd.get('guests'),amount:fd.get('amount'),note:fd.get('note')}),'تم حفظ الحجز وإضافته لكشف التحصيل.')
+  const available=state.tables.filter(t=>t.status!=='cancelled'&&!t.booking_id).sort((a,b)=>Number(a.display_order||0)-Number(b.display_order||0)||a.table_label.localeCompare(b.table_label,'ar',{numeric:true}));
+  if(!available.length){toast('لا توجد طاولات متاحة. جهّز طاولات جديدة أولًا.','error');return;}
+  const initial=table&&available.find(t=>t.id===table.id)||available[0];
+  const dlg=modal({title:'حجز طاولة أو مجموعة',subtitle:'ابدأ باسم الضيف وعدد الأشخاص؛ سيقترح النظام توزيعًا على الطاولات المجاورة.',submitText:'تأكيد الحجز وتوزيع الضيوف',
+   body:`<div class="form-grid"><div class="field full"><label>صاحب الحجز</label><input name="name" maxlength="150" required placeholder="مثال: زياد"></div><div class="field"><label>الهاتف (اختياري)</label><input name="phone" type="tel" maxlength="40"></div><div class="field"><label>عدد الأشخاص</label><input name="guests" type="number" min="1" max="1000" value="1" required></div><div class="field full"><label>الطاولة الأولى</label><select name="table" required>${opts(available.map(t=>[t.id,`${t.table_label} · متاح ${t.capacity} كراسي`]),initial.id)}</select></div>
+   <div class="field full"><label>توزيع المجموعة على الطاولات</label><div class="event-booking-suggestion-v035" data-suggest></div></div>
+   <div class="field full"><label>أسماء الأشخاص (اختياري، اسم لكل سطر)</label><textarea name="names" rows="4" placeholder="زياد&#10;محمد&#10;أحمد"></textarea><small class="hint">إذا أدخلت اسم صاحب الحجز فقط، تصبح الأسماء الأخرى: مع زياد 1، مع زياد 2... ويمكنك تعديلها.</small></div>
+   <div class="field"><label>القيمة الإجمالية للحجز (${esc(priceCurrency())})</label><input name="amount" type="number" min="0" step="any" value="${num(state.event.default_price_original)}" required></div>
+   <div class="field full"><label>ملاحظة</label><textarea name="note" rows="2" maxlength="500"></textarea></div></div><p class="metric-note">الحجز لا يثبت حركة نقدية حتى تضغط تحصيل. لا نسمح بتجاوز سعة الطاولات.</p>`,
+   onSubmit:async fd=>{const count=Number(fd.get('guests'));const allocation=pickAllocation(fd.get('table'),count);if(!allocation.ok){toast(allocation.reason,'error');return false;}const name=String(fd.get('name')||'').trim();const names=String(fd.get('names')||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(names.length>count){toast('عدد الأسماء أكبر من عدد الكراسي في الحجز.','error');return false;}if(names[0]!==name)names.unshift(name);if(names.length>count){toast('اكتب أسماء المرافقين فقط، أو اسم صاحب الحجز أولًا، بحيث لا يتجاوز العدد عدد الضيوف.','error');return false;}const result=await commit(()=>api.eventGroupBookingV035(eventId,{name,guests:count,allocations:allocation.rows,names,phone:fd.get('phone'),amount:fd.get('amount'),note:fd.get('note')}),'تم حجز المقاعد وحفظ أسماء الضيوف.');if(result)tab='bookings';return result;}
   });
-  const guests=dlg.form.elements.namedItem('guests'),amount=dlg.form.elements.namedItem('amount'),tableField=dlg.form.elements.namedItem('table');
-  let edited=false;
-  amount.addEventListener('input',()=>{edited=true;});
-  guests.addEventListener('input',()=>{if(!edited)amount.value=String(num(guests.value)*num(state.event.default_price_original));});
-  tableField.addEventListener('change',()=>{const t=state.tables.find(t=>t.id===tableField.value);if(t){guests.value=String(t.planned_guest_count);if(!edited)amount.value=String(num(guests.value)*num(state.event.default_price_original));}});
+  const guests=dlg.form.elements.namedItem('guests'),amount=dlg.form.elements.namedItem('amount'),tableField=dlg.form.elements.namedItem('table'),suggest=dlg.form.querySelector('[data-suggest]');
+  let edited=false;amount.addEventListener('input',()=>edited=true);
+  const sync=()=>{const count=Number(guests.value);const proposal=pickAllocation(tableField.value,count);suggest.innerHTML=proposal.ok?`<strong>✓ ${proposal.rows.map(r=>{const t=available.find(x=>x.id===r.table_id);return esc(t?.table_label||'')+' · '+r.guests+' أشخاص';}).join(' + ')}</strong><p>المقاعد تكفي للمجموعة. ${proposal.rows.length>1?'الاقتراح حسب ترتيب أرقام الطاولات؛ تأكد من تجاورها الفعلي في القاعة.':''}</p>`:`<strong class="payroll-danger-v034">⚠ ${esc(proposal.reason)}</strong>`;if(!edited)amount.value=String(Math.max(0,count)*num(state.event.default_price_original));};
+  const pickAllocation=(tableId,count)=>proposeEventAllocationV035(state.tables,tableId,count);
+  guests.addEventListener('input',sync);tableField.addEventListener('change',sync);sync();
  }
  function payBooking(booking){
   const r=state.bookingBalances.find(b=>b.booking_id===booking.id),due=num(r?.balance_original),activeBox=box();
@@ -470,6 +496,7 @@ export async function renderEventDetailV034(root,eventId){
   emit('[data-tab-switch]',el=>{tab=el.dataset.tabSwitch;paint();});
   emit('[data-action="open-plan"]',openPlan);
   emit('[data-action="add-table"]',()=>openTable());
+  emit('[data-action="add-bulk"]',openBulkTables);
   emit('[data-table-edit]',el=>openTable(state.tables.find(x=>String(x.id)===el.dataset.tableEdit)));
   emit('[data-table-book]',el=>openBooking(state.tables.find(x=>String(x.id)===el.dataset.tableBook)));
   emit('[data-table-extra]',el=>openExtra(state.tables.find(x=>String(x.id)===el.dataset.tableExtra)));
@@ -497,8 +524,8 @@ export async function renderEventDetailV034(root,eventId){
    rows:state.requirements.map(r=>[r.menu_item_name,EVENT_RULE_NAMES_V034[r.rule_type],r.quantity_per_rule,r.required_quantity,r.unit_food_cost_base??'تكلفة غير مكتملة',r.estimated_food_cost_base??'تكلفة غير مكتملة'])}));
   const bookingTable=root.querySelector('.event-booking-table-v034');
   if(bookingTable)registerTableExport(bookingTable,()=>({title:`حجوزات ${state.event.name}`,
-   headers:['الاسم','الهاتف','عدد الأشخاص','الطاولة','المتفق عليه','المدفوع','المتبقي','العملة'],
-   rows:state.bookings.map(b=>{const ba=state.bookingBalances.find(z=>z.booking_id===b.id)||{};return [b.customer_name,b.customer_phone||'',b.guest_count,state.tables.find(t=>t.booking_id===b.id)?.table_label||'',b.agreed_amount_original,ba.paid_original||0,ba.balance_original||0,b.currency_code];})}));
+   headers:['الاسم','الهاتف','عدد الأشخاص','أسماء المقاعد','الطاولات','المتفق عليه','المدفوع','المتبقي','العملة'],
+   rows:state.bookings.map(b=>{const ba=state.bookingBalances.find(z=>z.booking_id===b.id)||{};return [b.customer_name,b.customer_phone||'',b.guest_count,state.guests.filter(g=>g.booking_id===b.id).map(g=>g.guest_name).join('، '),state.tables.filter(t=>t.booking_id===b.id).map(t=>t.table_label).join(' + '),b.agreed_amount_original,ba.paid_original||0,ba.balance_original||0,b.currency_code];})}));
   const extraTable=root.querySelector('.event-extra-table-v034');
   if(extraTable)registerTableExport(extraTable,()=>({title:`فواتير الطاولات ${state.event.name}`,
    headers:['الطاولة','الوصف','الكمية','سعر الوحدة','الإجمالي','التكلفة الإجمالية (الأساس)','العملة','الحالة','الملاحظات'],

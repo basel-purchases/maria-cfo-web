@@ -36,8 +36,8 @@ RETURNS TABLE(payment_id uuid,employee_id uuid,employee_name text,paid_at timest
  amount_original numeric,bonus_original numeric,manual_deduction_original numeric,
  advance_deduction_original numeric,cashbox_id uuid,note text)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
- SELECT pp.id,pp.employee_id,pi.employee_name_snapshot,pp.occurred_at,
- pr.period_start,pr.period_end,
+ SELECT pp.id AS payment_id,pp.employee_id,pi.employee_name_snapshot AS employee_name,
+ pp.occurred_at AS paid_at,pr.period_start,pr.period_end,
  CASE WHEN pr.note LIKE 'MARIA_DAILY_V014:%' THEN 'daily' ELSE pi.pay_type_snapshot END,
  pp.currency_code,pp.amount_original,pi.bonus_original,pi.manual_deduction_original,
  pi.advance_deduction_original,pp.cashbox_id,pp.note

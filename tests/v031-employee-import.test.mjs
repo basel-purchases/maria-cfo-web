@@ -51,7 +51,7 @@ test('UI fifth type has preview, routing to employee RPC, history and employee d
  assert.match(ui,/راتب شهري/);
  assert.match(page,/residence_v031/);
  assert.match(page,/mobile_phone_v031/);
- assert.match(app,/Web v0\.(?:31|32|33|34)/);
+ assert.match(app,/Web v0\.(?:31|32|33|34|35)/);
 });
 test('safe atomic backend migration keeps prior four paths and protects salary financial ledger',()=>{
  const sql=src('database/Maria-CFO-Web-v0.31-Employee-Quick-Import.sql');

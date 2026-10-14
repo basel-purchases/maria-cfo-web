@@ -1240,3 +1240,8 @@ export const eventActivityV034=id=>list('event_activity_v034',{eq:{event_id:id},
 export const eventRecordActivityV034=(id,type,description)=>rpc('record_event_activity_v034',{
  p_event_id:id,p_activity_type:type,p_description:description,
 });
+
+// v0.35 - atomic bulk seating and named multi-table bookings
+export const eventBulkTablesV035=(id,count,capacity,prefix='طاولة',start=1)=>rpc('event_bulk_tables_v035',{p_event_id:id,p_count:Number(count),p_capacity:Number(capacity),p_prefix:prefix,p_start:Number(start)});
+export const eventGroupBookingV035=(id,data)=>rpc('event_group_booking_v035',{p_event_id:id,p_customer_name:data.name,p_guest_count:Number(data.guests),p_amount:Number(data.amount),p_allocations:data.allocations,p_guest_names:data.names||[],p_phone:data.phone||null,p_note:data.note||null});
+export const eventGuestsV035=id=>list('event_booking_guests_v035',{eq:{event_id:id},limit:2000});
