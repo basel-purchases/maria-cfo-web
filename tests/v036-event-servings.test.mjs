@@ -69,9 +69,11 @@ test('migration uses canonical event rule for recipe pricing and inventory and p
  assert.match(sql,/ON DELETE CASCADE/);assert.match(sql,/UNIQUE\(menu_item_id,serving_label\)/);
  assert.doesNotMatch(sql,/INSERT INTO public\.inventory_movements/);
 });
-test('composed plate is visible, editable and exported with ingredient portions',()=>{
+test('legacy main plate is preserved and becomes one of multiple named groups',()=>{
  const ui=read('js/pages/events-v034.js');
- assert.match(ui,/data-action=\\?"add-main-plate/);assert.match(ui,/data-action=\\?"add-plate-component/);
- assert.match(ui,/data-action=\\?"delete-main-plate/);assert.match(ui,/eventSaveServingV036/);
- assert.match(ui,/إجمالي وجبات المنيو اللازمة/);assert.match(ui,/كم نقدم في كل مرة؟/);
+ assert.match(ui,/data-action="add-event-group/);
+ assert.match(ui,/data-group-add/);assert.match(ui,/data-group-edit/);assert.match(ui,/data-group-delete/);
+ assert.match(ui,/eventSaveServingV037/);
+ assert.match(ui,/إجمالي وجبات المنيو اللازمة/);
+ assert.match(ui,/كم نقدم في كل مرة؟/);
 });

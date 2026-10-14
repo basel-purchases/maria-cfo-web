@@ -1260,3 +1260,19 @@ export const eventSaveServingV036=(eventId,input)=>rpc('save_event_serving_v036'
  p_serving_label:input.servingLabel,p_unit_id:input.unitId||null,
  p_servings_per_menu_item:Number(input.servingsPerMenuItem),p_plate_id:input.plateId||null,
 });
+
+// v0.37: arbitrary named hospitality groups and atomic serving-unit shortcuts.
+export const eventGroupsV037=id=>list('event_main_plates_v036',{eq:{event_id:id},order:'created_at',ascending:true,limit:200});
+export const eventSaveGroupV037=(eventId,groupId,name)=>rpc('save_event_group_v037',{p_event_id:eventId,p_group_id:groupId||null,p_name:name});
+export const eventDeleteGroupV037=(eventId,groupId)=>rpc('delete_event_group_v037',{p_event_id:eventId,p_group_id:groupId});
+export const eventSaveServingV037=(eventId,input)=>rpc('save_event_group_serving_v037',{
+ p_event_id:eventId,p_rule_id:input.id||null,p_menu_item_id:input.menuItemId,
+ p_rule_type:input.type,p_servings:Number(input.servings),
+ p_people:input.type==='per_n_people'?Number(input.people):null,
+ p_serving_label:input.servingLabel,p_unit_id:input.unitId||null,
+ p_servings_per_menu_item:Number(input.servingsPerMenuItem),p_group_id:input.plateId||null,
+});
+export const eventCreateServingUnitV037=(menuItemId,input)=>rpc('create_event_serving_unit_v037',{
+ p_menu_item_id:menuItemId,p_label:String(input.name||'').trim(),p_yield:Number(input.yieldCount),
+ p_material_id:input.materialId||null,p_quantity_in_base:input.materialId?Number(input.quantityInBase):null,
+});
