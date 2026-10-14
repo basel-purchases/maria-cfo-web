@@ -78,5 +78,5 @@ test('bonus management is wired through the existing payroll adjustment engine',
  assert.doesNotMatch(sql,/INSERT\s+INTO\s+public\.(?:cashbox_transactions|payroll_payments|expenses)/i);
  assert.match(app,/case 'bonuses': return renderBonusesV032\(root\)/);
  assert.match(hub,/#\/bonuses/);
- assert.match(app,/Web v0\.(?:33|34|35)/);
+ assert.match(app,/Web v0\.(?:33|34|35|36)/);
 });

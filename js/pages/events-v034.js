@@ -1,9 +1,10 @@
-import * as api from '../api.js?v=0.35';
+import * as api from '../api.js?v=0.36';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.33';
 import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
 import {registerTableExport} from '../table-export-v027.js?v=0.33';
 import {EVENT_RULE_NAMES_V034,eventCostQuoteV034,eventActualResultV034} from '../event-cost-v034.js?v=0.34';
 import {proposeEventAllocationV035} from '../event-seating-v035.js?v=0.35';
+import {menuEquivalentV036,portionPreviewV036,conversionHintsV036,platePerGuestV036,SERVING_RULE_NAMES_V036} from '../portion-servings-v036.js?v=0.36';
 
 const fmt=(v,c='SYP')=>money(Number(v)||0,c);
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -16,6 +17,12 @@ const toError=e=>{
  const s=String(e?.message||'');
  const errors={
  EVENT_BULK_INVALID:'تأكد من عدد الطاولات والكراسي.',
+ EVENT_SERVING_AMOUNT_INVALID:'أدخل عدد الحصص في التقديم وعدد الحصص الناتجة من وجبة المنيو بشكل صحيح.',
+ EVENT_PORTION_PRECISION:'هذه الكمية أصغر من دقة النظام (0.0001 وجبة) أو غير قابلة للتمثيل بدقة كافية. غيّر التحويل.',
+ EVENT_SERVING_UNIT_INVALID:'وحدة التقديم المختارة غير متاحة. حدّد وحدة أخرى.',
+ EVENT_PLATE_COMPONENT_INVALID:'مكونات الصحن الرئيسي يجب أن تكون لكل شخص، وتتبع هذه الحفلة.',
+ EVENT_PLATE_NOT_FOUND:'الصحن الرئيسي لم يعد موجودًا. حدّث الصفحة.',
+ EVENT_PLATE_NAME_INVALID:'اكتب اسمًا واضحًا للصحن الرئيسي.',
  EVENT_GROUP_COUNT_MISMATCH:'عدد المقاعد الموزعة لا يطابق عدد الضيوف.',
  EVENT_GROUP_TABLE_DUPLICATE:'لا يمكن وضع الطاولة نفسها مرتين في حجز واحد.',
  EVENT_GROUP_BOOKING_INVALID:'راجع بيانات الحجز وعدد الأشخاص.',
@@ -35,6 +42,7 @@ const toError=e=>{
  REASON_REQUIRED:'يرجى كتابة سبب واضح لا يقل عن ثلاثة أحرف.',
  };
  for(const [k,v] of Object.entries(errors))if(s.includes(k))return v;
+ if(s.includes('event_serving_rules_v036')||s.includes('event_main_plates_v036')||s.includes('menu_serving_conversions_v036')||s.includes('save_event_serving_v036')||s.includes('save_event_main_plate_v036'))return 'شغّل تحديث SQL v0.36 في Supabase ثم حدّث الصفحة لتفعيل حصص الضيافة والصحن الرئيسي.';
  if(s.includes('PGRST202')||s.includes('event_extras_v034')||s.includes('event_planner_settings_v034')||s.includes('event_activity_v034'))return 'يلزم تطبيق ملف SQL للإصدار v0.34 على Supabase قبل استخدام إدارة الحفلات.';
  return friendlyError(e,s||'حدث خطأ غير متوقع');
 };
@@ -70,17 +78,18 @@ export async function renderEventDetailV034(root,eventId){
  const reload=async()=>{
   if(busy)return;busy=true;root.innerHTML=loader();
   try{
-   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity,guests]=await Promise.all([
+   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity,guests,mainPlate,servingRules,servingConversions,menuSaleUnits]=await Promise.all([
     api.eventV034(eventId),api.eventTablesV034(eventId),api.eventMenuRulesV034(eventId),
     api.eventMenuRequirementsV034(eventId),api.eventTableMenuV034(eventId),api.menuCostsV034(),
     api.eventCostItemsV034(eventId),api.eventCostComparisonV034(eventId),api.eventLaborV034(eventId),
     api.eventSummaryV034(eventId),api.eventBookings(eventId),api.eventBookingBalancesV034(eventId),
     api.eventExtrasV034(eventId),api.eventWasteV034(eventId),api.cashboxes(),
     api.eventExpenseEntriesV034(eventId),api.eventPlannerV034(eventId),api.payrollSettings(),api.eventActivityV034(eventId),api.eventGuestsV035(eventId),
+    api.eventMainPlateV036(eventId),api.eventServingRulesV036(eventId),api.menuServingConversionsV036(),api.eventMenuSaleUnitsV036(),
    ]);
    if(!event)throw Error('EVENT_NOT_FOUND');
    state={event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary:summary||{},bookings,bookingBalances,
-    extras,waste,boxes,expenses,planner,settings,activity,guests};
+    extras,waste,boxes,expenses,planner,settings,activity,guests,mainPlate,servingRules,servingConversions,menuSaleUnits};
    paint();
   }catch(e){root.innerHTML=`<div class="page-head"><h2>الحفلة</h2><a class="btn secondary" href="#/events-list">رجوع</a></div><div class="notice"><strong>تعذّر تحميل لوحة الحفلة</strong><p>${esc(toError(e))}</p></div>`;}
   finally{busy=false;}
@@ -151,7 +160,7 @@ export async function renderEventDetailV034(root,eventId){
   const plannedRevenue=q.revenue,plannedCost=q.total;
   const max=Math.max(plannedRevenue,plannedCost,1);
   const difference=state.tables.filter(t=>t.status!=='cancelled').reduce((s,t)=>s+num(t.planned_guest_count),0)-num(e.planned_guest_count);
-  return `<div class="grid cols-2 event-dashboard-panels-v034"><section class="card"><div class="finance-section-head"><div><h3>تحليل ميزانية الحفلة</h3><p>تفصيل تكلفة الضيافة والفرقة والمصاريف والاحتياط قبل بدء الحفلة.</p></div>${editing()?'<button class="mini-btn" data-action="open-plan">ضبط السعر والهامش</button>':''}</div>
+  return `<div class="grid cols-2 event-dashboard-panels-v034"><section class="card"><div class="finance-section-head"><div><h3>تحليل ميزانية الحفلة</h3><p>تفصيل تكلفة الضيافة والفرقة والمصاريف والاحتياط قبل بدء الحفلة.</p></div>${editing()?'<button class="event-ctrl-v036 subtle" data-action="open-plan">⚙ ضبط السعر والهامش</button>':''}</div>
    <div class="event-budget-row-v034"><span>طعام ومشروبات</span><strong>${moneyBase(q.food)}</strong></div>
    <div class="event-budget-row-v034"><span>مصاريف وتجهيز وفرقة</span><strong>${moneyBase(q.others)}</strong></div>
    <div class="event-budget-row-v034"><span>أجور العمالة</span><strong>${moneyBase(q.labor)}</strong></div>
@@ -213,17 +222,37 @@ export async function renderEventDetailV034(root,eventId){
  }
  function menuHtml(){
   const q=quote();
-  const model=new Map(q.items.map(i=>[String(i.rule.id||i.rule.rule_id),i]));
-  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>قواعد ضيافة الحفلة</h3><p>الوجبة الرئيسية لكل شخص؛ الجاط لكل 4 أشخاص داخل كل طاولة؛ الصحن لكل طاولة؛ أو كمية ثابتة للحفلة.</p></div>${editing()?'<button class="btn" data-action="add-rule">+ صنف من قائمة المطعم</button>':''}</div>
-   ${q.missing?`<div class="notice">⚠ يوجد ${q.missing} صنف بلا تكلفة مكتملة. لن نعتبر الربح دقيقًا حتى تضيف وصفته وأسعار مكوناته في قسم «الوجبات والوصفات».</div>`:''}
-   ${state.requirements.length?`<div class="table-wrap"><table class="table event-menu-table-v034"><thead><tr><th>الصنف</th><th>التقديم</th><th>الكمية لكل توزيع</th><th>عدد الحصص المطلوب</th><th>تكلفة الحصة</th><th>الإجمالي المخطط</th><th>إجراء</th></tr></thead><tbody>
-    ${state.requirements.map(r=>{const item=model.get(String(r.rule_id));return `<tr>
-     <td><strong>${esc(r.menu_item_name)}</strong></td><td>${esc(EVENT_RULE_NAMES_V034[r.rule_type]||r.rule_type)} ${r.rule_type==='per_n_people'?`· كل ${esc(r.people_per_rule)} أشخاص`:''}</td>
-     <td>${esc(r.quantity_per_rule)}</td><td>${esc(r.required_quantity)}</td><td>${item?.unitCost==null?'⚠ غير معروف':moneyBase(item.unitCost)}</td>
-     <td>${item?.totalCost==null?'⚠ غير معروف':moneyBase(item.totalCost)}</td>
-     <td>${editing()?`<button class="mini-btn" data-rule-edit="${esc(r.rule_id)}">تعديل</button> <button class="mini-btn danger-lite" data-rule-delete="${esc(r.rule_id)}">حذف</button>`:'—'}</td></tr>`}).join('')}</tbody></table></div>`:empty('حدد أصناف الضيافة وقاعدة تقديم كل طبق ليحسب البرنامج كميات الطاولات تلقائيًا.')}
-   <div class="event-footnote-v034">مثال دقيق: 8 ضيوف على طاولتين (3 و5). إذا كان جاط التبولة يكفي 4 أشخاص فإن المطلوب جاط + جاطين = 3، وليس جاطين بناءً على إجمالي الـ8.</div>
-   <div class="event-total-line-v034"><span>مجموع تكلفة الضيافة المخططة</span><strong>${moneyBase(q.food)}</strong></div></section>`;
+  const metas=new Map(state.servingRules.map(m=>[String(m.rule_id),m]));
+  const plate=state.mainPlate;
+  const plateRows=plate?state.requirements.filter(r=>String(metas.get(String(r.rule_id))?.main_plate_id||'')===String(plate.id)):[];
+  const regular=state.requirements.filter(r=>!plateRows.some(p=>String(p.rule_id)===String(r.rule_id)));
+  const plateTotal=platePerGuestV036(plateRows,state.menuCosts);
+  const lineTable=(rows,css)=>rows.length?`<div class="table-wrap"><table class="table event-menu-table-v034 ${css}"><thead><tr>
+    <th>الصنف من قائمة المطعم</th><th>طريقة التقديم</th><th>كم نقدّم؟</th><th>إجمالي وجبات المنيو اللازمة</th><th>تكلفة هذا الصنف</th><th>إجراء</th>
+   </tr></thead><tbody>${rows.map(r=>{
+    const meta=metas.get(String(r.rule_id));
+    const method=r.rule_type==='per_n_people'?`كل ${esc(r.people_per_rule)} أشخاص على الطاولة`:(SERVING_RULE_NAMES_V036[r.rule_type]||r.rule_type);
+    const serving=meta?`${esc(meta.servings_per_distribution)} ${esc(meta.serving_label)}`:`${esc(r.quantity_per_rule)} من صنف المنيو`;
+    const ratio=meta&&Number(meta.servings_per_menu_item)!==1?`<small>كل ${esc(meta.servings_per_menu_item)} ${esc(meta.serving_label)} = وجبة من المنيو</small>`:'';
+    const missing=r.has_missing_cost||r.unit_food_cost_base==null;
+    return `<tr class="${missing?'event-menu-incomplete-v036':''}"><td><strong>${esc(r.menu_item_name)}</strong>${missing?'<small>⚠ وصفة أو سعر تكلفة ناقص</small>':''}</td>
+    <td>${method}</td><td><strong>${serving}</strong>${ratio}</td>
+    <td><strong>${esc(r.required_quantity)}</strong><small>بوحدة صنف المنيو الأصلية</small></td>
+    <td>${missing?'<span class="event-cost-missing-v036">⚠ غير مكتملة</span>':`<strong>${moneyBase(r.estimated_food_cost_base)}</strong>`}</td>
+    <td>${editing()?`<div class="event-row-actions-v036"><button type="button" class="event-ctrl-v036 subtle" data-rule-edit="${esc(r.rule_id)}">✎ تعديل</button><button type="button" class="event-ctrl-v036 danger" data-rule-delete="${esc(r.rule_id)}">حذف</button></div>`:'—'}</td></tr>`;
+   }).join('')}</tbody></table></div>`:empty('لم تُضف مكونات هنا بعد.');
+  return `<section class="card finance-section event-host-v036"><div class="finance-section-head event-menu-heading-v036"><div><h3>الضيافة ومكونات الصحن الرئيسي</h3><p>حدد الأصناف والحصص كما تقدمها للضيف؛ يتحول العدد تلقائيًا إلى كمية من وصفة المطعم وتكلفتها.</p></div>
+   ${editing()?'<button type="button" class="event-ctrl-v036 primary" data-action="add-rule">＋ إضافة ضيافة مستقلة</button>':''}</div>
+   <div class="event-guide-v036"><div><span class="event-guide-icon-v036">①</span><strong>اختر صنفًا</strong><small>مثل كيلو كباب مشوي</small></div><div><span class="event-guide-icon-v036">②</span><strong>حدد ما يقدم للضيف</strong><small>مثل سيخين كباب</small></div><div><span class="event-guide-icon-v036">③</span><strong>راجع الحساب</strong><small>الكمية والتكلفة من وصفة المطعم</small></div></div>
+   ${q.missing?`<div class="notice">⚠ هناك ${q.missing} صنف من دون تكلفة وصفة مكتملة؛ لا تعتمد على الربح حتى تستكمل الوصفات وأسعار المواد.</div>`:''}
+   <div class="event-main-plate-v036"><div class="event-main-plate-head-v036"><div><div class="event-kicker-v036">🍽 الصحن الرئيسي المركّب</div><h3>${esc(plate?.name||'جهّز الصحن الرئيسي مرة واحدة')}</h3><p>مثل قطعة كبة + سيخين كباب + سيخ شيش لكل ضيف؛ يظهر كل مكوّن وتكلفته دون إنشاء صنف بيع جديد.</p></div>
+   ${editing()?`<div class="event-main-actions-v036">${plate?`<button type="button" class="event-ctrl-v036 primary" data-action="add-plate-component">＋ إضافة مكوّن للصحن</button><button type="button" class="event-ctrl-v036 subtle" data-action="edit-main-plate">تسمية الصحن</button>`:`<button type="button" class="event-ctrl-v036 primary" data-action="add-main-plate">＋ إنشاء الصحن الرئيسي</button>`}</div>`:''}</div>
+   ${plate?`${lineTable(plateRows,'event-plate-lines-v036')}<div class="event-plate-summary-v036"><span>تكلفة الصحن الرئيسي لكل ضيف</span><strong>${plateTotal.missing?'⚠ تحتاج استكمال تكلفة':moneyBase(plateTotal.total)}</strong><span>لكل ${esc(state.event.planned_guest_count)} ضيف</span><strong>${plateTotal.missing?'غير مكتمل':moneyBase(plateTotal.total*num(state.event.planned_guest_count))}</strong></div>
+    ${editing()?'<button type="button" class="event-ctrl-v036 danger event-delete-plate-v036" data-action="delete-main-plate">حذف الصحن ومكوناته</button>':''}`:
+   '<p class="event-empty-plate-v036">بدل إضافة الكبة والكباب والشيش كأطباق منفصلة، اجمعها هنا كـ«صحن رئيسي» يُقدّم لكل ضيف.</p>'}</div>
+   <div class="event-regular-menu-v036"><div class="event-menu-subhead-v036"><h3>أصناف ضيافة أخرى</h3><small>تبولة لكل أربعة ضيوف، موالح لكل شخصين، ومقبلات لكل طاولة</small></div>${lineTable(regular,'event-extra-lines-v036')}</div>
+   <div class="event-footnote-v034">لتوضيح الأعداد: «2 سيخ لكل ضيف» مع «10 أسياخ في كيلو المنيو» تعني 0.2 من وجبة الكيلو للشخص. عند 80 ضيفًا تصبح 16 وجبة كيلو. تعتمد التكلفة على وصفة الكيلو الموجودة في البرنامج. الأصناف المشتركة تُقرّب لكل طاولة على حدة.</div>
+   <div class="event-total-line-v034"><span>إجمالي تكلفة الضيافة المخططة (الصحن + الضيافة المشتركة)</span><strong>${q.missing?'⚠ تكلفة غير مكتملة':moneyBase(q.food)}</strong></div></section>`;
  }
  function costsHtml(){
   const total=state.costs.filter(c=>c.is_active!==false).reduce((a,c)=>a+num(c.planned_amount_base),0);
@@ -365,24 +394,157 @@ export async function renderEventDetailV034(root,eventId){
    }
   });
  }
- function openRule(row=null){
-  const existing=Boolean(row),menu=state.menuCosts.filter(x=>x.is_active);
-  if(!menu.length){toast('سجّل الأصناف أولًا في قسم الوجبات والوصفات.','error');return;}
-  const menuOptions=opts([['','اختر طبقًا من قائمة المطعم'],...menu.map(i=>[i.id,i.name+(i.has_missing_cost?' · ⚠ تكلفة ناقصة':'')])],row?.menu_item_id||'');
-  const dlg=modal({title:existing?'تعديل قاعدة تقديم':'إضافة صنف إلى ضيافة الحفلة',subtitle:'استفد من وصفاتك الفعلية بدل كتابة تكلفة الطعام يدويًا.',submitText:existing?'حفظ الصنف':'إضافة الصنف',
-   body:`<div class="form-grid"><div class="field full"><label>الصنف</label><select name="item" required>${menuOptions}</select></div>
-    <div class="field"><label>طريقة التقديم</label><select name="type">${opts(Object.entries(EVENT_RULE_NAMES_V034),row?.rule_type||'per_person')}</select></div>
-    <div class="field"><label>عدد الوحدات لكل تقديم</label><input name="quantity" type="number" step="any" min="0.001" value="${esc(row?.quantity_per_rule||1)}" required></div>
-    <div class="field full event-people-field-v034"><label>الصحن الواحد يكفي كم شخصًا داخل الطاولة؟</label><input name="people" type="number" step="1" min="1" value="${esc(row?.people_per_rule||4)}"></div></div>
-    <div class="notice green">مثال: «تبولة، كل 4 أشخاص» = جاط واحد لكل مجموعة من أربعة ضيوف في كل طاولة، مع جبر الكسور إلى جاط كامل.</div>`,
+ function openMainPlate(){
+  modal({title:state.mainPlate?'تعديل اسم الصحن الرئيسي':'تجهيز الصحن الرئيسي',
+   subtitle:'كوّن الصحن من أصناف قائمة المطعم. تُحتسب كل قطعة أو سيخ من وصفة الصنف الأصلية.',
+   submitText:state.mainPlate?'حفظ اسم الصحن':'إنشاء الصحن وإضافة مكوّن',
+   body:`<div class="field"><label>اسم الصحن كما سيظهر في خطة الضيافة</label><input name="name" required maxlength="100" value="${esc(state.mainPlate?.name||'الصحن الرئيسي')}"></div>
+    <div class="notice green">مثال: قطعة كبة + سيخان كباب + سيخ شيش لكل شخص. لا يتكرر احتساب التكلفة عند تجميع المكونات.</div>`,
    onSubmit:async fd=>{
-    if(!fd.get('item')){toast('اختر طبقًا صحيحًا من القائمة.','error');return false;}
-    return commit(()=>api.eventSaveRuleV034(eventId,{id:row?.rule_id,menuItemId:fd.get('item'),type:fd.get('type'),quantity:fd.get('quantity'),people:fd.get('people')}),'تم حفظ توزيع الصنف وإعادة حساب كميات الضيافة.');
+    const addComponent=!state.mainPlate;
+    const ok=await commit(()=>api.eventSaveMainPlateV036(eventId,String(fd.get('name')||'').trim()),'أصبح الصحن الرئيسي جاهزًا لإضافة المكونات.');
+    if(ok&&addComponent)setTimeout(()=>openRule(null,state.mainPlate?.id),0);
+    return ok;
    }
   });
-  const type=dlg.form.elements.namedItem('type'),people=dlg.form.querySelector('.event-people-field-v034');
-  const sync=()=>{people.hidden=type.value!=='per_n_people';people.querySelector('input').required=type.value==='per_n_people';};
-  type.addEventListener('change',sync);sync();
+ }
+ async function openRule(row=null,requestedPlateId=null){
+  const editingRule=Boolean(row);
+  const menu=state.menuCosts.filter(x=>x.is_active);
+  if(!menu.length){toast('أضف صنفًا إلى قائمة المطعم أولًا.','error');return;}
+  const previous=state.servingRules.find(m=>String(m.rule_id)===String(row?.rule_id||''));
+  const plateId=requestedPlateId||previous?.main_plate_id||null;
+  const isPlate=Boolean(plateId);
+  let units=[],conversions=[],recipeLines=[],materials=[],materialLinks=[];
+  try{[units,conversions,materials,materialLinks]=await Promise.all([
+   api.units(),api.unitConversions(),api.catalogMaterials(),api.allMaterialUnitLinks(),
+  ]);}catch(e){toast('تعذّر قراءة وحدات المطعم وتحويلاتها: '+toError(e),'error');return;}
+  // Existing named units are listed once; the current menu item's conversion can
+  // be saved once and reused for all future events.
+  const menuOptions=opts([['','ابحث واختر صنفًا من المنيو'],...menu.map(i=>[i.id,i.name+(i.has_missing_cost?' · ⚠ تكلفة ناقصة':'')])],row?.menu_item_id||'');
+  const defaultType=isPlate?'per_person':row?.rule_type||'per_person';
+  const savedPortions=itemId=>state.servingConversions.filter(x=>String(x.menu_item_id)===String(itemId)&&
+   !x.unit_id&&x.serving_label!=='وجبة من المنيو');
+  const servingChoices=itemId=>[['','وجبة المنيو كاملة'],...units.filter(u=>u.is_active!==false).map(u=>[u.id,u.name]),
+   ...savedPortions(itemId).map(x=>['saved:'+x.serving_label,`${x.serving_label} · محفوظ (${x.servings_per_menu_item} في وجبة المنيو)`]),
+   ['custom','＋ تعريف حصة جديدة لهذا الصنف']];
+  const savedPrevious=previous?.serving_label&&savedPortions(row?.menu_item_id).some(x=>x.serving_label===previous.serving_label);
+  const selectedUnit=previous?.serving_unit_id||(previous&&previous.serving_label!=='وجبة من المنيو'?(savedPrevious?'saved:'+previous.serving_label:'custom'):'');
+  const unitOptions=opts(servingChoices(row?.menu_item_id),selectedUnit);
+  const dlg=modal({title:isPlate?(editingRule?'تعديل مكوّن الصحن الرئيسي':'إضافة مكوّن إلى الصحن الرئيسي'):(editingRule?'تعديل ضيافة':'إضافة ضيافة من المنيو'),
+   subtitle:'أدخل الحصة التي تقدمها فعليًا، والبرنامج يحولها إلى عدد وجبات المنيو وتكلفة الوصفة.',submitText:editingRule?'حفظ المكوّن والتكلفة':'إضافة إلى الضيافة',wide:true,
+   body:`<div class="event-portion-form-v036"><div class="field full"><label>الصنف الأصلي من المنيو</label><select name="item" required>${menuOptions}</select></div>
+    ${isPlate?'<div class="notice green">هذا المكوّن يُقدّم لكل ضيف ضمن الصحن الرئيسي.</div>':`<div class="field"><label>لمن نقدم هذه الحصة؟</label><select name="type">${opts(Object.entries(SERVING_RULE_NAMES_V036),defaultType)}</select></div>`}
+    <div class="field event-portion-people-v036" ${defaultType==='per_n_people'&&!isPlate?'':'hidden'}><label>كل كم شخص يتشاركون الحصة على الطاولة؟</label><input name="people" type="number" min="1" step="1" value="${esc(row?.people_per_rule||4)}"></div>
+    <div class="event-portion-grid-v036"><div class="field"><label>ما الحصة التي ستُقدَّم؟</label><select name="servingUnit">${unitOptions}</select><small class="hint">مثال: سيخ كباب، قطعة كبة، جاط، أو وجبة كاملة.</small></div>
+    <div class="field"><label class="event-serving-count-label-v036">كم نقدم في كل مرة؟</label><input name="servings" type="number" min="0.0001" step="any" required value="${esc(previous?.servings_per_distribution??row?.quantity_per_rule??1)}"><small class="hint event-servings-hint-v036">مثال: 2 سيخ للشخص الواحد.</small></div></div>
+    <div class="field full event-custom-unit-v036" hidden><label>اسم الحصة المخصصة</label><input name="customUnit" maxlength="80" placeholder="مثال: سيخ كباب" value="${esc(previous&&!previous.serving_unit_id&&previous.serving_label!=='وجبة من المنيو'?previous.serving_label:'')}"></div>
+    <div class="event-portion-yield-v036" hidden><div class="field"><label class="event-yield-label-v036">كم حصة تخرج من وجبة المنيو الواحدة؟</label><input name="yieldCount" type="number" step="any" min="0.0001" max="100000" placeholder="مثال: 10" value="${esc(previous?.servings_per_menu_item??'')}"></div>
+    <div class="event-conversion-note-v036" role="status" aria-live="polite">اختر وحدة ثم أكّد التحويل مرة واحدة؛ سيبقى محفوظًا للاستخدام في حفلات لاحقة.</div></div>
+    <div class="event-preview-v036" aria-live="polite"><strong>المعاينة الفورية</strong><p class="event-portion-preview-text-v036">اختر صنفًا ووحدة لتظهر الكمية والتكلفة تلقائيًا.</p></div>
+    <div class="event-form-meaning-v036"><strong>ماذا تعني الحقول؟</strong><p>«كم نقدم في كل مرة؟» يعني ما يوضع أمام ضيف واحد أو المجموعة أو الطاولة حسب طريقة التقديم. أما «كم حصة تخرج من وجبة المنيو؟» فهي علاقة تحويل مثل 1 كيلو كباب = 10 أسياخ، وتُحفظ لهذا الصنف.</p></div></div>`,
+   onSubmit:async fd=>{
+    const item=String(fd.get('item')||''),unitValue=String(fd.get('servingUnit')||'');
+    if(!item){toast('اختر صنفًا من قائمة المطعم.','error');return false;}
+    const unit=units.find(u=>String(u.id)===unitValue);
+    const label=unit?.name||(unitValue==='custom'?String(fd.get('customUnit')||'').trim():
+     unitValue.startsWith('saved:')?unitValue.slice('saved:'.length):'وجبة من المنيو');
+    const yieldCount=unitValue===''?1:Number(fd.get('yieldCount'));
+    const servings=Number(fd.get('servings'));
+    let menuQty;
+    try{menuQty=menuEquivalentV036(servings,yieldCount);}catch(e){toast(toError(e),'error');return false;}
+    if(!label||label.length>80||menuQty<=0){toast('اختر وحدة تقديم وحدّد علاقتها بوجبة المنيو.', 'error');return false;}
+    const type=isPlate?'per_person':String(fd.get('type'));
+    const people=type==='per_n_people'?Number(fd.get('people')):null;
+    if(type==='per_n_people'&&(!Number.isInteger(people)||people<1)){toast('حدد كم شخصًا يشتركون في كل تقديم.', 'error');return false;}
+    return commit(()=>api.eventSaveServingV036(eventId,{id:row?.rule_id,menuItemId:item,type,
+     servings,people,servingLabel:label,unitId:unit?.id||null,servingsPerMenuItem:yieldCount,plateId}),
+     'حُفظت الحصة. أُعيد حساب كمية الضيافة وتكلفتها من وصفة المنيو.');
+   }
+  });
+  const form=dlg.form;
+  const field=n=>form.elements.namedItem(n);
+  const selectedMenu=()=>menu.find(m=>String(m.id)===String(field('item').value));
+  const chosenUnit=()=>units.find(u=>String(u.id)===field('servingUnit').value);
+  const hintNode=form.querySelector('.event-conversion-note-v036');
+  const resultNode=form.querySelector('.event-portion-preview-text-v036');
+  const updatePreview=()=>{
+   const item=selectedMenu(),val=String(field('servingUnit').value);
+   const label=chosenUnit()?.name||(val==='custom'?String(field('customUnit').value||'').trim():
+    val.startsWith('saved:')?val.slice('saved:'.length):'وجبة من المنيو');
+   const ratio=val===''?1:Number(field('yieldCount').value);
+   const type=isPlate?'per_person':field('type').value;
+   if(!item||!label||!(ratio>0)){
+    resultNode.textContent='اختر الصنف والحصة، وأدخل كم حصة تنتج من وجبة المنيو الواحدة لتظهر التكلفة.';return;
+   }
+   try{
+    const p=portionPreviewV036({servings:field('servings').value,yieldCount:ratio,ruleType:type,
+     people:field('people').value,tables:state.tables,guests:state.event.planned_guest_count,
+     unitCost:item.has_missing_cost?null:item.recipe_cost_base});
+    const base=baseCurrency();
+    resultNode.textContent=`${field('servings').value} ${label} ÷ ${ratio} = ${p.menuQuantity} من وجبة المنيو لكل تقديم. ${p.distributions} تقديمًا = ${p.totalMenuUnits} من وجبة المنيو للحفلة. ${p.totalCost==null?'⚠ تكلفة الوصفة ناقصة.':`التكلفة المتوقعة ${fmt(p.totalCost,base)}.`}`;
+   }catch(e){resultNode.textContent=e.message==='EVENT_PORTION_PRECISION'?'الحصة أصغر من الدقة التي يسمح بها سجل المنيو؛ عدّل عدد الحصص أو التحويل.':'راجع عدد الحصص والتحويل؛ يجب أن تكون الأعداد موجبة.';}
+  };
+  let candidateCache=new Map();let choiceToken=0;
+  const updateServingOptions=async(keepExisting=false)=>{
+   const seq=++choiceToken,item=selectedMenu();
+   if(!item)return;
+   // Populate previously confirmed custom portions inside the same dropdown.
+   // A new event never requires retyping a stored 'skewer per kilogram' conversion.
+   const chosen=keepExisting?String(field('servingUnit').value):'';
+   field('servingUnit').innerHTML=opts(servingChoices(item.id),chosen);
+   const original=state.menuSaleUnits.find(x=>String(x.id)===String(item.id));
+   try{
+    const lines=await api.recipeItems(item.id);
+    if(seq!==choiceToken||!dlg.element.isConnected)return;
+    const hintedSaleUnit=original?.ameen_sale_unit_v024||(/^(?:1\s*)?(?:كغ|كيلو|kg)(?:\s|$)/i.test(item.name)?'كيلو':'');
+    const hints=conversionHintsV036({saleUnit:hintedSaleUnit,units,
+      conversions,recipeLines:lines,materials,materialLinks});
+    candidateCache=new Map(hints.map(x=>[String(x.unitId),x]));
+   }catch(e){candidateCache=new Map();}
+   if(!keepExisting){
+    // Switching menu items resets the serving unit; an old menu's ratio must
+    // never carry over and silently misprice the new product.
+    field('servingUnit').value='';field('servingUnit').dispatchEvent(new Event('change',{bubbles:true}));field('servings').value=1;field('yieldCount').value='';
+   }
+   syncUnit(keepExisting);
+  };
+  const syncUnit=(preserve=false)=>{
+   const val=String(field('servingUnit').value),chosen=chosenUnit(),item=selectedMenu();
+   const custom=val==='custom',whole=val==='';
+   form.querySelector('.event-custom-unit-v036').hidden=!custom;
+   field('customUnit').required=custom;
+   form.querySelector('.event-portion-yield-v036').hidden=whole;
+   field('yieldCount').required=!whole;
+   const label=chosen?.name||(custom?String(field('customUnit').value||'').trim():
+    val.startsWith('saved:')?val.slice('saved:'.length):'وجبة من المنيو');
+   form.querySelector('.event-serving-count-label-v036').textContent=`كم ${label||'حصة'} نقدّم في كل مرة؟`;
+   form.querySelector('.event-servings-hint-v036').textContent=`مثلًا: 2 ${label||'سيخ'} لكل ضيف، أو 1 لكل طاولة.`;
+   form.querySelector('.event-yield-label-v036').textContent=`كم ${label||'حصة'} تنتج من وجبة «${item?.name||'المنيو'}» كاملة؟`;
+   if(whole){field('yieldCount').value='1';hintNode.textContent='لا يحتاج هذا الصنف إلى تحويل؛ الكمية تُحسب بالوجبة الكاملة من المنيو.';}
+   else {
+    const saved=state.servingConversions.find(x=>String(x.menu_item_id)===String(item?.id)&&
+      (val==='custom'||val.startsWith('saved:')?x.serving_label===label:String(x.unit_id||'')===val));
+    const hint=candidateCache.get(val);
+    if(!preserve){field('yieldCount').value=saved?.servings_per_menu_item??hint?.ratio??'';}
+    hintNode.textContent=saved?`✓ تحويل محفوظ سابقًا: 1 وجبة من المنيو = ${saved.servings_per_menu_item} ${saved.serving_label}. يمكنك تعديله عند اختلاف الحصة.`:
+      hint?`اقتراح من ${hint.source}: ${Number(hint.ratio.toFixed(4))} ${label} في وجبة المنيو. راجع العدد قبل الحفظ؛ قد يختلف وزن الحصة المطبوخة عن المادة الخام.`:
+      'أدخل مرة واحدة عدد هذه الحصص في وجبة المنيو؛ سيُحفظ التحويل لهذا الصنف مستقبلًا.';
+   }
+   updatePreview();
+  };
+  const syncType=()=>{
+   const isGroup=!isPlate&&field('type').value==='per_n_people';
+   form.querySelector('.event-portion-people-v036').hidden=!isGroup;
+   field('people').required=isGroup;updatePreview();
+  };
+  field('item').addEventListener('change',()=>updateServingOptions(false));
+  field('servingUnit').addEventListener('change',()=>syncUnit(false));
+  field('customUnit').addEventListener('input',()=>syncUnit(false));
+  ['servings','yieldCount','people'].forEach(n=>field(n).addEventListener('input',updatePreview));
+  if(!isPlate)field('type').addEventListener('change',syncType);
+  syncType();
+  updateServingOptions(true);
  }
  function openBooking(table=null){
   const available=state.tables.filter(t=>t.status!=='cancelled'&&!t.booking_id).sort((a,b)=>Number(a.display_order||0)-Number(b.display_order||0)||a.table_label.localeCompare(b.table_label,'ar',{numeric:true}));
@@ -505,6 +667,10 @@ export async function renderEventDetailV034(root,eventId){
   emit('[data-action="add-booking"]',()=>openBooking());
   emit('[data-book-pay]',el=>{const x=state.bookings.find(x=>String(x.id)===el.dataset.bookPay);if(x)payBooking(x);});
   emit('[data-action="add-rule"]',()=>openRule());
+  emit('[data-action="add-main-plate"]',openMainPlate);
+  emit('[data-action="edit-main-plate"]',openMainPlate);
+  emit('[data-action="add-plate-component"]',()=>openRule(null,state.mainPlate?.id));
+  emit('[data-action="delete-main-plate"]',async()=>{if(await confirmBox('سيُحذف الصحن الرئيسي وجميع مكوناته من خطة الضيافة، وستتغير التكلفة. هل تؤكد الحذف؟','حذف الصحن'))await commit(()=>api.eventDeleteMainPlateV036(eventId),'حُذف الصحن الرئيسي ومكوناته.');});
   emit('[data-rule-edit]',el=>openRule(state.requirements.find(x=>String(x.rule_id)===el.dataset.ruleEdit)));
   emit('[data-rule-delete]',async el=>{if(await confirmBox('حذف هذه القاعدة يغيّر تكلفة الطعام وكميات الضيافة على كل الطاولات.','حذف القاعدة'))
     await commit(()=>api.eventDeleteRuleV034(eventId,el.dataset.ruleDelete),'حُذفت قاعدة التقديم وأُعيد احتساب الضيافة.');});
@@ -518,10 +684,20 @@ export async function renderEventDetailV034(root,eventId){
   emit('[data-action="add-waste"]',openWaste);
   emit('[data-waste-void]',el=>reasonModal('إلغاء سجل هدر',why=>api.eventVoidWasteV034(el.dataset.wasteVoid,why)));
   emit('[data-action="finish-event"]',finishEvent);
-  const menuTable=root.querySelector('.event-menu-table-v034');
-  if(menuTable)registerTableExport(menuTable,()=>({title:`قائمة ضيافة ${state.event.name}`,
-   headers:['الصنف','طريقة التقديم','كمية التقديم','المطلوب','تكلفة الحصة (الأساس)','إجمالي الطعام (الأساس)'],
-   rows:state.requirements.map(r=>[r.menu_item_name,EVENT_RULE_NAMES_V034[r.rule_type],r.quantity_per_rule,r.required_quantity,r.unit_food_cost_base??'تكلفة غير مكتملة',r.estimated_food_cost_base??'تكلفة غير مكتملة'])}));
+  root.querySelectorAll('.event-menu-table-v034').forEach(menuTable=>{
+   const grouped=menuTable.classList.contains('event-plate-lines-v036');
+   const metadata=new Map(state.servingRules.map(m=>[String(m.rule_id),m]));
+   const rows=state.requirements.filter(r=>{
+    const isPlate=Boolean(state.mainPlate&&String(metadata.get(String(r.rule_id))?.main_plate_id||'')===String(state.mainPlate.id));
+    return isPlate===grouped;
+   });
+   registerTableExport(menuTable,()=>({title:`${grouped?'مكوّنات الصحن الرئيسي':'الضيافة الأخرى'} · ${state.event.name}`,
+    headers:['الصنف','طريقة التقديم','ما يقدم في كل مرة','وحدة الحصة','عدد الحصص في وجبة المنيو','الإجمالي المطلوب من المنيو','تكلفة الوجبة الأصلية','تكلفة هذا الصنف'],
+    rows:rows.map(r=>{const meta=metadata.get(String(r.rule_id));return [r.menu_item_name,
+     SERVING_RULE_NAMES_V036[r.rule_type]||r.rule_type,meta?.servings_per_distribution??r.quantity_per_rule,
+     meta?.serving_label||'وجبة من المنيو',meta?.servings_per_menu_item??1,r.required_quantity,
+     r.unit_food_cost_base??'غير مكتملة',r.estimated_food_cost_base??'غير مكتملة'];})}));
+  });
   const bookingTable=root.querySelector('.event-booking-table-v034');
   if(bookingTable)registerTableExport(bookingTable,()=>({title:`حجوزات ${state.event.name}`,
    headers:['الاسم','الهاتف','عدد الأشخاص','أسماء المقاعد','الطاولات','المتفق عليه','المدفوع','المتبقي','العملة'],

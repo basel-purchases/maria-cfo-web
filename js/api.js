@@ -1245,3 +1245,18 @@ export const eventRecordActivityV034=(id,type,description)=>rpc('record_event_ac
 export const eventBulkTablesV035=(id,count,capacity,prefix='طاولة',start=1)=>rpc('event_bulk_tables_v035',{p_event_id:id,p_count:Number(count),p_capacity:Number(capacity),p_prefix:prefix,p_start:Number(start)});
 export const eventGroupBookingV035=(id,data)=>rpc('event_group_booking_v035',{p_event_id:id,p_customer_name:data.name,p_guest_count:Number(data.guests),p_amount:Number(data.amount),p_allocations:data.allocations,p_guest_names:data.names||[],p_phone:data.phone||null,p_note:data.note||null});
 export const eventGuestsV035=id=>list('event_booking_guests_v035',{eq:{event_id:id},limit:2000});
+
+// v0.36 restaurant event serving units and composed main plate.
+export const eventMainPlateV036=eventId=>list('event_main_plates_v036',{eq:{event_id:eventId},limit:1}).then(rows=>rows[0]||null);
+export const eventServingRulesV036=eventId=>list('event_serving_rules_v036',{eq:{event_id:eventId},limit:1000});
+export const menuServingConversionsV036=()=>list('menu_serving_conversions_v036',{order:'serving_label',ascending:true,limit:2000});
+export const eventMenuSaleUnitsV036=()=>list('menu_items',{select:'id,name,ameen_sale_unit_v024',order:'name',ascending:true,limit:1000});
+export const eventSaveMainPlateV036=(eventId,name)=>rpc('save_event_main_plate_v036',{p_event_id:eventId,p_name:name});
+export const eventDeleteMainPlateV036=eventId=>rpc('delete_event_main_plate_v036',{p_event_id:eventId});
+export const eventSaveServingV036=(eventId,input)=>rpc('save_event_serving_v036',{
+ p_event_id:eventId,p_rule_id:input.id||null,p_menu_item_id:input.menuItemId,
+ p_rule_type:input.type,p_servings:Number(input.servings),
+ p_people:input.type==='per_n_people'?Number(input.people):null,
+ p_serving_label:input.servingLabel,p_unit_id:input.unitId||null,
+ p_servings_per_menu_item:Number(input.servingsPerMenuItem),p_plate_id:input.plateId||null,
+});

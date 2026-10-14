@@ -1249,3 +1249,50 @@ select option{background:#fff;color:var(--text);padding:8px}
 .event-booking-suggestion-v035 p{margin:4px 0 0;font-size:12px;color:#58675d}
 .event-booking-table-v034 small{display:block;max-width:320px;white-space:normal;line-height:1.65}
 @media(max-width:500px){.event-table-actions-v034{grid-template-columns:1fr 1fr}.event-action-v035{min-height:40px!important}.event-tabs-v034{position:relative}}
+
+/* Maria CFO v0.36 — event plating, easy serving quantities and unified controls */
+.event-host-v036{overflow:visible}
+.event-menu-heading-v036{gap:16px;flex-wrap:wrap}.event-menu-heading-v036 h3{font-size:18px}
+.event-ctrl-v036{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 15px;min-height:39px;border-radius:11px;border:1px solid #d8cad4;background:#fff;color:#614157;font-family:inherit;font-size:12px;font-weight:700;line-height:1.4;letter-spacing:normal;cursor:pointer;box-shadow:0 2px 6px rgba(78,46,66,.04);transition:transform .15s,box-shadow .15s,border-color .15s,background .15s;white-space:nowrap;text-align:center}
+.event-ctrl-v036:hover:not(:disabled){transform:translateY(-1px);border-color:#a7849c;box-shadow:0 4px 12px rgba(68,38,55,.12)}
+.event-ctrl-v036:focus-visible{outline:3px solid #b386a3;outline-offset:2px}
+.event-ctrl-v036.primary{background:#6b485f;border-color:#6b485f;color:white;box-shadow:0 3px 9px rgba(76,40,60,.14)}
+.event-ctrl-v036.primary:hover:not(:disabled){background:#533448}
+.event-ctrl-v036.subtle{background:#f8f1f5;border-color:#e9dbe4}
+.event-ctrl-v036.danger{color:#a43b47;border-color:#efcdd0;background:#fff8f9}
+.event-ctrl-v036.danger:hover:not(:disabled){background:#ffeef0;border-color:#d78e96}
+.event-ctrl-v036:disabled{opacity:.48;cursor:not-allowed}
+.event-guide-v036{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;background:#fbf9fa;border:1px solid #eee3ea;border-radius:14px;padding:12px;margin:15px 0}
+.event-guide-v036>div{display:flex;gap:5px 10px;flex-wrap:wrap;align-items:center;min-width:0}
+.event-guide-icon-v036{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;background:#eedee7;color:#734b66;border-radius:50%;font-weight:800;font-size:12px}
+.event-guide-v036 strong{color:#4e3546;font-size:12px}.event-guide-v036 small{display:block;width:100%;padding-right:36px;color:#897886;font-size:11px}
+.event-main-plate-v036{background:linear-gradient(140deg,#fffafc,#faf3f7);border:1px solid #e8d2df;border-radius:17px;padding:18px;margin:18px 0;box-shadow:0 6px 22px rgba(84,53,73,.04)}
+.event-main-plate-head-v036{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-bottom:14px}
+.event-main-plate-head-v036 h3{margin:4px 0;font-size:17px;color:#65415a}
+.event-main-plate-head-v036 p{font-size:12px;color:#746774;line-height:1.8;margin:3px 0}
+.event-kicker-v036{font-size:11px;font-weight:800;color:#8c5e7a;letter-spacing:.1px}
+.event-main-actions-v036{display:flex;gap:8px;flex-wrap:wrap}
+.event-empty-plate-v036{margin:10px 0;padding:16px;border:1px dashed #d8c1d0;border-radius:12px;background:#fff;line-height:1.8;color:#7f6b79;font-size:13px}
+.event-plate-summary-v036{display:grid;grid-template-columns:1fr auto 1fr auto;gap:10px;align-items:center;border-radius:12px;background:#f1e4ec;padding:14px 16px;margin-top:13px;color:#67415a;font-size:12px}
+.event-plate-summary-v036 strong{font-size:14px;white-space:nowrap}.event-delete-plate-v036{margin-top:10px}
+.event-regular-menu-v036{margin:18px 0}.event-menu-subhead-v036{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.event-menu-subhead-v036 h3{font-size:16px;margin:0}.event-menu-subhead-v036 small{color:#887b85;font-size:12px}
+.event-menu-table-v034 td{vertical-align:middle}.event-menu-table-v034 td small{display:block;margin-top:3px;line-height:1.6;white-space:normal}
+.event-row-actions-v036{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.event-row-actions-v036 .event-ctrl-v036{min-height:34px;padding:7px 11px;font-size:11px}
+.event-menu-incomplete-v036{background:#fffaf4}.event-cost-missing-v036{color:#af6845;font-weight:700}
+.event-portion-form-v036{display:grid;gap:13px}
+.event-portion-grid-v036{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px;background:#fbf8fb;border-radius:14px;border:1px solid #ecdee7}
+.event-portion-yield-v036{padding:14px 15px;border:1px solid #e7d9e1;border-radius:13px;background:#fff}
+.event-portion-yield-v036 .field{margin-bottom:10px}
+.event-conversion-note-v036{font-size:12px;line-height:1.8;color:#645469}
+.event-preview-v036{border:1px solid #bdd7c3;border-radius:13px;background:#f2f8f3;padding:15px}
+.event-preview-v036 strong{font-size:13px;color:#326a45}.event-preview-v036 p{margin:6px 0 0;line-height:1.95;font-size:13px;color:#415c49}
+.event-form-meaning-v036{padding:12px 15px;background:#f7f3f6;border-radius:12px;line-height:1.9;font-size:12px;color:#695969}
+.event-form-meaning-v036 p{margin:4px 0 0}
+.event-host-v036 .table-export-bar-v027 .mini-btn{background:#f8f1f5!important;border:1px solid #e3d3df!important;border-radius:9px!important;color:#68465e!important;padding:6px 12px!important;font-weight:700!important}
+.event-host-v036 .table-export-bar-v027 .mini-btn:hover{background:#ecdeea!important}
+.event-dashboard-panels-v034 .finance-section-head .mini-btn{border:1px solid #dfcbd8;background:#f6eaf1;color:#65435e;border-radius:11px;min-height:38px;padding:8px 14px;font-weight:750}
+.event-dashboard-panels-v034 .finance-section-head .mini-btn:hover{background:#ebdce6;border-color:#c9a8bd}
+@media(max-width:780px){.event-plate-summary-v036{grid-template-columns:1fr auto}.event-guide-v036{grid-template-columns:1fr}.event-guide-v036 small{width:auto;padding-right:0}.event-main-plate-v036{padding:12px}.event-main-actions-v036{width:100%}.event-main-actions-v036 .event-ctrl-v036{flex:1}.event-menu-heading-v036 .event-ctrl-v036{width:100%}}
+@media(max-width:480px){.event-portion-grid-v036{grid-template-columns:1fr}.event-plate-summary-v036{gap:6px;font-size:11px}.event-plate-summary-v036 strong{font-size:12px}.event-row-actions-v036 .event-ctrl-v036{flex:1}.event-ctrl-v036{white-space:normal}}
