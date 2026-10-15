@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.41';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.27';
-import { esc, money, unitDisplay, num } from '../utils.js?v=0.27';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
-import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.27';
-import {downloadXlsx,exportDatasetPdf} from '../table-export-v027.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
+import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=1.0';
+import {downloadXlsx,exportDatasetPdf} from '../table-export-v027.js?v=1.0';
 
 function menuPrice(row){
   return row.manual_price_original ?? row.manual_price ?? row.price ?? row.suggested_price_rounded ?? row.suggested_price ?? null;
@@ -67,7 +67,7 @@ export async function renderMenu(root,{missingOnly=false}={}){
       <button class="mini-btn" type="button" id="menu-export-excel">⇩ Excel</button>
       <button class="mini-btn" type="button" id="menu-export-pdf">⇩ PDF</button>
     </div>
-    ${missingOnly?'<div class="notice sage">أنت تعرض فقط أصناف المينيو التي لا تملك وصفة مكتملة أو تكلفة تقديرية معتمدة. يمكنك إدخال تقدير أو مكونات الوصفة ثم الرجوع إلى تقرير الأمين.</div>':''}
+    ${missingOnly?'<div class="notice sage">أنت تعرض فقط أصناف المينيو التي لا تملك وصفة مكتملة أو تكلفة تقديرية معتمدة. يمكنك إدخال تقدير أو مكونات الوصفة ثم الرجوع إلى تقرير المبيعات.</div>':''}
     <div id="menu-results" aria-live="polite"></div>`;
   root.querySelector('.add').onclick=()=>addMenu(root,categories);
   const host=root.querySelector('#menu-results');
@@ -102,7 +102,7 @@ export async function renderMenu(root,{missingOnly=false}={}){
           <div><span>التكلفة المعتمدة للتحليل</span><strong>${r.recipe_cost_base!=null && r.has_missing_cost!==true && Number(r.missing_cost_count||0)===0?`${money(r.recipe_cost_base)} · وصفة`:(r.estimated_unit_cost_base!=null?`${money(r.estimated_unit_cost_base)} · تقديرية`:'غير محسوبة')}</strong></div>
           <div><span>Food Cost</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
           <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
-          <div><span>وحدة البيع من الأمين</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
+          <div><span>وحدة البيع المستوردة</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
         </div>
         <div class="menu-card-actions">
           <button class="btn secondary recipe" data-id="${esc(r.id)}">إدارة الوصفة</button>

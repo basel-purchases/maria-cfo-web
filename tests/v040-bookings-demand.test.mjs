@@ -49,8 +49,8 @@ test('v0.40: optional provisional cost is explicit, and absent estimates do not 
  assert.equal(estimated[0].actualCostIsEstimate,true);
 });
 test('v0.40: zero currency outputs have no minus symbol',()=>{
- assert.equal(eventMoneyV038(0,'SYP'),'0 SYP');
- assert.equal(eventMoneyV038(-0,'SYP'),'0 SYP');
+ assert.equal(eventMoneyV038(0,'SYP'),'0 ل.س');
+ assert.equal(eventMoneyV038(-0,'SYP'),'0 ل.س');
 });
 test('v0.40: SQL reservation transaction either books AND collects or rolls back both',()=>{
  const sql=text('database/Maria-CFO-Web-v0.40-Bookings-OnDemand.sql');
@@ -79,8 +79,8 @@ test('v0.40: pages separate planning from booking and offer instant payment + on
  const page=text('js/pages/events-v034.js'),routes=text('js/app.js'),hub=text('js/pages/hubs.js'),css=text('assets/styles.css');
  for(const tag of ["view==='booking'",'bookingSeatMapHtml','demandServiceHtml','demandHtml','data-add-demand-unit',
   'eventBookAndCollectV040','data-collected-v040','data-table-book','data-demand-issue','eventCompleteWithDemandV040'])assert.ok(page.includes(tag),tag);
- for(const tag of ['event-reservations','event-bookings','Web v0.41'])assert.ok(routes.includes(tag),tag);
+ for(const tag of ['event-reservations','event-bookings','Web v1.0'])assert.ok(routes.includes(tag),tag);
  assert.match(hub,/#\/event-reservations/);assert.match(hub,/#\/events-list/);
  assert.match(css,/event-book-collect-checkbox-v040/);
- assert.match(text('index.html'),/app\.js\?v=0\.(?:40|41)/);
+ assert.match(text('index.html'),/app\.js\?v=1\.0/);
 });

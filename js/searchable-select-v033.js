@@ -1,7 +1,7 @@
 // v0.33: ONE control only: type/search inside the dropdown combobox.
 // The original native <select> remains the source of truth for forms, change
 // listeners and Supabase RPCs. Suggestions never submit free text or guess IDs.
-import {staffSearchScoreV033,normalizeStaffQueryV033} from './staff-ux-v033.js?v=0.33';
+import {staffSearchScoreV033,normalizeStaffQueryV033} from './staff-ux-v033.js?v=1.0';
 const THRESHOLD=8;
 const cache=new WeakMap();
 const instances=new Set();

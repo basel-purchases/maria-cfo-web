@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.34';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.33';
-import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.33';
-import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034} from '../payroll-workbench-v034.js?v=0.34';
+import * as api from '../api.js?v=1.0';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
+import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034} from '../payroll-workbench-v034.js?v=1.0';
 
 const MONTH_NAMES=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
 const PAY_TYPE={monthly:'شهري',daily:'يومي',hourly:'ساعي',fixed:'مقطوع'};
@@ -149,7 +149,7 @@ export async function renderPayrollV034(root){
    const r=filterPayrollReadyV034(state.ready).find(x=>String(x.payroll_item_id)===b.dataset.id);if(!r||!r.payable||!mayPay())return;
    modal({title:'تأكيد دفع راتب',subtitle:'عملية واحدة تسجّل حركة النقد والقبض معًا. يمكن دفع مبلغ جزئي أيضًا.',submitText:'تأكيد الدفع من الصندوق',
     body:`<div class="payroll-pay-dialog-v034"><strong>${esc(r.employee_name)}</strong><span>${esc(MONTH_NAMES[state.month-1])} ${state.year} · ${esc(cashName())}</span><div class="metric-value">${compact(r.remaining,r.currency_code)}</div><small>صافي المسير ${compact(r.net,r.currency_code)} · مدفوع سابقًا ${compact(r.paid,r.currency_code)}</small></div>
-      <div class="field"><label>المبلغ المراد دفعه (${esc(r.currency_code)})</label><input name="amount" type="number" min="0.0001" step="any" max="${r.remaining}" value="${r.remaining}" required></div>
+      <div class="field"><label>المبلغ المراد دفعه (${esc(currencyLabel(r.currency_code))})</label><input name="amount" type="number" min="0.0001" step="any" max="${r.remaining}" value="${r.remaining}" required></div>
       <div class="field"><label>ملاحظة على الدفعة (اختياري)</label><textarea rows="2" maxlength="300" name="note" placeholder="مثال: قبض نقدي بموجب إيصال"></textarea></div>
       <div class="notice">بعد التأكيد ستظهر الحركة في «الرواتب المدفوعة» وفي الصندوق. لا تكرر الدفع إذا انقطع الاتصال قبل ظهور التأكيد؛ حدّث السجل أولًا.</div>`,
     onSubmit:async fd=>{try{const amt=Number(fd.get('amount'));if(!Number.isFinite(amt)||amt<=0||amt>r.remaining+.0001)throw Error('المبلغ أكبر من المتبقي أو غير صالح.');await api.payApprovedSalaryV034(r.payroll_item_id,amt,state.box,fd.get('note'));toast('تم صرف الراتب وحفظ حركة الصندوق.','success');await load();return true;}catch(e){toast(errorMessage(e),'error');return false;}}

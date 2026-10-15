@@ -13,10 +13,19 @@ export function num(value, fallback=0){
   return Number.isFinite(n) ? n : fallback;
 }
 
+export function currencyLabel(currency='SYP') {
+  const code=String(currency||'SYP').toUpperCase();
+  return code==='SYP' ? 'ل.س' : code;
+}
+
+// A single user-facing format for all monetary amounts. Currency codes are kept
+// unchanged in RPC/SQL data; the readable labels belong exclusively to the UI.
 export function money(value, currency='SYP') {
-  return new Intl.NumberFormat('ar-SY', {
-    maximumFractionDigits: currency==='SYP' ? 0 : 2,
-  }).format(num(value)) + ' ' + currency;
+  const code=String(currency||'SYP').toUpperCase();
+  const amount=num(value);
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: code==='SYP' ? 0 : 2,
+  }).format(Object.is(amount,-0) ? 0 : amount) + ' ' + currencyLabel(code);
 }
 
 export function dateOnly(value){

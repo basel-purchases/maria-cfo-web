@@ -1,6 +1,6 @@
 // v0.31: employee workbook ingestion, independent from Ameen report formats.
 // Salary is always monthly in SYP; job title never determines the pay type.
-import {cleanName} from './ameen-import-parser.js?v=0.30';
+import {cleanName} from './ameen-import-parser.js?v=1.0';
 const clean=v=>String(v??'').replace(/[\u200b-\u200f\u202a-\u202e]/g,'').trim().replace(/\s+/g,' ');
 const headers={
  name:['الاسم','اسم الموظف','الموظف'],

@@ -89,5 +89,5 @@ test('v0.39: UI has subtotal collections, expandable details, conversion quick-a
   'planRequirements()','seating()'])assert.ok(ui.includes(k),k);
  assert.match(css,/event-table-arrow-v039/);
  assert.match(api,/eventAllExternalUnitsV039/);
- assert.match(read('index.html'),/app\.js\?v=0\.(?:39|40|41)/);
+ assert.match(read('index.html'),/app\.js\?v=1\.0/);
 });

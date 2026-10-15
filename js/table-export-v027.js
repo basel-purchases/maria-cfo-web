@@ -1,6 +1,6 @@
 // Maria CFO v0.27 - filtered table export for dynamically rendered pages and dialogs.
 // Provider contract: async () => ({ title, headers: string[], rows: any[][] }).
-import {downloadXlsx} from './xlsx-export.js?v=0.27';
+import {downloadXlsx} from './xlsx-export.js?v=1.0';
 
 const providers=new WeakMap();
 const clean=x=>String(x??'').replace(/\s+/g,' ').trim();

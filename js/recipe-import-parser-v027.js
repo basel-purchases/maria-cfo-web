@@ -1,5 +1,5 @@
 // Pure validated parser for the two recipe import sheets.
-import {cleanName} from './ameen-import-parser.js?v=0.27';
+import {cleanName} from './ameen-import-parser.js?v=1.0';
 const normal=x=>cleanName(x);
 const safe=v=>String(v??'').trim();
 const number=v=>v===null||v===undefined||safe(v)===''?NaN:Number(v);

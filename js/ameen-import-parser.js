@@ -123,7 +123,7 @@ function parseOrders(rows,at,errors){
   order.grossTotal=round(order.grossTotal,4);
   order.netTotal=round(order.netTotal??order.grossTotal,4);
   order.difference=round(order.netTotal-order.grossTotal,4);
-  if(Math.abs(order.difference)>0.02)order.reviewReasons.push('صافي الأمين يختلف عن مجموع البنود: احتفظنا بالفرق للمراجعة، دون فرض رسوم إضافية.');
+  if(Math.abs(order.difference)>0.02)order.reviewReasons.push('صافي التقرير يختلف عن مجموع البنود: احتفظنا بالفرق للمراجعة، دون فرض رسوم إضافية.');
   if(order.reportedSyp===0&&order.netTotal>0)order.reviewReasons.push('عمود الليرة صفر مع صافي موجب: لا نفترض دفعًا نقديًا.');
  }
  return {records,stats:{records:records.length,sourceRows:records.reduce((n,r)=>n+r.items.length,0),needsReview:records.filter(r=>r.reviewReasons.length>0).length}};
@@ -164,7 +164,7 @@ export function parseAmeenRows(kind,sourceRows){
  if(!Array.isArray(sourceRows)||!sourceRows.length)throw new Error('الملف فارغ.');
  const at=sourceRows.findIndex(row=>matchReportType(row)===kind);
  const detected=sourceRows.map(row=>matchReportType(row)).find(Boolean);
- if(at<0)throw new Error(detected?`نوع الملف هو «${AMEEN_TYPES[detected]}» وليس «${AMEEN_TYPES[kind]}».`:'عناوين الأعمدة لا تطابق تقرير الأمين المختار.');
+ if(at<0)throw new Error(detected?`نوع الملف هو «${AMEEN_TYPES[detected]}» وليس «${AMEEN_TYPES[kind]}».`:'عناوين الأعمدة لا تطابق تقرير المبيعات المختار.');
  const rows=sourceRows;rows.__header=indexRow(rows[at]);rows.__headerRaw=rows[at];
  const errors=[];
  const parsed=(kind==='inventory'?parseInventory:kind==='orders'?parseOrders:parseSuppliers)(rows,at,errors);
@@ -229,7 +229,7 @@ export async function readAmeenWorkbook(file){
 export function findReportSheet(workbook,kind){
  if(!AMEEN_TYPES[kind])throw new Error('اختر نوع الإدخال أولًا.');
  const sheet=workbook.sheets.find(s=>s.rows.some(r=>matchReportType(r)===kind));
- if(!sheet){const found=workbook.sheets.flatMap(s=>s.rows.slice(0,10).map(matchReportType)).find(Boolean);throw new Error(found?`الملف يحتوي «${AMEEN_TYPES[found]}» وليس «${AMEEN_TYPES[kind]}».`:'هذا الملف لا يطابق رؤوس أعمدة تقارير الأمين المدعومة.');}
+ if(!sheet){const found=workbook.sheets.flatMap(s=>s.rows.slice(0,10).map(matchReportType)).find(Boolean);throw new Error(found?`الملف يحتوي «${AMEEN_TYPES[found]}» وليس «${AMEEN_TYPES[kind]}».`:'هذا الملف لا يطابق رؤوس أعمدة تقارير التقرير المدعومة.');}
  return sheet;
 }
 export async function sha256Hex(buffer){

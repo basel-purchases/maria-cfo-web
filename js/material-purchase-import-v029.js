@@ -1,8 +1,8 @@
-import * as api from './api.js?v=0.29-final';
-import {esc} from './utils.js?v=0.27';
-import {toast,friendlyError} from './ui.js?v=0.27';
-import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=0.27';
-import {parseMaterialPurchasesV029,purchaseChunksV029} from './material-purchase-parser-v029.js?v=0.29-final';
+import * as api from './api.js?v=1.0';
+import {esc} from './utils.js?v=1.0';
+import {toast,friendlyError} from './ui.js?v=1.0';
+import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=1.0';
+import {parseMaterialPurchasesV029,purchaseChunksV029} from './material-purchase-parser-v029.js?v=1.0';
 let importing=false;
 export function installMaterialPurchaseImportV029(root){
  const button=root.querySelector('#ameen-purchase-preview');

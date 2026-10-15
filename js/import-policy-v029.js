@@ -1,5 +1,5 @@
 // Maria CFO v0.29 - deterministic catalogue entry policy. Pure functions.
-import {cleanName} from './ameen-import-parser.js?v=0.27';
+import {cleanName} from './ameen-import-parser.js?v=1.0';
 const n = v => Number(v);
 export const positive = v => v !== null && v !== undefined && String(v).trim() !== '' && Number.isFinite(n(v)) && n(v)>0;
 export const hasWarehouse = v => String(v??'').trim().length>0;

@@ -12,7 +12,7 @@ const tables=[
 test('v0.38 rounds planned ticket UP to the next 100 SYP and displays costs without long fractions',()=>{
  assert.equal(roundHundredUpV038(10852.4977),10900);
  assert.equal(roundHundredUpV038(10000),10000);
- assert.equal(eventMoneyV038(10852.4977,'SYP'),'10,853 SYP');
+ assert.equal(eventMoneyV038(10852.4977,'SYP'),'10,853 ل.س');
  assert.equal(eventMoneyV038(1073.411,'USD'),'1,073.42 USD');
  assert.equal(ticketFromMarginV038(750000,10,25,1,'SYP'),100000);
  assert.equal(marginFromTicketV038(750000,10,100000),25);
@@ -74,5 +74,5 @@ test('v0.38 new UI has integrated table selection, both booking prices, external
  assert.match(js,/eventExternalDishesV038/);assert.match(js,/eventSaveExternalServingV0(?:38|39|40|41)/);assert.match(js,/eventPayExternalDishV038/);
  assert.match(js,/ticketFromMarginV038/);assert.match(js,/eventGuestSummaryV038/);
  assert.match(api,/eventSetBookingAmountV038/);
- assert.match(html,/app\.js\?v=0\.(?:39|40|41)/);
+ assert.match(html,/app\.js\?v=1\.0/);
 });

@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.32';
-import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=0.33';
-import {esc, money, dateOnly, todayISO} from '../utils.js?v=0.32';
-import {employeeName} from '../payroll-ui.js?v=0.32';
-import {BONUS_REASONS_V032, BONUS_STATUS_V032, validateBonusV032, bonusTotalsV032} from '../bonus-policy-v032.js?v=0.32';
-import {registerTableExport} from '../table-export-v027.js?v=0.33';
-import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=0.33';
+import * as api from '../api.js?v=1.0';
+import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=1.0';
+import {currencyLabel, esc, money, dateOnly, todayISO} from '../utils.js?v=1.0';
+import {employeeName} from '../payroll-ui.js?v=1.0';
+import {BONUS_REASONS_V032, BONUS_STATUS_V032, validateBonusV032, bonusTotalsV032} from '../bonus-policy-v032.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=1.0';
 
 const PAGE_SIZE=20;
 const niceError=e=>{
@@ -29,7 +29,7 @@ const niceError=e=>{
 export function openEmployeeBonusModal({staff=[],employeeId='',onSaved=()=>{}}={}){
  const eligible=staff.filter(e=>e.status==='active'&&e.pay_type!=='fixed');
  if(!eligible.length){toast('لا يوجد موظفون نشطون بنوع أجر مدعوم للمكافآت.','error');return;}
- const options=eligible.map(e=>`<option value="${esc(e.id)}" data-search="${esc([e.job_title,e.department,e.residence_v031,e.mobile_phone_v031].filter(Boolean).join(' '))}">${esc(e.name)} · ${esc(e.wage_currency_code||'SYP')}</option>`).join('');
+ const options=eligible.map(e=>`<option value="${esc(e.id)}" data-search="${esc([e.job_title,e.department,e.residence_v031,e.mobile_phone_v031].filter(Boolean).join(' '))}">${esc(e.name)} · ${esc(currencyLabel(e.wage_currency_code||'SYP'))}</option>`).join('');
  const m=modal({
   title:'منح مكافأة موظف',
   subtitle:'تُضاف إلى مستحقات مسير الراتب المناسب، ولا تُصرف من الصندوق الآن.',
@@ -60,7 +60,7 @@ export function openEmployeeBonusModal({staff=[],employeeId='',onSaved=()=>{}}={
  const badge=m.form.querySelector('.employee-bonus-currency');
  const sync=()=>{
   const employee=eligible.find(e=>String(e.id)===String(select.value));
-  badge.innerHTML=employee?`<strong class="staff-currency-chip">${esc(employee.wage_currency_code||'SYP')}</strong><small class="hint"> نفس عملة راتب الموظف </small>`:'<span class="hint">اختر الموظف لتحديد عملة راتبه.</span>';
+  badge.innerHTML=employee?`<strong class="staff-currency-chip">${esc(currencyLabel(employee.wage_currency_code||'SYP'))}</strong><small class="hint"> نفس عملة راتب الموظف </small>`:'<span class="hint">اختر الموظف لتحديد عملة راتبه.</span>';
  };
  select.addEventListener('change',sync);sync();
  return m;

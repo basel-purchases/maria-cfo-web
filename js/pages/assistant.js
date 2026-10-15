@@ -1,5 +1,5 @@
-import * as api from '../api.js?v=0.32';
-import { esc } from '../utils.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { esc } from '../utils.js?v=1.0';
 
 const LINKS={
   dashboard:'الرئيسية',reports:'التقارير',orders:'الأوردرات',purchases:'المشتريات',
@@ -66,7 +66,7 @@ export function renderAssistant(root){
     const pane=document.createElement('section');pane.className='agent-review';
     const title=review.kind==='purchase'?'فاتورة شراء':'أوردر';
     pane.innerHTML=`<div class="agent-review-head"><strong>مراجعة ${title}</strong><span>عدّل الحقول غير الدقيقة قبل الحفظ. لن يتم النشر المحاسبي الآن.</span></div>
-      <div class="form-grid agent-review-meta"><div class="field"><label>العملة</label><select data-field="currency"><option value="SYP">SYP</option><option value="USD">USD</option></select></div>
+      <div class="form-grid agent-review-meta"><div class="field"><label>العملة</label><select data-field="currency"><option value="SYP">ل.س</option><option value="USD">USD</option></select></div>
       <div class="field"><label>التاريخ</label><input data-field="date" type="date" value="${esc(review.document_date||new Date().toISOString().slice(0,10))}"></div>
       ${review.kind==='purchase'?`<div class="field"><label>المورد (اختياري)</label><input data-field="supplier" value="${esc(review.supplier_name||'')}"></div>`:
       `<div class="field"><label>صندوق الأوردر</label><span class="metric-note">يُختار من تفاصيل المسودة قبل نشرها</span></div>`}

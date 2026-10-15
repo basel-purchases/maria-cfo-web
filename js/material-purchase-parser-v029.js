@@ -1,7 +1,7 @@
 // Deterministic Ameen kitchen purchasing import. The 44K-row movement ledger is
 // NEVER blindly posted: only official 'شراء:' rows, kitchen allowlisted materials,
 // positive quantities/prices, and provable conversions are candidates.
-import {kitchenCatalogV029} from './kitchen-catalog-v029.js?v=0.29-final';
+import {kitchenCatalogV029} from './kitchen-catalog-v029.js?v=1.0';
 const catalog = new Map(kitchenCatalogV029.map(x=>[String(x.code),x]));
 const normalize=v=>String(v??'').trim().replace(/[\u064b-\u065f\u0670\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/\s+/g,' ').toLocaleLowerCase('ar');
 function datePart(v){
@@ -25,7 +25,7 @@ function rowCheck(line){
 export function parseMaterialPurchasesV029(workbook){
  const sheet=workbook?.sheets?.find(s=>s.name==='حركة مادة') ?? workbook?.sheets?.find(s=>s.rows?.[1]?.[0]==='المادة'&&s.rows[1]?.[7]==='فاتورة');
  if(!sheet||!sheet.rows?.length||sheet.rows[1]?.[0]!=='المادة'||sheet.rows[1]?.[7]!=='فاتورة')
-   throw new Error('ملف حركة مادة ليس بتنسيق الأمين المتوقع؛ لن نخمن الأعمدة.');
+   throw new Error('ملف حركة مادة ليس بتنسيق التقرير المتوقع؛ لن نخمن الأعمدة.');
  const groups=new Map(),alerts=[];let purchaseRows=0,ignoredMovements=0,ignoredOther=0;
  for(let i=2;i<sheet.rows.length;i++){
    const r=sheet.rows[i]||[];

@@ -1,6 +1,6 @@
-import {modal} from './ui.js?v=0.27';
-import {esc,money} from './utils.js?v=0.27';
-import {numericValue} from './table-presenter-v025.js?v=0.27';
+import {modal} from './ui.js?v=1.0';
+import {esc,money} from './utils.js?v=1.0';
+import {numericValue} from './table-presenter-v025.js?v=1.0';
 
 export function importedStockSummary(rows=[]){
  if(!rows.length)return '—';
@@ -14,10 +14,10 @@ export function importedPrice(rows=[]){
 }
 export function importedRowHasWarning(rows=[]){return rows.some(r=>String(r.review_reason||'').trim());}
 export function showImportedSourceDialog(name,rows=[]){
- modal({title:`بيانات الأمين: ${name}`,wide:true,hideActions:true,
+ modal({title:`بيانات المصدر: ${name}`,wide:true,hideActions:true,
   subtitle:'هذه لقطة البيانات القادمة من التقرير وليست بالضرورة الرصيد اللحظي بعد مبيعات المطعم.',
   body:rows.length?`<div class="table-wrap import-snapshot-scroll"><table class="table imported-source-table"><thead><tr>
-    <th>المستودع</th><th>القسم</th><th>تصنيف الأمين</th><th>الكمية الأصلية</th><th>وحدة الجرد</th>
+    <th>المستودع</th><th>القسم</th><th>التصنيف المستورد</th><th>الكمية الأصلية</th><th>وحدة الجرد</th>
     <th>الكمية البديلة</th><th>الوحدة البديلة</th><th>سعر التقرير</th><th>الكمية الأساسية</th><th>ملاحظة الاستيراد</th><th>آخر تحديث</th>
   </tr></thead><tbody>${rows.map(r=>`<tr>
     <td>${esc(r.warehouse||'—')}</td><td>${esc(r.kind||'—')}</td><td>${esc(r.category||'—')}</td>

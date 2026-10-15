@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.32';
-import { isVagueContextualName } from '../unit-catalog.js?v=0.27';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
-import { esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=0.27';
-import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
+import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
+import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.code==='AMEEN_LEGACY_UNKNOWN_SOURCE_V029' || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
@@ -80,7 +80,7 @@ function newPurchase(){
         <div class="field"><label>اسم المورد <span class="optional-badge">اختياري</span></label><input name="supplier" autocomplete="off"></div>
         <div class="field"><label>رقم الفاتورة <span class="optional-badge">اختياري</span></label><input name="number" autocomplete="off"></div>
         <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
-        <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+        <div class="field"><label>العملة</label><select name="currency"><option value="SYP">ل.س</option><option>USD</option></select></div>
       </div>`,
     submitText:'إنشاء الفاتورة',
     onSubmit:async fd=>{
@@ -127,7 +127,7 @@ export async function renderPurchaseDetail(root,id){
     root.innerHTML=`
       <div class="page-head">
         <div>
-          <h2>تفاصيل الفاتورة</h2>${invoice.is_ameen_legacy_v029?'<div class="notice">شراء تاريخي من الأمين؛ المورد والدفع غير معروفين، فلا يحتسب ضمن ديون الموردين ولا ينشئ حركة صندوق.</div>':''}
+          <h2>تفاصيل الفاتورة</h2>${invoice.is_ameen_legacy_v029?'<div class="notice">شراء تاريخي من التقرير المستورد؛ المورد والدفع غير معروفين، فلا يحتسب ضمن ديون الموردين ولا ينشئ حركة صندوق.</div>':''}
           <p>${direct?'شراء مباشر بدون مورد':`المورد: ${esc(supplier?.name||'—')}`}</p>
         </div>
         <div class="page-head-actions">
@@ -141,7 +141,7 @@ export async function renderPurchaseDetail(root,id){
             <div class="k">التاريخ</div><div>${dateOnly(invoice.invoice_date||invoice.occurred_at)}</div>
             <div class="k">المورد</div><div>${direct?'بدون مورد':esc(supplier?.name||'—')}</div>
             <div class="k">الحالة</div><div>${invoiceStatus(invoice)}</div>
-            <div class="k">العملة</div><div>${esc(invoice.currency_code||'SYP')}</div>
+            <div class="k">العملة</div><div>${esc(currencyLabel(invoice.currency_code||'SYP'))}</div>
             <div class="k">الإجمالي</div><div><strong>${money(invoice.is_voided?(invoice.voided_original_total||0):(invoice.total_original||0),invoice.currency_code||'SYP')}</strong></div>
           </div>
           ${invoice.is_voided?`<div class="notice rose compact-notice">أُلغيت هذه الفاتورة وتم تسجيل حركة عكسية للمخزون.${invoice.void_reason?` السبب: ${esc(invoice.void_reason)}`:''}</div>`:''}
@@ -424,7 +424,7 @@ async function openPurchaseOcrReview(root,{result,job=null,invoice,mats,units,su
           <div class="field compact"><label>المورد</label><input name="ocr_supplier" autocomplete="off" value="${esc(detectedSupplier)}" placeholder="اختياري"></div>
           <div class="field compact"><label>رقم الفاتورة</label><input name="ocr_number" autocomplete="off" value="${esc(result.invoice_number||invoice.invoice_number||'')}"></div>
           <div class="field compact"><label>التاريخ</label><input name="ocr_date" type="date" value="${esc(result.invoice_date||invoice.invoice_date||'')}"></div>
-          <div class="field compact"><label>العملة</label><select name="ocr_currency"><option value="SYP" ${detectedCurrency==='SYP'?'selected':''}>SYP</option><option value="USD" ${detectedCurrency==='USD'?'selected':''}>USD</option></select></div>
+          <div class="field compact"><label>العملة</label><select name="ocr_currency"><option value="SYP" ${detectedCurrency==='SYP'?'selected':''}>ل.س</option><option value="USD" ${detectedCurrency==='USD'?'selected':''}>USD</option></select></div>
           <div class="field compact"><label>إجمالي الفاتورة المقروء <span class="optional-badge">اختياري</span></label><input name="ocr_invoice_total" type="number" step="any" min="0" value="${invoiceTotal>0?esc(invoiceTotal):''}" placeholder="غير ظاهر"></div>
         </div>
         <div class="ocr-review-note">راجع اسم المادة والأرقام خصوصًا في الفواتير المكتوبة بخط اليد. يمكن تعديل أي قيمة هنا مباشرة.</div>
@@ -508,7 +508,7 @@ async function openPurchaseOcrReview(root,{result,job=null,invoice,mats,units,su
         total+=line>0?line:qty*price;
       });
       const target=m.form.querySelector('[data-ocr-selected-total]');
-      if(target) target.textContent=`${Number(total.toFixed(4)).toLocaleString('en-US')} ${m.form.querySelector('[name="ocr_currency"]')?.value||'SYP'}`;
+      if(target) target.textContent=`${Number(total.toFixed(4)).toLocaleString('en-US')} ${currencyLabel(m.form.querySelector('[name="ocr_currency"]')?.value||'SYP')}`;
     };
 
     rows.forEach((r,i)=>{
@@ -634,7 +634,7 @@ function addItem(root,id,mats,units,currency='SYP'){
           <label>سعر الوحدة</label>
           <div class="input-with-suffix">
             <input name="price" type="number" step="any" min="0" required autocomplete="off">
-            <span class="input-suffix" data-price-suffix>${esc(currency)} / الوحدة</span>
+            <span class="input-suffix" data-price-suffix>${esc(currencyLabel(currency))} / الوحدة</span>
           </div>
         </div>
         <div class="field">
@@ -705,14 +705,14 @@ function addItem(root,id,mats,units,currency='SYP'){
     const material=mats.find(x=>String(x.id)===String(materialSel.value));
     if(!material){
       unitSel.innerHTML='<option value="">—</option>';
-      priceSuffix.textContent=`${currency} / الوحدة`;
+      priceSuffix.textContent=`${currencyLabel(currency)} / الوحدة`;
       return;
     }
     const choices=await materialUnitChoices(material,units);
     unitSel.innerHTML=choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('');
     if(preferred && choices.some(x=>String(x.unitId)===String(preferred))) unitSel.value=preferred;
     const label=unitSel.options[unitSel.selectedIndex]?.textContent?.trim()||'الوحدة';
-    priceSuffix.textContent=`${currency} / ${label}`;
+    priceSuffix.textContent=`${currencyLabel(currency)} / ${label}`;
   };
 
   const selectMaterial=async material=>{
@@ -794,7 +794,7 @@ function addItem(root,id,mats,units,currency='SYP'){
   materialSel.addEventListener('change',()=>populateUnits());
   unitSel.addEventListener('change',()=>{
     const label=unitSel.options[unitSel.selectedIndex]?.textContent?.trim()||'الوحدة';
-    priceSuffix.textContent=`${currency} / ${label}`;
+    priceSuffix.textContent=`${currencyLabel(currency)} / ${label}`;
   });
   populateUnits();
 

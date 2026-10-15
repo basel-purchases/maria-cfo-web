@@ -1,34 +1,34 @@
-import { supabase, configured, configurationMessage } from './supabase.js?v=0.27';
-import * as api from './api.js?v=0.41';
-import { esc } from './utils.js?v=0.27';
-import { toast, friendlyError, modal } from './ui.js?v=0.33';
-import { renderDashboard } from './pages/dashboard.js?v=0.27';
-import { renderHub } from './pages/hubs.js?v=0.41';
-import { renderMaterials } from './pages/materials.js?v=0.27';
-import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.27';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.29-final';
-import { renderMenu } from './pages/menu.js?v=0.41';
+import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
+import * as api from './api.js?v=1.0';
+import { esc } from './utils.js?v=1.0';
+import { toast, friendlyError, modal } from './ui.js?v=1.0';
+import { renderDashboard } from './pages/dashboard.js?v=1.0';
+import { renderHub } from './pages/hubs.js?v=1.0';
+import { renderMaterials } from './pages/materials.js?v=1.0';
+import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=1.0';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0';
+import { renderMenu } from './pages/menu.js?v=1.0';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=0.27';
-import { renderEmployees, renderAttendance } from './pages/employees.js?v=0.33';
-import {renderBonusesV032} from './pages/bonuses.js?v=0.33';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.41';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=0.34';
-import { renderReports } from './pages/reports.js?v=0.27';
-import { renderAssistant } from './pages/assistant.js?v=0.27';
-import { renderImages } from './pages/images.js?v=0.27';
-import { renderSettings } from './pages/settings.js?v=0.27';
-import { renderAssets } from './pages/assets.js?v=0.27';
-import { renderAdvances } from './pages/advances.js?v=0.27';
-import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.32';
-import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=0.41';
-import {installTableExportV027} from './table-export-v027.js?v=0.27';
-import {installSearchableSelectsV033} from './searchable-select-v033.js?v=0.33';
+} from './pages/daily.js?v=1.0';
+import { renderEmployees, renderAttendance } from './pages/employees.js?v=1.0';
+import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0';
+import { renderReports } from './pages/reports.js?v=1.0';
+import { renderAssistant } from './pages/assistant.js?v=1.0';
+import { renderImages } from './pages/images.js?v=1.0';
+import { renderSettings } from './pages/settings.js?v=1.0';
+import { renderAssets } from './pages/assets.js?v=1.0';
+import { renderAdvances } from './pages/advances.js?v=1.0';
+import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0';
+import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0';
+import {installTableExportV027} from './table-export-v027.js?v=1.0';
+import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0';
 
 const app = document.querySelector('#app');
 installSearchableSelectsV033();
@@ -47,7 +47,7 @@ const nav = [
   ['#/assistant', 'المساعد الذكي'],
   ['#/images', 'الصور'],
   ['#/quick-imports', 'الإدخالات السريعة'],
-  ['#/ameen-daily', 'أوردرات الأمين اليومية'],
+  ['#/daily-orders', 'الأوردرات'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.41</div>
+        <div class="sidebar-foot">Web v1.0</div>
       </aside>
 
       <main class="main">
@@ -305,7 +305,8 @@ async function route() {
     dashboard: 'الرئيسية',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
-    'ameen-daily': 'أوردرات الأمين اليومية',
+    'ameen-daily': 'الأوردرات',
+    'daily-orders': 'الأوردرات',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
     events: 'الحفلات',
@@ -345,7 +346,8 @@ async function route() {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
-      case 'ameen-daily': return renderAmeenDailyV041(root);
+      case 'ameen-daily':
+      case 'daily-orders': return renderAmeenDailyV041(root);
       case 'recipes-import': location.hash='#/quick-imports'; return;
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');

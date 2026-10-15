@@ -46,8 +46,8 @@ test('v0.40.1: app module import graph links without missing exports or files',(
 
 test('v0.40.1: corrected error message is quoted and cache bust forces new app/modules',()=>{
   assert.match(read('js/pages/events-v034.js'),/EVENT_TABLE_NO_UNPAID_EXTRAS:'لا توجد طلبات معلقة/);
-  assert.match(read('js/app.js'),/events-v034\.js\?v=0\.(?:40\.1|41)/);
-  assert.match(read('index.html'),/app\.js\?v=0\.(?:40\.1|41)/);
+  assert.match(read('js/app.js'),/events-v034\.js\?v=1\.0/);
+  assert.match(read('index.html'),/app\.js\?v=1\.0/);
   assert.match(read('index.html'),/id="maria-startup-retry"/);
   assert.match(read('index.html'),/window\.setTimeout\(showStartupError, 12000\)/);
 });

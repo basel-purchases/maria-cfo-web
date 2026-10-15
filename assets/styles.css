@@ -1497,3 +1497,23 @@ select option{background:#fff;color:var(--text);padding:8px}
 .daily-order-list-v041{grid-template-columns:minmax(0,1fr)}
 .daily-order-v041{min-width:0;width:100%}
 .daily-report-v041 .table-wrap{overflow-x:auto}
+
+/* v1.0: readable price-review states and separated preview metrics. */
+.daily-preview-v041 > .grid > .card{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:flex-start;justify-content:center}
+.daily-preview-v041 > .grid > .card strong{display:block;font-size:clamp(20px,2vw,27px);line-height:1.15;font-variant-numeric:tabular-nums;color:var(--plum)}
+.daily-preview-v041 > .grid > .card small{display:block;font-size:12px;line-height:1.6;color:#725c6c;margin:0}
+.daily-price-review-v100 .daily-price-row-v100.is-mismatch{background:#fff9f9}
+.daily-price-review-v100 .daily-price-row-v100.is-new{background:#fffdf7}
+.daily-price-review-v100 .daily-price-row-v100.is-match{background:#f9fcf9}
+.daily-price-review-v100 .badge{white-space:nowrap;font-size:12px}
+.daily-price-reason-v100{display:block;margin-top:6px;color:var(--danger);font-size:11px;line-height:1.6}
+.daily-price-review-v100 th,.daily-price-review-v100 td{padding-block:12px;vertical-align:middle}
+.daily-price-review-v100 .daily-price-action-v041{min-width:185px}
+@media(max-width:690px){.daily-preview-v041 > .grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.daily-preview-v041 > .grid > .card{padding:13px}.daily-price-review-v100 .badge{font-size:11px}}
+@media(max-width:420px){.daily-preview-v041 > .grid{grid-template-columns:1fr!important}}
+/* v1.0 mobile guard: wide comparison tables scroll inside the preview, not the page. */
+.daily-preview-v041{grid-template-columns:minmax(0,1fr);min-width:0;width:100%;max-width:100%;overflow:hidden}
+.daily-preview-v041 > *{min-width:0;max-width:100%}
+.daily-preview-v041 .table-wrap{min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+.daily-preview-v041 table{min-width:690px;width:100%}
+.daily-preview-v041 .grid{min-width:0;max-width:100%}

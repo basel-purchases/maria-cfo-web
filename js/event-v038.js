@@ -5,7 +5,7 @@ export const roundMoneyUpV038=(x,currency='SYP')=>currency==='SYP'?Math.ceil(n(x
 export const normalizeTicketV038=(x,currency='SYP')=>roundMoneyUpV038(x,currency);
 export function eventMoneyV038(x,currency='SYP'){
  const value=roundMoneyUpV038(x,currency);
- return new Intl.NumberFormat('en-US',{maximumFractionDigits:currency==='SYP'?0:2,minimumFractionDigits:0}).format(value===0?0:value)+' '+currency;
+ return new Intl.NumberFormat('en-US',{maximumFractionDigits:currency==='SYP'?0:2,minimumFractionDigits:0}).format(value===0?0:value)+' '+(currency==='SYP'?'ل.س':currency);
 }
 export function bookingPriceV038(guests,unitPrice){
  const count=Number(guests),price=Number(unitPrice);

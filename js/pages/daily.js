@@ -1,14 +1,14 @@
-import * as api from '../api.js?v=0.32';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=0.27';
-import { esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=0.27';
-import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=0.27';
-import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=0.27';
-import { downloadXlsx } from '../xlsx-export.js?v=0.27';
-import { renderCashboxManualLedger } from './cashbox-ledger.js?v=0.27';
-import { renderFilteredExpenses } from './expenses-batch.js?v=0.27';
-import { calculateOrderTotals } from '../order-totals.js?v=0.27';
-import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
+import {currencyLabel, esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=1.0';
+import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=1.0';
+import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=1.0';
+import { downloadXlsx } from '../xlsx-export.js?v=1.0';
+import { renderCashboxManualLedger } from './cashbox-ledger.js?v=1.0';
+import { renderFilteredExpenses } from './expenses-batch.js?v=1.0';
+import { calculateOrderTotals } from '../order-totals.js?v=1.0';
+import {PAGE_SIZES,pageInfo} from '../table-presenter-v025.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
 
 function inventoryMinimum(r){
   const keys=[
@@ -162,7 +162,7 @@ export async function renderCashboxes(root){
           <div class="form-grid">
             <div class="field"><label>العملية</label><select name="direction"><option value="in">إضافة</option><option value="out">سحب</option></select></div>
             <div class="field"><label>المبلغ</label><input name="amount" type="number" min="0.000001" step="any" required></div>
-            <div class="field"><label>العملة</label><select name="currency"><option value="SYP">SYP</option><option value="USD">USD</option></select></div>
+            <div class="field"><label>العملة</label><select name="currency"><option value="SYP">ل.س</option><option value="USD">USD</option></select></div>
             <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
             <div class="field full"><label>ملاحظة <span class="optional-badge">اختياري</span></label><input name="note" placeholder="مثال: رصيد افتتاحي عند بدء استخدام النظام"></div>
           </div>`,
@@ -363,7 +363,7 @@ function newOrder(boxes){
         <div class="field"><label>رقم الأوردر <span class="optional-badge">اختياري</span></label><input name="number"></div>
         <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}"></div>
         <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${b.id}" ${String(b.id)===String(firstBox)?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
-        <div class="field"><label>العملة</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+        <div class="field"><label>العملة</label><select name="currency"><option value="SYP">ل.س</option><option>USD</option></select></div>
       </div>`,
     submitText:'إنشاء المسودة',
     onSubmit:async fd=>{
@@ -399,7 +399,7 @@ async function openOrderOcrReview(root,job,boxes){
         <div class="field"><label>رقم الأوردر <span class="optional-badge">اختياري</span></label><input name="number" value="${esc(result.external_order_number||'')}"></div>
         <div class="field"><label>التاريخ</label><input name="date" type="date" value="${esc(orderDate)}"></div>
         <div class="field"><label>الصندوق</label><select name="box"><option value="">اختر لاحقًا</option>${boxes.map(b=>`<option value="${esc(b.id)}" ${String(b.id)===String(firstBox)?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
-        <div class="field"><label>العملة</label><select name="currency"><option value="SYP" ${currency==='SYP'?'selected':''}>SYP</option><option value="USD" ${currency==='USD'?'selected':''}>USD</option></select></div>
+        <div class="field"><label>العملة</label><select name="currency"><option value="SYP" ${currency==='SYP'?'selected':''}>ل.س</option><option value="USD" ${currency==='USD'?'selected':''}>USD</option></select></div>
       </div>
       <div class="order-ocr-items">${items.map((x,i)=>{
         const matched=x.matched_menu_item_id||'';
@@ -533,7 +533,7 @@ export async function renderOrderDetail(root,id){
         </section>
         <section class="card order-controls-card">
           <div class="kv"><div class="k">\u0627\u0644\u062d\u0627\u0644\u0629</div><div>${statusBadge(order.status)}</div>
-            <div class="k">\u0627\u0644\u0639\u0645\u0644\u0629</div><div>${esc(order.currency_code||'SYP')}</div>
+            <div class="k">\u0627\u0644\u0639\u0645\u0644\u0629</div><div>${esc(currencyLabel(order.currency_code||'SYP'))}</div>
             <div class="k">\u0627\u0644\u0635\u0646\u062f\u0648\u0642</div><div>${order.cashbox_id?esc(boxMap[String(order.cashbox_id)]?.name||''):'\u0639\u0646\u062f \u0627\u0644\u0646\u0634\u0631'}</div>
           </div>
           <div class="quick-actions order-action-buttons">

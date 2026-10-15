@@ -1,12 +1,12 @@
 // Maria CFO Web v0.28 — re-import approved recipes and link prices from live materials.
 // Never import the zero/estimated 'price' from the Excel workbook.
-import * as api from './api.js?v=0.32';
-import {esc,money} from './utils.js?v=0.27';
-import {toast,loader,friendlyError} from './ui.js?v=0.27';
-import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=0.27';
-import {parseRecipesV027} from './recipe-import-parser-v027.js?v=0.27';
-import {alignRecipeLinesToCatalog} from './recipe-unit-match-v0272.js?v=0.28';
-import {summarizeRecipeMaterialPrices} from './recipe-cost-coverage-v028.js?v=0.28';
+import * as api from './api.js?v=1.0';
+import {esc,money} from './utils.js?v=1.0';
+import {toast,loader,friendlyError} from './ui.js?v=1.0';
+import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=1.0';
+import {parseRecipesV027} from './recipe-import-parser-v027.js?v=1.0';
+import {alignRecipeLinesToCatalog} from './recipe-unit-match-v0272.js?v=1.0';
+import {summarizeRecipeMaterialPrices} from './recipe-cost-coverage-v028.js?v=1.0';
 
 const normalize=x=>String(x??'').trim().toLocaleLowerCase('ar').replace(/\s+/g,' ');
 const migrationNotice='شغّل ملف database/Maria-CFO-Web-v0.28-Recipe-Resync.sql في Supabase SQL Editor أولًا. لا يكفي رفع ملفات الموقع وحدها.';
@@ -98,7 +98,7 @@ export async function renderRecipeImportV028(root){
    ${coverage.missingNames.length?`<div class="notice"><strong>المواد التالية لا تملك سعرًا معروفًا داخل جدول المواد، لذلك لن تظهر تكلفة كاملة للوصفات التي تستخدمها:</strong>
     <p>${coverage.missingNames.slice(0,25).map(esc).join(' · ')}${coverage.missingNames.length>25?` · و${coverage.missingNames.length-25} مادة أخرى`:''}</p></div>`:''}
    ${incomplete.length?`<details><summary>عرض الوصفات ذات التكلفة غير المكتملة (${incomplete.length})</summary>
-      <div class="table-wrap"><table class="table"><thead><tr><th>الوجبة</th><th>مكونات ناقصة السعر</th><th>المجموع المعروف فقط (SYP)</th></tr></thead><tbody>${incomplete.slice(0,75).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.missingLines}</td><td>${money(r.knownSubtotal)}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+      <div class="table-wrap"><table class="table"><thead><tr><th>الوجبة</th><th>مكونات ناقصة السعر</th><th>المجموع المعروف فقط (ل.س)</th></tr></thead><tbody>${incomplete.slice(0,75).map(r=>`<tr><td>${esc(r.name)}</td><td>${r.missingLines}</td><td>${money(r.knownSubtotal)}</td></tr>`).join('')}</tbody></table></div></details>`:''}
    <label class="recipe-confirm-check"><input type="checkbox" id="recipe-v028-replace"> أوافق على تحديث مكونات الوصفات الموجودة لتطابق الملف، بعد حفظ نسخة احتياطية لكل عملية. لا تعديل لأسعار المواد.</label>
    <button class="btn" id="recipe-v028-commit" type="button" ${errors.length?'disabled':''}>مطابقة وتحديث الـ75 وصفة من جديد</button>
    <p class="metric-note">يمكن إعادة رفع الملف نفسه. إذا لم تتغير مكونات الوصفة فلن يعيد النظام إنشاء سطورها؛ تتحدث التكلفة تلقائيًا عند تعديل سعر المادة.</p></div>`;

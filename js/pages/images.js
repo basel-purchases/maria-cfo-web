@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=0.32';
-import { esc, unitDisplay, todayISO } from '../utils.js?v=0.27';
-import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=0.27';
-import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=0.27';
-import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=0.27';
-import {usageSummary} from '../image-cloud-rules.js?v=0.27';
-import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { esc, unitDisplay, todayISO } from '../utils.js?v=1.0';
+import { toast, loader, friendlyError, confirmBox, modal } from '../ui.js?v=1.0';
+import { newLocalDocument, saveLocalImage, deleteLocalImage, listLocalImages } from '../image-local-store.js?v=1.0';
+import { recognizeCloudImage, fetchOcrUsage } from '../image-cloud-ocr.js?v=1.0';
+import {usageSummary} from '../image-cloud-rules.js?v=1.0';
+import { reviewedOcrItemCandidates,autofillExactCatalog,validateImageDocument,localStatus,exactCatalogId,normalizedName } from '../image-document-rules.js?v=1.0';
 
 const T={
   fast:'\u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0633\u0631\u064a\u0639 - Engine 1',
@@ -177,7 +177,7 @@ export async function renderImages(root){
             <div class="form-grid">
               <div class="field"><label>نوع الصورة</label><select data-doc="type"><option value="order" ${doc.type==='order'?'selected':''}>أوردر (افتراضي)</option><option value="purchase" ${doc.type==='purchase'?'selected':''}>فاتورة شراء</option></select></div>
               <div class="field"><label>التاريخ</label><input data-doc="date" type="date" value="${esc(doc.date||todayISO())}"></div>
-              <div class="field"><label>العملة</label><select data-doc="currency"><option value="SYP" ${doc.currency==='SYP'?'selected':''}>SYP</option><option value="USD" ${doc.currency==='USD'?'selected':''}>USD</option></select></div>
+              <div class="field"><label>العملة</label><select data-doc="currency"><option value="SYP" ${doc.currency==='SYP'?'selected':''}>ل.س</option><option value="USD" ${doc.currency==='USD'?'selected':''}>USD</option></select></div>
               <div class="field"><label>رقم المستند (اختياري)</label><input data-doc="number" value="${esc(doc.number||'')}"></div>
               ${doc.type==='purchase'?`<div class="field full"><label>اسم المورد (اختياري)</label><input data-doc="supplier" value="${esc(doc.supplier||'')}"></div>`:''}
             </div>

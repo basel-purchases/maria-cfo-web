@@ -1,15 +1,15 @@
-import * as api from '../api.js?v=0.32';
-import {modal,toast,loader,friendlyError} from '../ui.js?v=0.27';
-import {esc,money} from '../utils.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.27';
-import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import {modal,toast,loader,friendlyError} from '../ui.js?v=1.0';
+import {esc,money} from '../utils.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=1.0';
 
 const amount=value=>value===null||value===undefined?'—':money(value,'SYP');
 const reportValue=value=>esc(amount(value));
 
 function statusBadge(account){
  switch(supplierBalanceState(account)){
-  case 'unpaid':return '<span class="badge red">دين غير مسدد بحسب الأمين</span>';
+  case 'unpaid':return '<span class="badge red">دين غير مسدد بحسب التقرير</span>';
   case 'settled':return '<span class="badge green">الرصيد صفر</span>';
   case 'credit':return '<span class="badge yellow">رصيد دائن / سالب</span>';
   case 'unknown':return '<span class="badge yellow">الرصيد غير معروف</span>';
@@ -38,14 +38,14 @@ function addSupplier(root){
 
 async function showLedger(account){
  const m=modal({title:`كشف مورد: ${account.supplier_name}`,wide:true,hideActions:true,
-  subtitle:`حساب الأمين ${account.external_account}. البيانات هنا مرجعية ولا تسدد تلقائيًا من الصندوق.`,
+  subtitle:`رقم الحساب المرجعي ${account.external_account}. البيانات هنا مرجعية ولا تسدد تلقائيًا من الصندوق.`,
   body:`<div class="supplier-statement-summary">
     <div><span>الرصيد السابق</span><strong>${reportValue(account.previous_balance)}</strong></div>
     <div><span>إجمالي المدين بالتقرير</span><strong>${reportValue(account.total_debit)}</strong></div>
     <div><span>إجمالي الدائن بالتقرير</span><strong>${reportValue(account.total_credit)}</strong></div>
     <div><span>أوراق تجارية غير محصلة</span><strong>${reportValue(account.uncollected_papers_v025)}</strong></div>
     <div><span>الرصيد الحالي</span><strong>${reportValue(account.current_balance)}</strong></div>
-  </div><div class="notice ${supplierBalanceState(account)==='unpaid'?'rose':'green'}">${supplierBalanceState(account)==='unpaid'?'يوجد رصيد موجب غير مسدد بحسب كشف الأمين. تحقق من السندات والتسويات قبل اعتماده دينًا نهائيًا.':'لا توجد إشارة إلى رصيد موجب مستحق وفق آخر كشف مستورد.'}</div>
+  </div><div class="notice ${supplierBalanceState(account)==='unpaid'?'rose':'green'}">${supplierBalanceState(account)==='unpaid'?'يوجد رصيد موجب غير مسدد بحسب الكشف المستورد. تحقق من السندات والتسويات قبل اعتماده دينًا نهائيًا.':'لا توجد إشارة إلى رصيد موجب مستحق وفق آخر كشف مستورد.'}</div>
   <div class="supplier-ledger-host" aria-live="polite">${loader()}</div>`});
  const host=m.form.querySelector('.supplier-ledger-host');
  let page=1,sequence=0;
@@ -100,15 +100,15 @@ export async function renderSuppliersWithAmeen(root){
   const outstanding=unpaid.reduce((total,s)=>total+Number(s.account?.current_balance||0),0);
   root.innerHTML=`<div class="page-head">
     <div><h2>الموردون وكشوف الحساب</h2>
-      <p>جميع الحقول المستوردة من تقرير الأمين؛ والرصيد الموجب يُبرز لمراجعته دون تسجيل دفع مالي تلقائي.</p></div>
+      <p>جميع الحقول المستوردة من تقرير المبيعات؛ والرصيد الموجب يُبرز لمراجعته دون تسجيل دفع مالي تلقائي.</p></div>
     <div class="page-head-actions"><a class="btn secondary" href="#/quick-imports">رفع كشف حساب</a><button class="btn add">إضافة مورد</button></div>
   </div>
   <div class="grid cols-3 finance-summary-grid">
     <div class="card"><strong>${all.length}</strong><div class="metric-note">عدد الموردين</div></div>
     <div class="card"><strong>${unpaid.length}</strong><div class="metric-note">موردون لديهم رصيد موجب</div></div>
-    <div class="card"><strong>${esc(amount(outstanding))}</strong><div class="metric-note">إجمالي الأرصدة الموجبة من كشف الأمين</div></div>
+    <div class="card"><strong>${esc(amount(outstanding))}</strong><div class="metric-note">إجمالي الأرصدة الموجبة من الكشف المستورد</div></div>
   </div>
-  <div class="notice">الأرصدة المرجعية من برنامج الأمين، ولا تعني وجود دفعات مسجلة داخل Maria CFO. تحقق من توقيت آخر كشف وأي تسويات حدثت بعده.</div>
+  <div class="notice">الأرصدة المرجعية من الملف المستورد، ولا تعني وجود دفعات مسجلة داخل Maria CFO. تحقق من توقيت آخر كشف وأي تسويات حدثت بعده.</div>
   <div class="list-toolbar">
     <div class="search-box"><span aria-hidden="true">⌕</span><input id="supplier-search" type="search" autocomplete="off" placeholder="ابحث باسم المورد أو رقم الحساب أو الهاتف"></div>
     <select id="supplier-status-filter" aria-label="حالة الدين">
@@ -126,7 +126,7 @@ export async function renderSuppliersWithAmeen(root){
    state.page=info.page;
    root.querySelector('#supplier-count').textContent=`${filtered.length} مورد`;
    root.querySelector('#supplier-results').innerHTML=`<div class="table-wrap supplier-table-scroll"><table class="table supplier-full-table">
-    <thead><tr><th>المورد</th><th>رقم حساب الأمين</th><th>الهاتف</th><th>جهة الاتصال</th>
+    <thead><tr><th>المورد</th><th>رقم رقم الحساب المرجعي</th><th>الهاتف</th><th>جهة الاتصال</th>
       <th>الرصيد السابق</th><th>مدين إجمالي</th><th>دائن إجمالي</th>
       <th>الأوراق التجارية غير المحصلة</th><th>الرصيد الحالي</th><th>الحالة</th><th>الحركات</th></tr></thead>
     <tbody>${info.rows.map((s,i)=>{
@@ -140,7 +140,7 @@ export async function renderSuppliersWithAmeen(root){
        <td>${reportValue(a?.uncollected_papers_v025)}</td>
        <td class="supplier-balance">${reportValue(a?.current_balance)}</td>
        <td>${statusBadge(a)}</td>
-       <td>${a?`<button class="mini-btn view-supplier-ledger" data-code="${esc(a.external_account)}">عرض حركات الأمين</button>`:'—'}</td>
+       <td>${a?`<button class="mini-btn view-supplier-ledger" data-code="${esc(a.external_account)}">عرض الحركات المستوردة</button>`:'—'}</td>
      </tr>`;
     }).join('')||'<tr><td colspan="11">لا توجد نتائج مطابقة.</td></tr>'}</tbody></table></div>
     ${info.pages>1?`<div class="pagination-bar">
@@ -150,7 +150,7 @@ export async function renderSuppliersWithAmeen(root){
     </div>`:''}`;
    registerTableExport(root.querySelector('.supplier-full-table'),()=>({
      title:'الموردون - حسب البحث والفلتر',
-     headers:['المورد','رقم حساب الأمين','الهاتف','جهة الاتصال','الرصيد السابق','مدين إجمالي','دائن إجمالي','أوراق تجارية','الرصيد الحالي','الحالة'],
+     headers:['المورد','رقم رقم الحساب المرجعي','الهاتف','جهة الاتصال','الرصيد السابق','مدين إجمالي','دائن إجمالي','أوراق تجارية','الرصيد الحالي','الحالة'],
      rows:filtered.map(s=>{const a=s.account;return [s.name,s.code||'',s.phone||'',s.contact||'',a?.previous_balance??'',a?.total_debit??'',a?.total_credit??'',a?.uncollected_papers_v025??'',a?.current_balance??'',supplierBalanceState(a)];})
    }));
    root.querySelectorAll('.view-supplier-ledger').forEach(b=>b.onclick=()=>{

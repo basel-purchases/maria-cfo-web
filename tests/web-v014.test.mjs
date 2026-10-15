@@ -23,8 +23,8 @@ test('currency due amounts are NOT summed across currencies',()=>{
     {estimated_due_original:1000,currency_code:'SYP'},
     {estimated_due_original:20,currency_code:'USD'},
   ]);
-  assert.match(x,/٣٠ USD/);
-  assert.match(x,/SYP/);
+  assert.match(x,/30 USD/);
+  assert.match(x,/ل\.س/);
 });
 test('profit remains provisional if cost data is incomplete',()=>{
   assert.equal(finalProfitValue({kpis:{profit_is_final:false,net_result_base:null,provisional_net_result_base:345}}),345);
@@ -41,7 +41,7 @@ test('chart markup escapes server-provided labels',()=>{
   assert.ok(x.includes('&lt;bad&gt;'));
 });
 test('statistical KPI values use numeric value or explicit missing mark',()=>{
-  assert.match(financialCard('إيراد',0),/٠ SYP/);
+  assert.match(financialCard('إيراد',0),/0 ل\.س/);
   assert.match(financialCard('إيراد',null),/—/);
 });
 test('financial RPC uses exact verified parameter names',()=>{
@@ -79,13 +79,13 @@ test('all relative JS imports exist and are versioned',()=>{
         for(const m of text.matchAll(rx)){
           const relative=m[1].split('?')[0];
           assert.ok(existsSync(resolve(dir,relative)),`${abs} missing ${relative}`);
-          assert.match(m[1],/\?v=0\.(?:27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)(?:\.\d+)?(?:-final)?$/);
+          assert.match(m[1],/\?v=1\.0$/);
         }
       }
     }
   }
   check(root);
-  assert.match(index,/v=0\.(?:27|28|29|30|31|32|33|34|35|36|37|38|39|40|41)/);
+  assert.match(index,/v=1\.0/);
 });
 test('project ZIP contents do not need Git or config changes',()=>{
   assert.equal(existsSync(join(base,'config.js')),false);

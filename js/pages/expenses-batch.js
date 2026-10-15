@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.32';
-import {toast,loader,friendlyError,modal} from '../ui.js?v=0.27';
-import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
-import {datePeriod,dateInRange} from '../date-range-batch.js?v=0.27';
-import {downloadXlsx} from '../xlsx-export.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import {toast,loader,friendlyError,modal} from '../ui.js?v=1.0';
+import {currencyLabel, esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
+import {datePeriod,dateInRange} from '../date-range-batch.js?v=1.0';
+import {downloadXlsx} from '../xlsx-export.js?v=1.0';
 
 const L={
  title:'\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a',newExpense:'\u0625\u0636\u0627\u0641\u0629 \u0645\u0635\u0631\u0648\u0641',
@@ -36,7 +36,7 @@ export async function renderFilteredExpenses(root,options=defaults){
   const draw=()=>{
     const filtered=rows.filter(r=>dateInRange(r.occurred_at,datePeriod(state.period,state.anchor).start,datePeriod(state.period,state.anchor).end));
     const {totals,count}=summary(filtered);
-    $('#expense-summary').innerHTML=`${Object.entries({SYP:totals.SYP||0,USD:totals.USD||0}).map(([c,v])=>`<div class="card"><div class="metric-label">${L.total} ${c}</div><div class="metric-value">${money(v,c)}</div></div>`).join('')}<div class="card"><div class="metric-label">${L.count}</div><div class="metric-value">${count}</div></div>`;
+    $('#expense-summary').innerHTML=`${Object.entries({SYP:totals.SYP||0,USD:totals.USD||0}).map(([c,v])=>`<div class="card"><div class="metric-label">${L.total} ${currencyLabel(c)}</div><div class="metric-value">${money(v,c)}</div></div>`).join('')}<div class="card"><div class="metric-label">${L.count}</div><div class="metric-value">${count}</div></div>`;
     $('#expense-table').innerHTML=filtered.length?`<div class="table-wrap table-fit"><table class="table expense-table"><thead><tr><th>${L.date}</th><th>${L.name}</th><th>${L.category}</th><th>${L.amount}</th><th>${L.box}</th><th>${L.recipient}</th><th>${L.details}</th></tr></thead><tbody>${filtered.map(r=>`<tr class="${r.transaction_is_void?'is-void':''}"><td>${dateOnly(r.occurred_at)}</td><td>${esc(r.title||'')}</td><td>${esc(r.category_name||L.other)}</td><td>${r.amount_original==null?'\u2014':money(r.amount_original,r.currency_code||'SYP')}</td><td>${esc(r.cashbox_name||'\u2014')}</td><td>${esc(r.payee||'\u2014')}</td><td><button class="mini-action expense-details" data-id="${esc(r.id)}" type="button">${L.view}</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="card empty">${L.empty}</div>`;
     root.querySelectorAll('.expense-details').forEach(button=>button.addEventListener('click',()=>{
       const row=filtered.find(r=>String(r.id)===String(button.dataset.id));
@@ -69,7 +69,7 @@ export async function renderFilteredExpenses(root,options=defaults){
     modal({title:L.newExpense,body:`<div class="form-grid">
     <div class="field full"><label>${L.name}</label><input name="title" required></div>
     <div class="field"><label>${L.amount}</label><input name="amount" type="number" min="0.000001" step="any" required></div>
-    <div class="field"><label>${L.currency}</label><select name="currency"><option>SYP</option><option>USD</option></select></div>
+    <div class="field"><label>${L.currency}</label><select name="currency"><option value="SYP">ل.س</option><option>USD</option></select></div>
     <div class="field"><label>${L.box}</label><select name="box" required>${boxes.filter(b=>b.is_active!==false).map(b=>`<option value="${esc(b.id)}" ${b.id===general?.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
     <div class="field"><label>${L.category}</label><select name="cat"><option value="">${L.other}</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field"><label>${L.recipient}</label><input name="payee"></div>

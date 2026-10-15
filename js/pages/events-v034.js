@@ -1,17 +1,17 @@
-import * as api from '../api.js?v=0.40';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.33';
-import {esc,money,dateOnly,todayISO} from '../utils.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.33';
-import {EVENT_RULE_NAMES_V034,eventCostQuoteV034,eventActualResultV034} from '../event-cost-v034.js?v=0.34';
-import {proposeEventAllocationV035} from '../event-seating-v035.js?v=0.35';
-import {menuEquivalentV036,portionPreviewV036,conversionHintsV036,SERVING_RULE_NAMES_V036} from '../portion-servings-v036.js?v=0.36';
-import {validateQuickServingV037,quickServingChoiceV037} from '../event-unit-quick-v037.js?v=0.37';
-import {conversionChoices,relationBaseFromAmount} from '../unit-display-conversion.js?v=0.27';
-import {hospitalityGroupsV037} from '../event-groups-v037.js?v=0.37';
-import {eventMoneyV038,normalizeTicketV038,bookingPriceV038,ticketFromMarginV038,marginFromTicketV038,eventGuestSummaryV038,validateTableDistributionV038,normalizeTableSearchV038,EVENT_BOOKING_STATUS_AR_V038} from '../event-v038.js?v=0.40';
-import {augmentEventQuoteV038} from '../event-external-v038.js?v=0.38';
-import {planningTablesV039,plannedMenuRequirementsV039,externalBudgetV039,externalPreviewV039,tableExtraGroupsV039,portionDisplayV039} from '../event-planning-v039.js?v=0.39';
-import {onDemandRowsV040,onDemandTotalsV040,reservationDashboardV040} from '../event-on-demand-v040.js?v=0.40';
+import * as api from '../api.js?v=1.0';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
+import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {EVENT_RULE_NAMES_V034,eventCostQuoteV034,eventActualResultV034} from '../event-cost-v034.js?v=1.0';
+import {proposeEventAllocationV035} from '../event-seating-v035.js?v=1.0';
+import {menuEquivalentV036,portionPreviewV036,conversionHintsV036,SERVING_RULE_NAMES_V036} from '../portion-servings-v036.js?v=1.0';
+import {validateQuickServingV037,quickServingChoiceV037} from '../event-unit-quick-v037.js?v=1.0';
+import {conversionChoices,relationBaseFromAmount} from '../unit-display-conversion.js?v=1.0';
+import {hospitalityGroupsV037} from '../event-groups-v037.js?v=1.0';
+import {eventMoneyV038,normalizeTicketV038,bookingPriceV038,ticketFromMarginV038,marginFromTicketV038,eventGuestSummaryV038,validateTableDistributionV038,normalizeTableSearchV038,EVENT_BOOKING_STATUS_AR_V038} from '../event-v038.js?v=1.0';
+import {augmentEventQuoteV038} from '../event-external-v038.js?v=1.0';
+import {planningTablesV039,plannedMenuRequirementsV039,externalBudgetV039,externalPreviewV039,tableExtraGroupsV039,portionDisplayV039} from '../event-planning-v039.js?v=1.0';
+import {onDemandRowsV040,onDemandTotalsV040,reservationDashboardV040} from '../event-on-demand-v040.js?v=1.0';
 
 const fmt=(v,c='SYP')=>eventMoneyV038(Math.abs(Number(v)||0)<1e-8?0:Number(v)||0,c);
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -104,7 +104,7 @@ export async function renderEventsV034(root,mode='planning'){
     <div class="field"><label>تاريخ الحفلة</label><input type="date" name="date" value="${todayISO()}" required></div>
     <div class="field"><label>نوع الحفلة</label><select name="type"><option value="public">عامة · تذاكر</option><option value="private">خاصة · حجز</option></select></div>
     <div class="field"><label>عدد الضيوف المتوقع</label><input type="number" name="guests" min="1" max="100000" value="40" required></div>
-    <div class="field"><label>عملة الحفلة</label><select name="currency"><option value="SYP">ليرة سورية SYP</option><option value="USD">دولار USD</option></select></div>
+    <div class="field"><label>عملة الحفلة</label><select name="currency"><option value="SYP">ليرة سورية · ل.س</option><option value="USD">دولار · USD</option></select></div>
     <div class="field"><label>عدد الطاولات</label><input type="number" name="tableCount" min="1" max="200" value="10" required></div><div class="field"><label>كراسي كل طاولة</label><input type="number" name="seatsPerTable" min="1" max="100" value="8" required></div><div class="field full"><label>مصدر الإيراد</label><select name="mode"><option value="bookings">تذاكر وحجوزات</option><option value="both">حجوزات وأوردرات منفصلة</option><option value="orders">أوردرات فقط</option></select></div></div>`,
    onSubmit:async fd=>{try{const result=await api.createEvent({name:fd.get('name'),date:fd.get('date'),type:fd.get('type'),guests:fd.get('guests'),currency:fd.get('currency'),revenueMode:fd.get('mode')});
     try{await api.eventBulkTablesV035(result,fd.get('tableCount'),fd.get('seatsPerTable'));toast('تم إنشاء الحفلة وجميع طاولاتها دفعة واحدة.','success');location.hash=`#/event/${result}`;return true;}catch(setupError){toast('تم إنشاء الحفلة لكن تعذّر تجهيز الطاولات: '+toError(setupError),'error');location.hash=`#/event/${result}`;return true;}
@@ -1008,7 +1008,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   const paid=num(state.bookingBalances.find(x=>x.booking_id===booking.id)?.paid_original);
   if(paid>0){toast('لا يمكن تغيير قيمة حجز له دفعات مسجلة.','error');return;}
   const dlg=modal({title:'تحديد قيمة الحجز',subtitle:'يُستخدم لتصحيح حجز قديم بقيمة صفر أو تعديل قيمته قبل أول قبض. لا تُسجَّل حركة صندوق الآن.',submitText:'حفظ القيمة الجديدة',
-   body:`<div class="form-grid"><div class="field"><label>عدد الأشخاص</label><input type="number" value="${esc(booking.guest_count)}" disabled></div><div class="field"><label>سعر الشخص (${esc(booking.currency_code)})</label><input name="unit" type="number" step="any" min="0.0001" value="${num(booking.agreed_amount_original)/Math.max(1,num(booking.guest_count))}" required></div><div class="field full"><label>إجمالي الحجز</label><input name="total" type="number" step="any" min="0.0001" value="${num(booking.agreed_amount_original)}" required></div></div>`,
+   body:`<div class="form-grid"><div class="field"><label>عدد الأشخاص</label><input type="number" value="${esc(booking.guest_count)}" disabled></div><div class="field"><label>سعر الشخص (${esc(currencyLabel(booking.currency_code))})</label><input name="unit" type="number" step="any" min="0.0001" value="${num(booking.agreed_amount_original)/Math.max(1,num(booking.guest_count))}" required></div><div class="field full"><label>إجمالي الحجز</label><input name="total" type="number" step="any" min="0.0001" value="${num(booking.agreed_amount_original)}" required></div></div>`,
    onSubmit:async fd=>{const value=Number(fd.get('total'));if(!(value>0)){toast('سعر الحجز يجب أن يكون موجبًا.','error');return false;}return commit(()=>api.eventSetBookingAmountV038(booking.id,bookingPriceV038(num(booking.guest_count),normalizeTicketV038(value/num(booking.guest_count),booking.currency_code))),'تم تصحيح قيمة الحجز ويمكنك تحصيله.');}
   });
   const unit=dlg.form.elements.namedItem('unit'),total=dlg.form.elements.namedItem('total'),count=num(booking.guest_count);
@@ -1021,7 +1021,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   if(!r||due<=0||!activeBox){toast('لا يوجد رصيد مطلوب أو صندوق نشط.','error');return;}
   modal({title:`تحصيل حجز ${booking.customer_name}`,subtitle:'تُسجّل حركة نقدية داخل الصندوق مباشرة عند التأكيد.',submitText:'تأكيد التحصيل',
    body:`<div class="notice rose">المتبقي: <strong>${fmt(due,booking.currency_code)}</strong> · حالة الحجز ${esc(EVENT_BOOKING_STATUS_AR_V038[booking.status]||statusLabel[booking.status]||booking.status)}</div>
-    <div class="form-grid"><div class="field"><label>المبلغ المطلوب تحصيله (${esc(booking.currency_code)})</label><input name="amount" type="number" min="0.0001" step="any" max="${due}" value="${due}" required></div>
+    <div class="form-grid"><div class="field"><label>المبلغ المطلوب تحصيله (${esc(currencyLabel(booking.currency_code))})</label><input name="amount" type="number" min="0.0001" step="any" max="${due}" value="${due}" required></div>
     <div class="field"><label>الصندوق</label><select name="box" required>${withBox()}</select></div></div>`,
    onSubmit:async fd=>{const amt=Number(fd.get('amount'));if(!Number.isFinite(amt)||amt<=0||amt>due+.0001){toast('راجع المبلغ، لا يمكن تحصيل أكثر من المتبقي.','error');return false;}
     return commit(()=>api.eventPayBookingV034(booking.id,fd.get('box'),amt,booking.currency_code),'تم تحصيل الحجز وتسجيل حركة الصندوق.');}

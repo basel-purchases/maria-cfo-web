@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=0.32';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.27';
-import { esc, money, dateOnly, todayISO } from '../utils.js?v=0.27';
-import { employeeName } from '../payroll-ui.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
+import {currencyLabel, esc, money, dateOnly, todayISO } from '../utils.js?v=1.0';
+import { employeeName } from '../payroll-ui.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
 
 const SIZE=15;
 export async function renderAdvances(root){
@@ -51,7 +51,7 @@ export async function renderAdvances(root){
     root.querySelector('#advance-status').onchange=e=>{state.status=e.target.value;state.page=1;draw();};
     root.querySelector('.add-advance').onclick=()=>modal({
       title:'\u0625\u0636\u0627\u0641\u0629 \u0633\u0644\u0641\u0629',
-      body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u0645\u0648\u0638\u0641</label><select name="employee" required>${staff.filter(e=>e.status==='active').map(e=>`<option value="${esc(e.id)}">${esc(e.name)} (${esc(e.wage_currency_code||'SYP')})</option>`).join('')}</select></div>
+      body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u0645\u0648\u0638\u0641</label><select name="employee" required>${staff.filter(e=>e.status==='active').map(e=>`<option value="${esc(e.id)}">${esc(e.name)} (${esc(currencyLabel(e.wage_currency_code||'SYP'))})</option>`).join('')}</select></div>
       <div class="field"><label>\u0627\u0644\u0635\u0646\u062f\u0648\u0642</label><select name="cashbox" required>${boxes.filter(x=>x.is_active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
       <div class="field"><label>\u0627\u0644\u0645\u0628\u0644\u063a</label><input name="amount" type="number" min="0.0001" step="any" required></div>
       <div class="field"><label>\u0627\u0644\u062e\u0635\u0645</label><select name="repayment"><option value="installments">\u0623\u0642\u0633\u0627\u0637</option><option value="full_next_payroll">\u0627\u0644\u0631\u0627\u062a\u0628 \u0627\u0644\u0642\u0627\u062f\u0645</option><option value="manual">\u064a\u062f\u0648\u064a</option></select></div>

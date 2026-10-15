@@ -74,9 +74,9 @@ test('v0.41: protected importer is atomic, idempotent, and does not post cash tw
 });
 test('v0.41: independent sidebar, daily preview, order audit and menu missing-cost route are wired',()=>{
  const a=read('js/app.js'),d=read('js/pages/ameen-daily-v041.js'),m=read('js/pages/menu.js'),e=read('js/pages/events-v034.js');
- for(const tag of ['#/ameen-daily','renderAmeenDailyV041','Web v0.41','case \'ameen-daily\''])assert.ok(a.includes(tag),tag);
+ for(const tag of ['#/daily-orders','renderAmeenDailyV041','Web v1.0','case \'ameen-daily\''])assert.ok(a.includes(tag),tag);
  for(const tag of ['readAmeenWorkbook','parseAmeenRows','ameenPricePreviewV041','ameenImportDailyV041','data-price-index','ameenPriceUndoV041','menu/unpriced','duplicateFile','conflicts','source'])assert.ok(d.includes(tag),tag);
  assert.match(m,/menuMissingCostPageV041/);assert.match(m,/estimatedCost/);
  assert.doesNotMatch(e,/<a class="mini-btn event-action-v035 primary" href="#\/event-bookings/);
- assert.match(read('index.html'),/app\.js\?v=0\.41/);
+ assert.match(read('index.html'),/app\.js\?v=1\.0/);
 });

@@ -1,13 +1,13 @@
-import * as api from '../api.js?v=0.32';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=0.33';
-import { esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=0.27';
-import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=0.27';
-import {employeeDirectoryScoreV033, attendanceSummaryV033, filterAttendanceV033} from '../staff-ux-v033.js?v=0.33';
-import {registerTableExport} from '../table-export-v027.js?v=0.33';
-import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=0.32';
-import {openEmployeeBonusModal} from './bonuses.js?v=0.33';
+import * as api from '../api.js?v=1.0';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
+import {currencyLabel, esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=1.0';
+import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=1.0';
+import {employeeDirectoryScoreV033, attendanceSummaryV033, filterAttendanceV033} from '../staff-ux-v033.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0';
+import {openEmployeeBonusModal} from './bonuses.js?v=1.0';
 
-import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=0.27';
+import { PAY_LABELS, payTypeBadge, employeeName, currenciesSummary } from '../payroll-ui.js?v=1.0';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
 const ATTENDANCE_LABELS = {
   full: 'دوام كامل', partial: 'دوام جزئي', absent: 'غياب',
@@ -45,7 +45,7 @@ export async function renderEmployees(root) {
             <td dir="ltr">${esc(r.mobile_phone_v031 || '—')}</td>
             <td>${payTypeBadge(r.pay_type)}</td>
             <td><strong>${rate == null ? '—' : money(rate, r.wage_currency_code || 'SYP')}</strong></td>
-            <td>${esc(r.wage_currency_code || 'SYP')}</td>
+            <td>${esc(currencyLabel(r.wage_currency_code || 'SYP'))}</td>
             <td><span class="badge ${r.status==='active'?'green':'yellow'}">${r.status==='active'?'نشط':'غير نشط'}</span></td>
           </tr>`;
         }).join('')}</tbody>
@@ -115,7 +115,7 @@ function openEmployeeModal(root, employee=null) {
           <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option><option value="fixed">مقطوع</option>
         </select></div>
         <div class="field"><label class="wage-label">الراتب الشهري</label><input name="wage" type="number" min="0.0001" step="any" required inputmode="decimal" value="${value(rate)}"></div>
-        <div class="field"><label>عملة الأجر</label><select name="currency"><option value="SYP">SYP · ليرة سورية</option><option value="USD">USD · دولار</option></select></div>
+        <div class="field"><label>عملة الأجر</label><select name="currency"><option value="SYP">ل.س · ليرة سورية</option><option value="USD">USD · دولار</option></select></div>
         <div class="field"><label>تاريخ التعيين</label><input name="hire_date" type="date" value="${value(employee?.hire_date)}"></div>
         <div class="field"><label>تاريخ انتهاء العمل (اختياري)</label><input name="termination_date" type="date" value="${value(employee?.termination_date)}"></div>
         <div class="field full"><label>ملاحظات إدارية</label><textarea name="notes" maxlength="2000" rows="2">${value(employee?.notes)}</textarea></div>
@@ -478,7 +478,7 @@ async function renderSalaryLedger(root,employeeMap,boxMap){
   const now=todayISO();
   let kind='day',day=now,page=0,period;
   const fetchPage=async()=>{
-    const bounds=(await import('../payroll-policy-v023.js?v=0.27')).salaryPeriod(kind,day);
+    const bounds=(await import('../payroll-policy-v023.js?v=1.0')).salaryPeriod(kind,day);
     period=bounds;
     const result=await api.salaryPaymentPage(bounds.start,bounds.end,page*25,25);
     const rows=Array.isArray(result?.rows)?result.rows:[];

@@ -1,13 +1,13 @@
-import * as api from '../api.js?v=0.32';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.27';
-import { esc, unitDisplay } from '../utils.js?v=0.27';
-import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
+import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
+import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
 import {
   buildUnitCatalog,
   formatUnitAmount,
   normalizedUnitName,
   validateNamedUnitDraft,
-} from '../unit-catalog.js?v=0.27';
+} from '../unit-catalog.js?v=1.0';
 
 const TYPE_LABELS={
   dedicated:'وحدة خاصة بمادة', material:'تحويل مادة',
@@ -67,7 +67,7 @@ export async function renderSettings(root, selectedTab='general') {
       <div data-settings-pane="general">
         <div class="grid cols-2">
           <div class="card"><h3>إعدادات حالية</h3><div class="kv">
-            <div class="k">العملة الأساسية</div><div>${esc(s.base_currency_code || s.base_currency || 'SYP')}</div>
+            <div class="k">العملة الأساسية</div><div>${esc(currencyLabel(s.base_currency_code || s.base_currency || 'SYP'))}</div>
             <div class="k">العملة الثانوية</div><div>${esc(s.secondary_currency_code || s.secondary_currency || 'USD')}</div>
             <div class="k">Food Cost الافتراضي</div><div>${esc(s.default_food_cost_percent ?? '30')}%</div>
             <div class="k">المنطقة الزمنية</div><div>${esc(s.timezone || '—')}</div>
@@ -75,7 +75,7 @@ export async function renderSettings(root, selectedTab='general') {
           <div class="card"><h3>سعر الصرف</h3><p>تغيير السعر اليوم لا يعيد كتابة العمليات التاريخية.</p>
             <div class="form-grid" style="margin-top:12px">
               <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
-              <div class="field"><label>1 USD = كم SYP</label><input id="fx-rate" type="number" step="any"></div>
+              <div class="field"><label>1 USD = كم ل.س</label><input id="fx-rate" type="number" step="any"></div>
             </div><div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
           </div>
           <div class="card soft"><h3>جلسة الدخول</h3><p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>

@@ -1,6 +1,6 @@
 // Maria CFO v0.37 — validate a serving conversion before creating anything.
 // Menu-to-serving yield and ingredient-to-stock-unit conversion are independent.
-import {normalizedUnitName,isVagueContextualName} from './unit-catalog.js?v=0.27';
+import {normalizedUnitName,isVagueContextualName} from './unit-catalog.js?v=1.0';
 
 const finitePositive=value=>Number.isFinite(Number(value))&&Number(value)>0;
 const hasAtMostFourDecimals=value=>Math.abs(Number(value)*10000-Math.round(Number(value)*10000))<0.0000001;

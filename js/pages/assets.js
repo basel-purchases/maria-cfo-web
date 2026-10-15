@@ -1,9 +1,9 @@
-import * as api from '../api.js?v=0.32';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=0.27';
-import {esc,money} from '../utils.js?v=0.27';
-import {registerTableExport} from '../table-export-v027.js?v=0.27';
-import {PAGE_SIZES,paginateArray,sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=0.27';
-import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=0.27';
+import * as api from '../api.js?v=1.0';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
+import {esc,money} from '../utils.js?v=1.0';
+import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {PAGE_SIZES,paginateArray,sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=1.0';
+import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=1.0';
 
 export async function renderAssets(root){
  root.innerHTML=loader();
@@ -17,7 +17,7 @@ export async function renderAssets(root){
   const state={category:'',query:'',page:1};
   root.innerHTML=`
    <div class="page-head"><div><h2>الأساسيات والممتلكات</h2>
-    <p>جرد التجهيزات والأواني، مع عددها الحالي ومواقعها وكمياتها ووحداتها كما جاءت في كشف الأمين.</p>
+    <p>جرد التجهيزات والأواني، مع عددها الحالي ومواقعها وكمياتها ووحداتها كما جاءت في الكشف المستورد.</p>
    </div><button class="btn add-asset">إضافة أساسيات</button></div>
    <div class="list-toolbar">
      <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="asset-query" placeholder="ابحث باسم الأساسيات"></div>
@@ -62,7 +62,7 @@ export async function renderAssets(root){
      </div>
      <div class="card"><div class="table-wrap assets-table-scroll"><table class="table asset-details-table">
       <thead><tr><th>الأساسيات</th><th>التصنيف</th><th>الوحدة</th><th>العدد الحالي</th><th>حد التنبيه</th>
-      <th>المستودع وكمية الأمين</th><th>سعر الأمين</th><th>الحالة</th><th>الملاحظات</th><th>إجراء</th></tr></thead>
+      <th>المستودع والكمية المستوردة</th><th>سعر التقرير</th><th>الحالة</th><th>الملاحظات</th><th>إجراء</th></tr></thead>
       <tbody>${info.rows.map(x=>{
        const sourceRows=importedRowsFor(x,source),price=importedPrice(sourceRows);
        return `<tr>
@@ -89,7 +89,7 @@ export async function renderAssets(root){
      </div>`:''}</div>`;
    registerTableExport(root.querySelector('.asset-details-table'),()=>({
     title:'الأساسيات - حسب التصفية',
-    headers:['الاسم','التصنيف','الوحدة','العدد الحالي','حد التنبيه','كمية جرد الأمين','سعر الأمين','ملاحظات'],
+    headers:['الاسم','التصنيف','الوحدة','العدد الحالي','حد التنبيه','كمية الجرد المستورد','سعر التقرير','ملاحظات'],
     rows:filtered.map(x=>{const sr=importedRowsFor(x,source);const pr=importedPrice(sr);return [x.name,names.get(String(x.category_id))||'',x.ameen_unit_v024||sr[0]?.unit_name||'',x.quantity,x.minimum_quantity,importedStockSummary(sr),pr==null?'':pr,x.notes||''];})
    }));
    root.querySelectorAll('.asset-edit').forEach(b=>b.onclick=()=>assetForm(items.find(x=>String(x.id)===b.dataset.id)));

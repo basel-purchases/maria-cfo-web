@@ -1,5 +1,5 @@
 // Supports the original complete v0.27 workbook, and a filtered v0.29 workbook.
-import {parseRecipesV027} from './recipe-import-parser-v027.js?v=0.27';
+import {parseRecipesV027} from './recipe-import-parser-v027.js?v=1.0';
 const s=v=>String(v??'').trim();
 const rowObjects=(sheet,keys)=>{
  if(!sheet?.rows?.length)throw Error('RECIPE_V029_INVALID_FORMAT');

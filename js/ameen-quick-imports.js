@@ -1,9 +1,9 @@
-import * as api from './api.js?v=0.32';
-import {esc} from './utils.js?v=0.27';
-import {modal,toast,friendlyError,loader} from './ui.js?v=0.27';
-import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=0.27';
-import {filterInventoryV029} from './import-policy-v029.js?v=0.29-final';
-import {installMaterialPurchaseImportV029} from './material-purchase-import-v029.js?v=0.29-final';
+import * as api from './api.js?v=1.0';
+import {esc} from './utils.js?v=1.0';
+import {modal,toast,friendlyError,loader} from './ui.js?v=1.0';
+import {AMEEN_TYPES,parseAmeenRows,readAmeenWorkbook,findReportSheet,sha256Hex,classifyFileName} from './ameen-import-parser.js?v=1.0';
+import {filterInventoryV029} from './import-policy-v029.js?v=1.0';
+import {installMaterialPurchaseImportV029} from './material-purchase-import-v029.js?v=1.0';
 
 const browserSupport=()=>typeof window.showDirectoryPicker==='function';
 const DB='maria-ameen-folder-v024',STORE='settings',KEY='import-folder';
@@ -50,7 +50,7 @@ async function scanFiles(){
 }
 function askFiles(files,ignored=[]){return new Promise(resolve=>{
  const m=modal({
-  title:'تحديث ملفات الأمين',wide:true,submitText:'تأكيد وبدء الاستيراد',
+  title:'تحديث الملفات المستوردة',wide:true,submitText:'تأكيد وبدء الاستيراد',
   subtitle:'راجع الملفات التي وجدها النظام قبل البدء. ستُعالج كل منها مرة واحدة بأمان.',
   body:`<div class="ameen-found-list">${files.map(({kind,file})=>`<div class="ameen-found-row"><strong>${esc(AMEEN_TYPES[kind])}</strong><span>${esc(file.name)}</span><small>${(file.size/1024).toFixed(1)} KB</small></div>`).join('')}</div>
   ${ignored.length?`<p class="metric-note">تم تجاهل ${ignored.length} ملفات غير مطابقة أو نسخ أقدم في المجلد.</p>`:''}
@@ -61,7 +61,7 @@ function askFiles(files,ignored=[]){return new Promise(resolve=>{
  });}
 function overlay(){
  const el=document.createElement('div');el.className='ameen-import-blocker';el.setAttribute('role','alertdialog');el.setAttribute('aria-modal','true');
- el.innerHTML=`<div class="ameen-block-card"><div class="loader"></div><h3>جاري معالجة ملفات الأمين</h3><p id="ameen-stage">قراءة الملفات والتحقق من البيانات…</p><progress id="ameen-progress" max="100" value="0"></progress><small>لا تغلق الصفحة أو تحدّثها أثناء الاستيراد. قد تستغرق معالجة الجرد بعض الوقت.</small></div>`;
+ el.innerHTML=`<div class="ameen-block-card"><div class="loader"></div><h3>جاري معالجة الملفات المستوردة</h3><p id="ameen-stage">قراءة الملفات والتحقق من البيانات…</p><progress id="ameen-progress" max="100" value="0"></progress><small>لا تغلق الصفحة أو تحدّثها أثناء الاستيراد. قد تستغرق معالجة الجرد بعض الوقت.</small></div>`;
  document.body.append(el);document.querySelector('#app')?.setAttribute('inert','');
  return {update(value,label){el.querySelector('#ameen-stage').textContent=label;el.querySelector('progress').value=value;},close(){document.querySelector('#app')?.removeAttribute('inert');el.remove();}};
 }
@@ -121,13 +121,13 @@ function compactSample(kind,parsed){
  return `<div class="table-wrap"><table class="table ameen-preview-table"><thead><tr>${headers.map(v=>`<th>${esc(v)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${values(r).map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 export async function renderQuickImports(root){
- root.innerHTML=`<div class="page-head"><div><h2>الإدخالات السريعة من برنامج الأمين</h2><p>رفع Excel ومراجعة بيانات الجرد والأوردرات وكشف الموردين. يمنع البرنامج التكرار تلقائيًا.</p></div><button class="btn secondary" id="ameen-refresh-in-page">↻ تحديث من المجلد</button></div>
+ root.innerHTML=`<div class="page-head"><div><h2>الإدخالات السريعة من الملف المستورد</h2><p>رفع Excel ومراجعة بيانات الجرد والأوردرات وكشف الموردين. يمنع البرنامج التكرار تلقائيًا.</p></div><button class="btn secondary" id="ameen-refresh-in-page">↻ تحديث من المجلد</button></div>
   <div class="card"><a class="btn secondary" href="#/recipes-import">استيراد وصفات المنيو من Excel</a></div>
   <div class="card"><h3>استيراد فواتير شراء مواد المطبخ من حركة مادة</h3>
      <p>تستورد الفواتير التاريخية المكتملة الخاصة بمواد المطبخ مع الأسعار والتواريخ الأصلية، ثم تتطلب مطابقة الرصيد النهائي مع الجرد؛ لن يُحتسب مجموع المشتريات كمخزون متاح بعد التسوية. لا تسجّل دفعات أو ديونًا مجهولة.</p>
      <div class="field"><label for="ameen-purchase-file">تقرير حركة مادة1.xlsx</label><input id="ameen-purchase-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
      <div class="quick-actions"><button class="btn" type="button" id="ameen-purchase-preview">معاينة وفحص فواتير المطبخ</button>
-     <a class="btn secondary" href="./templates/Maria-CFO-Ameen-Material-Purchases-v0.29-Review.xlsx" download>ملف تدقيق الفواتير</a></div>
+     <a class="btn secondary" href="./templates/Maria-CFO-Material-Purchases-Review.xlsx" download>ملف تدقيق الفواتير</a></div>
      <div id="ameen-purchase-results" aria-live="polite"></div>
   </div>
   <div class="card ameen-upload-card"><h3>استيراد ملف يدويًا</h3><div class="form-grid"><div class="field"><label>نوع الإدخال <strong>*</strong></label><select id="ameen-kind" required><option value="">— اختر النوع —</option>${Object.entries(AMEEN_TYPES).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div><div class="field"><label>ملف Excel بصيغة .xlsx</label><input id="ameen-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div></div><div class="quick-actions"><button class="btn" type="button" id="ameen-preview-button">معاينة الملف</button></div><p class="metric-note">لا يُرفع الملف إلى Supabase قبل معاينته وتأكيد الاستيراد. تُقرأ البيانات محليًا داخل المتصفح أولًا.</p></div>
@@ -193,11 +193,11 @@ export async function renderQuickImports(root){
   details.innerHTML=loader();
   try{
    const rows=await api.ameenOrderImportsV024();
-   details.innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>بنود</th><th>صافي الأمين</th><th>حالة الاستيراد</th><th>الأوردر</th><th>اعتماد المراجعة</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.external_number)}</td><td>${esc(r.business_date)}</td><td>${esc(r.line_payload?.length||0)}</td><td>${esc(r.source_net)}</td><td>${r.review_status==='conflict'?'<span class="badge warning">تعارض — مراجعة</span>':r.review_status==='approved'?'<span class="badge success">اعتمدت المطابقة</span>':'<span class="badge">مسودة — تحتاج مراجعة</span>'}</td><td>${r.linked_order_id?`<a href="#/order/${esc(r.linked_order_id)}">فتح المسودة</a>`:'غير مربوطة'}</td><td>${r.linked_order_id&&r.review_status==='needs_review'?`<button type="button" class="mini-btn ameen-approve" data-id="${esc(r.linked_order_id)}">اعتماد بعد المطابقة</button>`:r.review_status==='approved'?'معتمد':'—'}</td></tr>`).join('')}</tbody></table></div>`;
+   details.innerHTML=`<div class="table-wrap"><table class="table"><thead><tr><th>الرقم</th><th>التاريخ</th><th>بنود</th><th>صافي التقرير</th><th>حالة الاستيراد</th><th>الأوردر</th><th>اعتماد المراجعة</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.external_number)}</td><td>${esc(r.business_date)}</td><td>${esc(r.line_payload?.length||0)}</td><td>${esc(r.source_net)}</td><td>${r.review_status==='conflict'?'<span class="badge warning">تعارض — مراجعة</span>':r.review_status==='approved'?'<span class="badge success">اعتمدت المطابقة</span>':'<span class="badge">مسودة — تحتاج مراجعة</span>'}</td><td>${r.linked_order_id?`<a href="#/order/${esc(r.linked_order_id)}">فتح المسودة</a>`:'غير مربوطة'}</td><td>${r.linked_order_id&&r.review_status==='needs_review'?`<button type="button" class="mini-btn ameen-approve" data-id="${esc(r.linked_order_id)}">اعتماد بعد المطابقة</button>`:r.review_status==='approved'?'معتمد':'—'}</td></tr>`).join('')}</tbody></table></div>`;
    details.querySelectorAll('.ameen-approve').forEach(btn=>btn.onclick=async()=>{
      const approved=await new Promise(resolve=>{
        modal({title:'اعتماد أوردر مستورد',
-         body:'<div class="notice">يجب أن يكون صندوق الأوردر محددًا وأن يطابق المبلغ النهائي صافي ملف الأمين. الاعتماد لا ينشر الأوردر؛ النشر يتم لاحقًا بأمر منفصل.</div>',
+         body:'<div class="notice">يجب أن يكون صندوق الأوردر محددًا وأن يطابق المبلغ النهائي صافي الملف المستورد. الاعتماد لا ينشر الأوردر؛ النشر يتم لاحقًا بأمر منفصل.</div>',
          submitText:'التحقق والاعتماد',onSubmit:async()=>{resolve(true);return true;},onClose:()=>resolve(false)});
      });
      if(!approved)return;

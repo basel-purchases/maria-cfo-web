@@ -1,5 +1,5 @@
 // Maria CFO v0.30: exact two-sheet catalog/recipe workbook. No guessed costs or recipe quantities.
-import {cleanName} from './ameen-import-parser.js?v=0.30';
+import {cleanName} from './ameen-import-parser.js?v=1.0';
 const txt=x=>String(x??'').trim().replace(/\s+/g,' ');
 const number=x=>x==null||txt(x)===''?null:(Number.isFinite(Number(x))?Number(x):null);
 const badMessage=x=>`الملف غير صالح: ${x}`;

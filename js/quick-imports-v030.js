@@ -1,9 +1,9 @@
-import * as api from './api.js?v=0.32';
-import {esc} from './utils.js?v=0.30';
-import {toast,friendlyError,modal,loader,confirmBox} from './ui.js?v=0.30';
-import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from './ameen-import-parser.js?v=0.30';
-import {parseMasterV030,QUICK_TYPES_V030 as TYPES} from './quick-import-parser-v030.js?v=0.31';
-import {parseEmployeesV031} from './employee-import-parser-v031.js?v=0.31';
+import * as api from './api.js?v=1.0';
+import {esc} from './utils.js?v=1.0';
+import {toast,friendlyError,modal,loader,confirmBox} from './ui.js?v=1.0';
+import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from './ameen-import-parser.js?v=1.0';
+import {parseMasterV030,QUICK_TYPES_V030 as TYPES} from './quick-import-parser-v030.js?v=1.0';
+import {parseEmployeesV031} from './employee-import-parser-v031.js?v=1.0';
 
 let importing=false;
 function confirmQuickImport({filename,kind,count}){
@@ -58,7 +58,7 @@ export async function renderQuickImportsV030(root){
       <div class="field"><label for="quick-file-v030">ملف Excel</label><input id="quick-file-v030" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
     </div>
     <button type="button" class="btn" id="quick-preview-v030">معاينة الملف</button>
-    <p class="metric-note">الاستيراد لا ينشئ مدفوعات للموردين أو الموظفين، ولا ينشر الأوردرات أو يسجّل مقبوضات. جميع الموظفين المرفوعين من الجدول الخامس رواتبهم شهرية بالليرة السورية (SYP).</p>
+    <p class="metric-note">الاستيراد لا ينشئ مدفوعات للموردين أو الموظفين، ولا ينشر الأوردرات أو يسجّل مقبوضات. جميع الموظفين المرفوعين من الجدول الخامس رواتبهم شهرية بالليرة السورية (ل.س).</p>
   </div>
   <div id="quick-result-v030" aria-live="polite"></div>
   <div class="card"><h3>سجل الإدخالات والتراجع خلال 24 ساعة</h3><div id="quick-history-v030">${loader()}</div></div>`;
@@ -112,7 +112,7 @@ export async function renderQuickImportsV030(root){
     ${kind==='assets'?'<div class="notice">سيستورد البرنامج الأساسيات فقط؛ يُتجاهل أي قسم منيو أو مواد في الملف.</div>':''}
     ${kind==='orders'?'<div class="notice">سيُنشئ أوردرات مسودات، وقد ينشئ أسماء أصناف مبيعات ناقصة في المنيو مع علامة مراجعة. لن تُنشر أي مبيعات.</div>':''}
     ${kind==='employees'?'<div class="notice">كل الموظفين من هذا الملف يتقاضون راتبًا شهريًا بالليرة السورية بغض النظر عن المهنة. سيتم تحديث الموظف الشهري الموجود بالاسم نفسه بدل تكراره، مع الحفاظ على البيانات الناقصة في Excel إن كانت موجودة مسبقًا. الموظف الموجود بنوع أجر مختلف سيوقف الاستيراد دون تغيير البيانات.</div>':''}
-    ${kind==='employees'?`<details open><summary>معاينة أسماء ورواتب الموظفين (${parsed.records.length})</summary><div class="table-wrap" style="max-height:360px;overflow:auto"><table class="table"><thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>الموبايل</th><th>الراتب الشهري (SYP)</th></tr></thead><tbody>${parsed.records.map(r=>`<tr><td>${show(r.name)}</td><td>${show(r.jobTitle)}</td><td>${show(r.residence)}</td><td>${show(r.phone)}</td><td>${show(r.monthlySalary.toLocaleString('en-US'))}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+    ${kind==='employees'?`<details open><summary>معاينة أسماء ورواتب الموظفين (${parsed.records.length})</summary><div class="table-wrap" style="max-height:360px;overflow:auto"><table class="table"><thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>الموبايل</th><th>الراتب الشهري (ل.س)</th></tr></thead><tbody>${parsed.records.map(r=>`<tr><td>${show(r.name)}</td><td>${show(r.jobTitle)}</td><td>${show(r.residence)}</td><td>${show(r.phone)}</td><td>${show(r.monthlySalary.toLocaleString('en-US'))}</td></tr>`).join('')}</tbody></table></div></details>`:''}
     ${kind==='orders'&&parsed.records.some(r=>r.reviewReasons?.length)?`<details><summary>أوردرات تحتاج مراجعة (${parsed.records.filter(r=>r.reviewReasons?.length).length})</summary><div style="max-height:240px;overflow:auto">${parsed.records.filter(r=>r.reviewReasons?.length).map(r=>`<p><strong>أوردر ${show(r.number)}:</strong> ${show(r.reviewReasons.join('؛ '))}</p>`).join('')}</div></details>`:''}
     ${parsed.warnings?.length?`<details ${kind==='employees'?'open':''}><summary>تنبيهات الملف (${parsed.warnings.length})</summary><div style="max-height:220px;overflow:auto">${parsed.warnings.slice(0,30).map(w=>`<div>${show(w.row)}: ${show(w.message)}</div>`).join('')}</div></details>`:''}
     <button type="button" class="btn" id="quick-confirm-v030">تأكيد استيراد ${show(TYPES[kind])}</button>
@@ -135,7 +135,7 @@ export async function renderQuickImportsV030(root){
         <p>جديد: ${show(result.created||0)} · تحديث: ${show(result.updated||0)} · بحاجة مراجعة: ${show(result.review||0)} · مستبعد: ${show(result.skipped||0)}</p>
         ${result.recipesPublished!=null?`<p>وصفات أُدرجت بالتكلفة: ${show(result.recipesPublished)} · وصفات غير مكتملة: ${show(result.recipesPending||0)}</p>`:''}
         ${result.ordersDraft!=null?`<p>أوردرات مسودة: ${show(result.ordersDraft)}، ولا توجد حركة نقدية منشورة.</p>`:''}
-        ${kind==='employees'?'<p>الأجر: شهري · العملة: SYP · لم تُنشأ رواتب مدفوعة أو حركات صندوق.</p><a class="btn secondary" href="#/employees-list">عرض قائمة الموظفين</a>':''}</div>`;
+        ${kind==='employees'?'<p>الأجر: شهري · العملة: ل.س · لم تُنشأ رواتب مدفوعة أو حركات صندوق.</p><a class="btn secondary" href="#/employees-list">عرض قائمة الموظفين</a>':''}</div>`;
       toast('اكتمل الاستيراد وسُجلت العملية.','success');await history();
     }catch(e){toast(errorMessage(e),'error');submit.disabled=false;}
     finally{importing=false;}
