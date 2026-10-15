@@ -288,7 +288,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
      <div class="event-table-numbers-v034"><span>تكلفة طعام الطاولة</span><strong>${moneyBase(f.cost)} ${f.missing?'⚠':''}</strong></div>
      <div class="event-table-numbers-v034"><span>طعام لكل ضيف</span><strong>${occupancy?moneyBase(f.cost/occupancy):'—'}</strong></div>
      <div class="event-table-numbers-v034"><span>فاتورة خارج الباقة</span><strong class="${due?'payroll-danger-v034':''}">${moneyTicket(due)}</strong></div>
-     <div class="event-table-actions-v034">${!readOnly?`<a class="mini-btn event-action-v035 primary" href="#/event-bookings/${esc(eventId)}">الحجوزات ←</a><button class="mini-btn event-action-v035 accent" data-table-extra="${esc(t.id)}">+ طلب إضافي</button>`:''}<button class="mini-btn event-action-v035" data-table-invoice="${esc(t.id)}">كشف الطاولة ↗</button><button class="mini-btn event-action-v035" data-tab-switch="extras">الفواتير</button></div>
+     <div class="event-table-actions-v034">${!readOnly?`<button class="mini-btn event-action-v035 accent" data-table-extra="${esc(t.id)}">+ طلب إضافي</button>`:''}<button class="mini-btn event-action-v035" data-table-invoice="${esc(t.id)}">كشف الطاولة ↗</button><button class="mini-btn event-action-v035" data-tab-switch="extras">الفواتير</button></div>
     </article>`;
    }).join('')}</div>`:empty('أضف أول طاولة لتظهر خريطة المقاعد.')}
    <p class="metric-note">تُعرض هنا كميات الضيافة الثابتة لكل طاولة. سجلات التقديم حسب الطلب تُحسب فقط عند تقديمها فعليًا، ولا تُخصم الكميات غير المقدّمة.</p></section>`;

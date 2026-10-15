@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=0.32';
+import * as api from '../api.js?v=0.41';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=0.27';
 import { esc, money, unitDisplay, num } from '../utils.js?v=0.27';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=0.27';
@@ -48,12 +48,12 @@ function materialBaseCost(row){
   return Number.isFinite(n)?n:null;
 }
 
-export async function renderMenu(root){
+export async function renderMenu(root,{missingOnly=false}={}){
  root.innerHTML=loader();
  try{
   const categories=await api.menuCategoriesV023();
   const categoryMap=new Map(categories.map(c=>[String(c.id),c.name]));
-  const state={page:1,categoryId:'',query:'',sequence:0};
+  const state={page:1,categoryId:'',query:'',sequence:0,missingOnly};
   root.innerHTML=`
     <div class="page-head"><div>
       <h2>الوجبات والوصفات</h2>
@@ -61,11 +61,13 @@ export async function renderMenu(root){
     </div><div class="page-head-actions"><button class="btn add">إضافة وجبة</button></div></div>
     <div class="list-toolbar">
       <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off"></div>
+      <select id="menu-cost-filter-v041"><option value="all" ${missingOnly?'':'selected'}>كل الوجبات</option><option value="missing" ${missingOnly?'selected':''}>ناقصة التكلفة فقط</option></select>
       <select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
       <span class="list-count" id="menu-count"></span>
       <button class="mini-btn" type="button" id="menu-export-excel">⇩ Excel</button>
       <button class="mini-btn" type="button" id="menu-export-pdf">⇩ PDF</button>
     </div>
+    ${missingOnly?'<div class="notice sage">أنت تعرض فقط أصناف المينيو التي لا تملك وصفة مكتملة أو تكلفة تقديرية معتمدة. يمكنك إدخال تقدير أو مكونات الوصفة ثم الرجوع إلى تقرير الأمين.</div>':''}
     <div id="menu-results" aria-live="polite"></div>`;
   root.querySelector('.add').onclick=()=>addMenu(root,categories);
   const host=root.querySelector('#menu-results');
@@ -73,18 +75,22 @@ export async function renderMenu(root){
    const call=++state.sequence;
    host.innerHTML=loader();
    try{
-    let response=await api.menuItemsPageV025({page:state.page,pageSize:PAGE_SIZES.menu,
+    let response=await (state.missingOnly?api.menuMissingCostPageV041:api.menuItemsPageV025)({page:state.page,pageSize:PAGE_SIZES.menu,
       categoryId:state.categoryId,query:state.query});
     if(call!==state.sequence)return;
     let meta=pageInfo(response.total,state.page,PAGE_SIZES.menu);
     if(state.page!==meta.page){
       state.page=meta.page;
-      response=await api.menuItemsPageV025({page:state.page,pageSize:PAGE_SIZES.menu,
+      response=await (state.missingOnly?api.menuMissingCostPageV041:api.menuItemsPageV025)({page:state.page,pageSize:PAGE_SIZES.menu,
         categoryId:state.categoryId,query:state.query});
       if(call!==state.sequence)return;
       meta=pageInfo(response.total,state.page,PAGE_SIZES.menu);
     }
     const rows=response.rows;
+    const estimates=await api.menuEstimatesForIdsV041(rows.map(r=>r.id)).catch(()=>[]);
+    if(call!==state.sequence)return;
+    const estimateMap=new Map(estimates.map(r=>[String(r.menu_item_id),r.estimated_unit_cost_base]));
+    for(const r of rows)r.estimated_unit_cost_base=estimateMap.get(String(r.id))??r.estimated_unit_cost_base??null;
     root.querySelector('#menu-count').textContent=`${meta.total} وجبة`;
     host.innerHTML=`${rows.length?`<div id="menu-listing" class="grid cols-3">
        ${rows.map(r=>`<div class="card section-card menu-card">
@@ -93,14 +99,14 @@ export async function renderMenu(root){
         <div class="menu-summary">
           <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
           ${menuDiscount(r)>0?`<div class="menu-net-price"><span>سعر البيع بعد الخصم</span><strong>${money(effectiveSalePrice(r))}</strong></div>`:''}
-          <div><span>تكلفة الوصفة</span><strong>${r.recipe_cost_base!=null && Number(r.missing_cost_count||0)===0?money(r.recipe_cost_base):'غير محسوبة'}</strong></div>
+          <div><span>التكلفة المعتمدة للتحليل</span><strong>${r.recipe_cost_base!=null && r.has_missing_cost!==true && Number(r.missing_cost_count||0)===0?`${money(r.recipe_cost_base)} · وصفة`:(r.estimated_unit_cost_base!=null?`${money(r.estimated_unit_cost_base)} · تقديرية`:'غير محسوبة')}</strong></div>
           <div><span>Food Cost</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
           <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
           <div><span>وحدة البيع من الأمين</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
         </div>
         <div class="menu-card-actions">
           <button class="btn secondary recipe" data-id="${esc(r.id)}">إدارة الوصفة</button>
-          <button class="btn soft edit-menu" data-id="${esc(r.id)}">تعديل الوجبة</button>
+          <button class="btn soft edit-menu" data-id="${esc(r.id)}">تعديل الوجبة والتقدير</button>
         </div>
        </div>`).join('')}</div>`:
        '<div class="card empty"><strong>لا توجد وجبات مطابقة</strong><div>غيّر البحث أو التصنيف، أو أضف وجبة.</div></div>'}
@@ -132,11 +138,17 @@ export async function renderMenu(root){
     state.query=e.target.value.trim();state.page=1;clearTimeout(delay);delay=setTimeout(draw,240);
   });
   root.querySelector('#menu-category-filter').onchange=e=>{state.categoryId=e.target.value;state.page=1;draw();};
+  root.querySelector('#menu-cost-filter-v041').onchange=e=>{
+    state.missingOnly=e.target.value==='missing';state.page=1;
+    if(state.missingOnly && location.hash==='#/menu')location.hash='#/menu/unpriced';
+    if(!state.missingOnly && location.hash==='#/menu/unpriced')location.hash='#/menu';
+    draw();
+  };
   const filteredMenuDataset=async()=>{
     const all=[];let page=1,total=Infinity;
     const snapshot={categoryId:state.categoryId,query:state.query};
     while(all.length<total){
-      const result=await api.menuItemsPageV025({page,pageSize:100,...snapshot});
+      const result=await (state.missingOnly?api.menuMissingCostPageV041:api.menuItemsPageV025)({page,pageSize:100,...snapshot});
       total=result.total;all.push(...result.rows);
       if(!result.rows.length)break;page++;
       if(page>10000)throw Error('MENU_EXPORT_LIMIT');
@@ -168,6 +180,11 @@ function menuFormBody(row={},categories=[]){
         <input name="price" type="number" min="0" step="any" value="${menuPrice(row)==null?'':esc(menuPrice(row))}" autocomplete="off">
       </div>
       <div class="field">
+        <label>التكلفة التقديرية للحصة <span class="optional-badge">اختياري</span></label>
+        <input name="estimatedCost" type="number" min="0" step="any" value="${row.estimated_unit_cost_base==null?'':esc(row.estimated_unit_cost_base)}" placeholder="عند غياب وصفة مكتملة">
+        <small>لتحليل الربح فقط؛ لا تغيّر وصفة المواد أو المخزون.</small>
+      </div>
+      <div class="field">
         <label>Food Cost خاص % <span class="optional-badge">اختياري</span></label>
         <input name="fc" type="number" min="0" max="100" step="any" value="${menuFoodCost(row)==null?'':esc(menuFoodCost(row))}" autocomplete="off">
       </div>
@@ -186,15 +203,16 @@ function addMenu(root,categories=[]){
       try{
         const name=String(fd.get('name')||'').trim();
         if(!name){toast('اكتب اسم الوجبة.','error');return false;}
-        await api.createMenuItem({
+        const saved=await api.createMenuItem({
           name,
           price:String(fd.get('price')||'').trim()||null,
           foodCost:String(fd.get('fc')||'').trim()||null,
           discount:String(fd.get('discount')||'').trim()||0,
           categoryId:fd.get('category')||null,
         });
+        if(String(fd.get('estimatedCost')||'').trim())await api.menuSetEstimateV041(saved.id,fd.get('estimatedCost'));
         toast('تمت إضافة الوجبة','success');
-        await renderMenu(root);
+        await renderMenu(root,{missingOnly:location.hash==='#/menu/unpriced'});
         return true;
       }catch(e){
         toast(friendlyError(e,'تعذر حفظ الوجبة. تأكد من تشغيل تحديث قاعدة البيانات v0.7.'),'error');
@@ -220,8 +238,9 @@ function editMenu(root,row,categories=[]){
           discount:String(fd.get('discount')||'').trim()||0,
           categoryId:fd.get('category')||null,
         });
-        toast('تم تحديث الوجبة.','success');
-        await renderMenu(root);
+        await api.menuSetEstimateV041(row.id,String(fd.get('estimatedCost')||'').trim()||null);
+        toast('تم تحديث الوجبة والتكلفة التقديرية.','success');
+        await renderMenu(root,{missingOnly:location.hash==='#/menu/unpriced'});
         return true;
       }catch(e){
         toast(friendlyError(e,'تعذر تعديل الوجبة.'),'error');
@@ -276,7 +295,7 @@ async function recipeDialog(root,id,name,mats,units){
       wide:true,
       hideActions:true,
       onClose:async()=>{
-        await renderMenu(root);
+        await renderMenu(root,{missingOnly:location.hash==='#/menu/unpriced'});
       },
       body:`
         <div class="recipe-topbar">

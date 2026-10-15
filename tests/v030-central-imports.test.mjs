@@ -46,7 +46,7 @@ test('invalid workbook structures or inventory numbers are rejected',()=>{
 });
 test('one central sidebar link immediately before settings and no recipes-import button',()=>{
  const app=slurp('js/app.js'), hub=slurp('js/pages/hubs.js'),menu=slurp('js/pages/menu.js');
- assert.match(app,/\['#\/quick-imports', 'الإدخالات السريعة'\],\s*\['#\/settings'/);
+ assert.match(app,/\['#\/quick-imports', 'الإدخالات السريعة'\],\s*(?:\['#\/ameen-daily', 'أوردرات الأمين اليومية'\],\s*)?\['#\/settings'/);
  assert.doesNotMatch(hub,/#\/quick-imports|#\/recipes-import/);
  assert.doesNotMatch(menu,/#\/recipes-import/);
  assert.match(app,/case 'recipes-import': location\.hash='#\/quick-imports'/);

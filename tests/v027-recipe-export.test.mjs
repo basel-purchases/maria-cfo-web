@@ -60,7 +60,7 @@ test('all table exports appear globally, and server-paged filtering is exported 
    assert.match(read('js/'+p),/registerTableExport/);
  }
  const menu=read('js/pages/menu.js');assert.match(menu,/filteredMenuDataset/);
- assert.match(menu,/menuItemsPageV025\(\{page,pageSize:100/);
+ assert.match(menu,/menuMissingCostPageV041:api\.menuItemsPageV025\)\(\{page,pageSize:100/);
  assert.match(read('js/app.js'),/installTableExportV027\(\)/);
 });
 test('release branches from v0.25 only; rejected v0.26 is absent',()=>{

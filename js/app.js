@@ -1,13 +1,13 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=0.27';
-import * as api from './api.js?v=0.40';
+import * as api from './api.js?v=0.41';
 import { esc } from './utils.js?v=0.27';
 import { toast, friendlyError, modal } from './ui.js?v=0.33';
 import { renderDashboard } from './pages/dashboard.js?v=0.27';
-import { renderHub } from './pages/hubs.js?v=0.32';
+import { renderHub } from './pages/hubs.js?v=0.41';
 import { renderMaterials } from './pages/materials.js?v=0.27';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=0.27';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=0.29-final';
-import { renderMenu } from './pages/menu.js?v=0.28';
+import { renderMenu } from './pages/menu.js?v=0.41';
 import {
   renderInventory,
   renderCashboxes,
@@ -17,7 +17,7 @@ import {
 } from './pages/daily.js?v=0.27';
 import { renderEmployees, renderAttendance } from './pages/employees.js?v=0.33';
 import {renderBonusesV032} from './pages/bonuses.js?v=0.33';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.40.1';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.41';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=0.34';
 import { renderReports } from './pages/reports.js?v=0.27';
 import { renderAssistant } from './pages/assistant.js?v=0.27';
@@ -26,6 +26,7 @@ import { renderSettings } from './pages/settings.js?v=0.27';
 import { renderAssets } from './pages/assets.js?v=0.27';
 import { renderAdvances } from './pages/advances.js?v=0.27';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=0.32';
+import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=0.41';
 import {installTableExportV027} from './table-export-v027.js?v=0.27';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=0.33';
 
@@ -46,6 +47,7 @@ const nav = [
   ['#/assistant', 'المساعد الذكي'],
   ['#/images', 'الصور'],
   ['#/quick-imports', 'الإدخالات السريعة'],
+  ['#/ameen-daily', 'أوردرات الأمين اليومية'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -110,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.40.1</div>
+        <div class="sidebar-foot">Web v0.41</div>
       </aside>
 
       <main class="main">
@@ -303,6 +305,7 @@ async function route() {
     dashboard: 'الرئيسية',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
+    'ameen-daily': 'أوردرات الأمين اليومية',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
     events: 'الحفلات',
@@ -342,6 +345,7 @@ async function route() {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
+      case 'ameen-daily': return renderAmeenDailyV041(root);
       case 'recipes-import': location.hash='#/quick-imports'; return;
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
@@ -354,7 +358,7 @@ async function route() {
       case 'suppliers': return renderSuppliers(root);
       case 'purchases': return renderPurchases(root);
       case 'purchase': return renderPurchaseDetail(root, id);
-      case 'menu': return renderMenu(root);
+      case 'menu': return renderMenu(root,{missingOnly:id==='unpriced'});
       case 'inventory': return renderInventory(root);
       case 'cashboxes': return renderCashboxes(root);
       case 'expenses': return renderExpenses(root);

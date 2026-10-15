@@ -1340,3 +1340,42 @@ export const eventVoidOnDemandIssueV040=(issueId,reason)=>rpc('event_void_on_dem
 export const eventCompleteWithDemandV040=(eventId,note)=>rpc('complete_event_with_demand_v040',{
  p_event_id:eventId,p_notes:note||null,
 });
+
+// v0.41: independent Al-Ameen daily cashier ledger (read-only financially).
+export const ameenPricePreviewV041=(records)=>rpc('ameen_price_preview_v041',{p_records:records});
+export const ameenImportDailyV041=(filename,sha256,records,actions=[],reportedCashboxId=null)=>
+  rpc('ameen_import_daily_v041',{p_filename:filename,p_sha256:sha256,p_records:records,
+    p_actions:actions,p_reported_cashbox_id:reportedCashboxId});
+export const ameenDailyReportV041=day=>rpc('ameen_daily_report_v041',{p_day:day});
+export const ameenDailyDaysV041=()=>rpc('ameen_daily_days_v041');
+export const ameenPriceUndoV041=id=>rpc('ameen_price_undo_v041',{p_audit_id:Number(id)});
+export const ameenDailyHistoryV041=()=>list('ameen_daily_imports_v041',{order:'created_at',limit:150});
+export const menuCostStatusV041=()=>list('menu_cost_status_v041',{order:'name',ascending:true,limit:1200});
+export async function menuMissingCostPageV041({page=1,pageSize=18,query='',categoryId=''}={}){
+  const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||18));
+  const offset=(Math.max(1,Math.trunc(page)||1)-1)*size;
+  let q=need().from('menu_cost_status_v041').select('id',{count:'exact'}).eq('cost_is_missing',true);
+  if(categoryId)q=q.eq('category_id',categoryId);
+  if(String(query||'').trim())q=q.ilike('name',`%${String(query).trim().replace(/[\\%_]/g,'\\$&')}%`);
+  const {data,error,count}=await q.order('name',{ascending:true}).order('id',{ascending:true}).range(offset,offset+size-1);
+  if(error)throw error;
+  const ids=(data||[]).map(r=>r.id);
+  if(!ids.length)return {rows:[],total:count??0};
+  const [masters,costs,estimates]=await Promise.all([
+    dataOrThrow(need().from('menu_items').select('*').in('id',ids)),
+    dataOrThrow(need().from('menu_item_costs').select('*').in('id',ids)).catch(()=>[]),
+    dataOrThrow(need().from('event_menu_cost_estimates_v039').select('*').in('menu_item_id',ids)).catch(()=>[]),
+  ]);
+  const mm=new Map(masters.map(r=>[String(r.id),r]));
+  const cm=new Map(costs.map(r=>[String(r.id),r]));
+  const em=new Map(estimates.map(r=>[String(r.menu_item_id),r]));
+  return {rows:ids.map(id=>({...cm.get(String(id)),...mm.get(String(id)),
+    estimated_unit_cost_base:em.get(String(id))?.estimated_unit_cost_base??null})),total:count??ids.length};
+}
+export const menuSetEstimateV041=(menuItemId,cost)=>rpc('menu_set_estimate_v041',{
+  p_menu_item_id:menuItemId,p_cost:cost==null||cost===''?null:Number(cost)
+});
+export async function menuEstimatesForIdsV041(ids=[]){
+ if(!ids.length)return [];
+ return dataOrThrow(need().from('event_menu_cost_estimates_v039').select('*').in('menu_item_id',ids));
+}

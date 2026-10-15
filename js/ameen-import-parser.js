@@ -103,8 +103,14 @@ function parseOrders(rows,at,errors){
   }
   const sourceNet=num(from(r,rows.__header,'صافي الطلب')),
         syp=num(from(r,rows.__header,'ليرة سورية'));
-  if(!output.has(key))output.set(key,{key,date:localDate,number:rawNum,occurredAt:ts,netTotal:sourceNet,reportedSyp:syp,items:[],grossTotal:0,reviewReasons:[]});
+  if(!output.has(key))output.set(key,{key,date:localDate,number:rawNum,occurredAt:ts,netTotal:sourceNet,reportedSyp:syp,items:[],grossTotal:0,reviewReasons:[],cashbox:''});
   const order=output.get(key);
+  // Optional cashier/location column, when actually present in the Al-Ameen report.
+  const cashbox=safeText(from(r,rows.__header,'الصندوق')||from(r,rows.__header,'اسم الصندوق')||from(r,rows.__header,'الكاشير')||'',120);
+  if(cashbox){
+    if(order.cashbox && order.cashbox!==cashbox)order.reviewReasons.push(`مسمى الصندوق مختلف بين صفوف الأوردر ${rawNum}`);
+    else order.cashbox=cashbox;
+  }
   if(sourceNet!=null&&order.netTotal!=null&&Math.abs(sourceNet-order.netTotal)>0.005)warning(errors,i+1,`صافي الأوردر ${rawNum} غير متطابق بين صفوفه`);
   if(syp!=null&&order.reportedSyp!=null&&Math.abs(syp-order.reportedSyp)>0.005)warning(errors,i+1,`عمود الليرة للأوردر ${rawNum} غير متطابق`);
   order.items.push({name,unit:safeText(from(r,rows.__header,'الوحدة'),70),quantity:round(quantity,6),unitPrice:round(price,4),lineNet:round(lineNet,4),note:safeText(from(r,rows.__header,'بيان القلم'),300),sourceRow:i+1});

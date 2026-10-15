@@ -1443,3 +1443,57 @@ select option{background:#fff;color:var(--text);padding:8px}
 .event-on-demand-help-v040{font-size:12px;color:#726172;line-height:1.65}
 @media(max-width:880px){.event-booking-kpis-v040{grid-template-columns:repeat(2,minmax(0,1fr))}.event-plan-steps-v040{justify-content:flex-start}.event-booking-kpis-v040 strong{font-size:19px}}
 @media(max-width:470px){.event-booking-kpis-v040{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.event-booking-kpis-v040>.card{padding:12px;min-height:110px}.event-booking-kpis-v040 strong{font-size:16px}.event-plan-steps-v040 span{font-size:11px}.event-demand-kpis-v040{grid-template-columns:1fr}.event-book-collect-checkbox-v040{padding:12px}}
+
+/* v0.41: spacious table cards, no intersecting controls at narrow widths. */
+.event-seat-map-v034{grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:20px;align-items:stretch}
+.event-booking-seat-map-v040{grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr))}
+.event-table-card-v034{padding:18px;gap:12px;min-height:410px;overflow:hidden}
+.event-table-card-title-v034{min-height:38px;align-items:flex-start}
+.event-table-card-title-v034 strong{overflow-wrap:anywhere;line-height:1.55}
+.event-table-illustration-v034{margin-block:6px 8px;min-width:0}
+.event-table-actions-v034{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:auto;padding-top:14px}
+.event-table-actions-v034 .mini-btn{display:inline-flex;align-items:center;justify-content:center;white-space:normal;min-width:0;min-height:38px;text-align:center;line-height:1.4;padding:7px 9px}
+@media(max-width:620px){.event-seat-map-v034,.event-booking-seat-map-v040{grid-template-columns:1fr;gap:14px}.event-table-card-v034{min-height:0;padding:16px}}
+
+/* Daily Al-Ameen cashier operations. */
+.daily-import-card-v041,.daily-report-v041{display:grid;gap:14px;margin-bottom:18px}
+.daily-import-controls-v041{display:grid;grid-template-columns:minmax(220px,1.6fr) minmax(170px,.9fr) auto;gap:14px;align-items:end}
+.daily-import-controls-v041>.btn{min-height:43px;margin-bottom:2px}
+.daily-import-controls-v041 .field input,.daily-import-controls-v041 .field select{width:100%;max-width:100%}
+.daily-date-controls-v041{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.daily-date-controls-v041 input{max-width:185px;min-height:40px;padding:7px 12px;border:1px solid #e1d3dc;border-radius:12px}
+.daily-preview-v041{display:grid;gap:15px;margin-top:12px;padding-top:15px;border-top:1px solid #ebdfe7}
+.daily-preview-v041 h3,.daily-preview-v041 h4{margin:0}
+.daily-preview-v041 details{border:1px solid #e8dae3;border-radius:12px;padding:11px 14px;background:#fff}
+.daily-preview-v041 details>summary{cursor:pointer;color:#65465a;font-weight:760;padding:7px}
+.daily-scroll-v041{max-height:350px;overflow:auto}
+.daily-price-action-v041{width:100%;min-width:170px;border:1px solid #d9c4d1;border-radius:9px;padding:8px;background:#fff;color:#51374a}
+.daily-kpis-v041,.daily-secondary-stats-v041{margin:10px 0 15px;gap:12px}
+.daily-kpis-v041 .card,.daily-secondary-stats-v041 .card{padding:18px;min-width:0}
+.daily-kpis-v041 .metric-value{font-size:clamp(18px,2vw,24px);overflow-wrap:anywhere}
+.daily-kpis-v041 small,.daily-secondary-stats-v041 small{display:block;color:#826f7e;margin-top:7px;line-height:1.7;font-size:11px}
+.daily-secondary-stats-v041 strong{display:block;font-size:20px;color:#624257;overflow-wrap:anywhere;margin-top:8px}
+.daily-missing-banner-v041{display:flex;flex-wrap:wrap;align-items:center;gap:12px;line-height:1.8;padding:15px;margin-bottom:14px}
+.daily-missing-banner-v041 p{flex-basis:100%;margin:0}
+.daily-cashboxes-v041{margin-bottom:15px}
+.daily-order-list-v041{display:grid;gap:11px;margin-top:12px}
+.daily-order-v041{border:1px solid #e8d9e3;border-radius:14px;background:#fff;overflow:hidden}
+.daily-order-v041[open]{border-color:#c4a5ba;box-shadow:0 4px 18px #60415810}
+.daily-order-v041>summary{display:grid;grid-template-columns:minmax(160px,1.5fr) minmax(110px,.8fr) minmax(125px,1fr) auto;gap:15px;align-items:center;cursor:pointer;list-style:none;padding:16px 18px}
+.daily-order-v041 summary::-webkit-details-marker{display:none}
+.daily-order-v041>summary span:first-child{display:grid;gap:5px}
+.daily-order-v041>summary small{font-size:11px;color:#846a7c}
+.daily-arrow-v041{transition:transform .2s;display:block;font-size:21px;color:#75556b}
+.daily-order-v041[open] .daily-arrow-v041{transform:rotate(180deg)}
+.daily-order-v041 .table-wrap{margin:0 12px 12px;max-width:calc(100% - 24px)}
+.daily-order-v041 .metric-note{margin:7px 16px 15px}
+@media(max-width:990px){.daily-import-controls-v041{grid-template-columns:repeat(2,minmax(0,1fr))}.daily-import-controls-v041>.btn{grid-column:1/-1;justify-self:start}}
+@media(max-width:690px){.daily-import-controls-v041{grid-template-columns:1fr}.daily-order-v041>summary{grid-template-columns:1fr auto;gap:8px;padding:13px}.daily-order-v041>summary>span:nth-child(2){grid-column:1}.daily-order-v041>summary>strong{grid-column:2;grid-row:1}.daily-arrow-v041{grid-column:2;grid-row:2}.daily-kpis-v041,.daily-secondary-stats-v041{grid-template-columns:1fr 1fr!important}.daily-date-controls-v041{width:100%}}
+@media(max-width:420px){.daily-kpis-v041,.daily-secondary-stats-v041{grid-template-columns:1fr!important}}
+/* Keep order tables scrollable within their own card; never expand the full mobile viewport. */
+.daily-import-card-v041,.daily-report-v041{min-width:0;max-width:100%;grid-template-columns:minmax(0,1fr)}
+.daily-import-card-v041>*,.daily-report-v041>*,.daily-report-v041 .table-wrap,.daily-report-v041 .daily-order-list-v041{min-width:0;max-width:100%}
+.daily-kpis-v041,.daily-secondary-stats-v041{width:100%;min-width:0}
+.daily-order-list-v041{grid-template-columns:minmax(0,1fr)}
+.daily-order-v041{min-width:0;width:100%}
+.daily-report-v041 .table-wrap{overflow-x:auto}
