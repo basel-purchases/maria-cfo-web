@@ -74,8 +74,10 @@ export async function remove(table,id){
   if(error) throw error;
 }
 
-export async function rpc(name,args={}){
-  const {data,error}=await need().rpc(name,args);
+export async function rpc(name,args={},options={}){
+  let request=need().rpc(name,args);
+  if(options?.signal&&typeof request.abortSignal==='function')request=request.abortSignal(options.signal);
+  const {data,error}=await request;
   if(error) throw error;
   return data;
 }
