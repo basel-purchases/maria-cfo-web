@@ -59,7 +59,7 @@ const toError=e=>{
  EVENT_ON_DEMAND_EXCEEDS_PURCHASE:'لا تكفي الكمية المشتراة من الخارج لتقديم هذا العدد.',
  EVENT_ON_DEMAND_PRECISION:'تحويل الحصص ينتج كمية أصغر من دقة نظام المخزون؛ عدّل التحويل.',
  EVENT_ON_DEMAND_ISSUE_NOT_FOUND:'سجل التقديم غير موجود أو أُلغي مسبقًا.',
- EVENT_TABLE_NO_UNPAID_EXTRAS:لا توجد طلبات معلقة على هذه الطاولة؛ حدّث الشاشة قبل التحصيل.',
+ EVENT_TABLE_NO_UNPAID_EXTRAS:'لا توجد طلبات معلقة على هذه الطاولة؛ حدّث الشاشة قبل التحصيل.',
  EVENT_CASHBOX_INVALID:'اختر صندوقًا نشطًا لتسجيل الدفع.',
  EVENT_GROUP_BOOKING_INVALID:'راجع بيانات الحجز وعدد الأشخاص.',
  EVENT_TABLES_ALREADY_EXIST:'الطاولات جاهزة بالفعل. اختر رقم بداية مختلفًا لإضافة مجموعة.',
