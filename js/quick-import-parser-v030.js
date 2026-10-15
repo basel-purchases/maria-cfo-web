@@ -23,7 +23,7 @@ export function parseMasterV030(workbook){
   for(let i=mh+1;i<ms.rows.length;i++){
     const r=ms.rows[i]||[];const name=txt(r[0]),unit=txt(r[1]),stock=number(r[2]),price=number(r[3]);
     if(!name||name==='لا توجد مادة بهذا البحث')continue;
-    if(!unit||stock==null||stock<0||price==null||price<=0)throw Error(`المواد، السطر ${i+1}: الوحدة والكمية غير السالبة والسعر الموجب مطلوبة للمادة «${name}».`);
+    if(!unit||stock==null||stock<0||price==null||price<0||(price===0&&stock>0))throw Error(`المواد، السطر ${i+1}: الوحدة والكمية غير السالبة والسعر غير السالب مطلوب (يمكن تركه صفرًا فقط عندما يكون الرصيد صفرًا) للمادة «${name}».`);
     if(stock>1e12||price>1e12)throw Error(`المواد، السطر ${i+1}: كمية أو سعر غير منطقي.`);
     const key=cleanName(name);
     if(known.has(key))throw Error(`المواد: الاسم «${name}» مكرر. يرجى توحيد الأسماء أولًا.`);
@@ -58,8 +58,10 @@ export function parseMasterV030(workbook){
       if(note==='أضف المكونات')continue;
       // An unspecified recipe line is a deliberate review placeholder.
     }
+    const unknownPrice=!!material&&!(material.lastPrice>0);
     const line={materialName,quantity,unit:material?.unit||txt(r[6]),note,
-      needsReview:!material||!(quantity>0)||Boolean(note.startsWith('اختر مادة:'))};
+      needsReview:!material||!(quantity>0)||unknownPrice||Boolean(note.startsWith('اختر مادة:'))};
+    if(unknownPrice)warnings.push({row:i+1,message:`المادة «${material.name}» مسجلة برصيد صفر دون سعر شراء؛ تكلفة الوصفة معلقة حتى التسعير.`});
     if(materialName&&!material)warnings.push({row:i+1,message:`المادة «${materialName}» غير موجودة في شيت المواد.`});
     current.lines.push(line);allRows++;
     if(material&&quantity>0&&!line.needsReview)filled++;

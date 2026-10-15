@@ -2,7 +2,7 @@ import * as api from './api.js?v=1.0';
 import {esc} from './utils.js?v=1.0';
 import {toast,friendlyError,modal,loader,confirmBox} from './ui.js?v=1.0';
 import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from './ameen-import-parser.js?v=1.0';
-import {parseMasterV030,QUICK_TYPES_V030 as TYPES} from './quick-import-parser-v030.js?v=1.0';
+import {parseMasterV030,QUICK_TYPES_V030 as TYPES} from './quick-import-parser-v030.js?v=1.0.1';
 import {parseEmployeesV031} from './employee-import-parser-v031.js?v=1.0';
 
 let importing=false;
@@ -115,7 +115,7 @@ export async function renderQuickImportsV030(root){
     ${kind==='employees'?`<details open><summary>معاينة أسماء ورواتب الموظفين (${parsed.records.length})</summary><div class="table-wrap" style="max-height:360px;overflow:auto"><table class="table"><thead><tr><th>الاسم</th><th>الوظيفة</th><th>السكن</th><th>الموبايل</th><th>الراتب الشهري (ل.س)</th></tr></thead><tbody>${parsed.records.map(r=>`<tr><td>${show(r.name)}</td><td>${show(r.jobTitle)}</td><td>${show(r.residence)}</td><td>${show(r.phone)}</td><td>${show(r.monthlySalary.toLocaleString('en-US'))}</td></tr>`).join('')}</tbody></table></div></details>`:''}
     ${kind==='orders'&&parsed.records.some(r=>r.reviewReasons?.length)?`<details><summary>أوردرات تحتاج مراجعة (${parsed.records.filter(r=>r.reviewReasons?.length).length})</summary><div style="max-height:240px;overflow:auto">${parsed.records.filter(r=>r.reviewReasons?.length).map(r=>`<p><strong>أوردر ${show(r.number)}:</strong> ${show(r.reviewReasons.join('؛ '))}</p>`).join('')}</div></details>`:''}
     ${parsed.warnings?.length?`<details ${kind==='employees'?'open':''}><summary>تنبيهات الملف (${parsed.warnings.length})</summary><div style="max-height:220px;overflow:auto">${parsed.warnings.slice(0,30).map(w=>`<div>${show(w.row)}: ${show(w.message)}</div>`).join('')}</div></details>`:''}
-    <button type="button" class="btn" id="quick-confirm-v030">تأكيد استيراد ${show(TYPES[kind])}</button>
+    <button type="button" class="btn" id="quick-confirm-v030">تأكيد استيراد ${show(String(TYPES[kind]||kind).replace(/^\d{2}\s*·\s*/,''))}</button>
     <p class="metric-note">كل ملف عملية واحدة في Supabase. تراجع 24 ساعة من وقت الاستيراد، وقد يُرفض لحماية بيانات أُجري عليها تعديل لاحق.</p></div>`;
    preview.querySelector('#quick-confirm-v030').onclick=async()=>{
     if(importing)return;
