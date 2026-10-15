@@ -73,7 +73,7 @@ test('legacy main plate is preserved and becomes one of multiple named groups',(
  const ui=read('js/pages/events-v034.js');
  assert.match(ui,/data-action="add-event-group/);
  assert.match(ui,/data-group-add/);assert.match(ui,/data-group-edit/);assert.match(ui,/data-group-delete/);
- assert.match(ui,/eventSaveServingV037/);
+ assert.match(ui,/eventSaveServing(?:V037|WithEstimateV039)/);
  assert.match(ui,/إجمالي وجبات المنيو اللازمة/);
  assert.match(ui,/كم نقدم في كل مرة؟/);
 });

@@ -1295,3 +1295,25 @@ export const eventSaveExternalServingV038=(id,input)=>rpc('event_save_external_s
 export const eventDeleteExternalServingV038=(id,ruleId)=>rpc('event_delete_external_serving_v038',{p_event_id:id,p_rule_id:ruleId});
 export const eventVoidExternalDishV038=(id,reason)=>rpc('event_void_external_dish_v038',{p_id:id,p_reason:reason});
 export const eventPayExternalDishV038=(id,boxId)=>rpc('event_pay_external_dish_v038',{p_id:id,p_cashbox_id:boxId});
+
+// v0.39: transaction-safe table checkout, reusable estimate, and external serving units.
+export const eventMenuCostEstimatesV039=()=>list('event_menu_cost_estimates_v039',{limit:2000});
+export const eventSaveCostEstimateV039=(menuItemId,cost)=>rpc('event_save_cost_estimate_v039',{p_menu_item_id:menuItemId,p_cost:Number(cost),p_note:'تقدير تخطيط حفلات، وليس تكلفة وصفة فعلية'});
+export const eventExternalUnitsV039=id=>list('event_external_unit_conversions_v039',{eq:{dish_id:id},limit:200});
+export const eventAllExternalUnitsV039=()=>list('event_external_unit_conversions_v039',{limit:3000});
+export const eventAddExternalUnitV039=(dishId,name,yieldCount)=>rpc('event_add_external_unit_v039',{p_dish_id:dishId,p_label:name,p_per_purchase_unit:Number(yieldCount)});
+export const eventSaveExternalServingV039=(eventId,input)=>rpc('event_save_external_serving_v039',{
+ p_event_id:eventId,p_rule_id:input.id||null,p_dish_id:input.dishId,p_group_id:input.groupId||null,
+ p_rule_type:input.type,p_servings:Number(input.servings),p_people:input.type==='per_n_people'?Number(input.people):null,
+ p_conversion_id:input.conversionId||null,
+});
+export const eventPayTableExtrasV039=(id,tableId,boxId)=>rpc('pay_event_table_extras_v039',{p_event_id:id,p_table_id:tableId,p_cashbox_id:boxId});
+
+export const eventSaveServingWithEstimateV039=(eventId,input,estimate=null)=>rpc('event_save_group_serving_v039',{
+ p_event_id:eventId,p_rule_id:input.id||null,p_menu_item_id:input.menuItemId,
+ p_rule_type:input.type,p_servings:Number(input.servings),
+ p_people:input.type==='per_n_people'?Number(input.people):null,
+ p_serving_label:input.servingLabel,p_unit_id:input.unitId||null,
+ p_servings_per_menu_item:Number(input.servingsPerMenuItem),p_group_id:input.plateId||null,
+ p_estimate:estimate===null||estimate===''?null:Number(estimate),
+});

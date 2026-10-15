@@ -1366,3 +1366,43 @@ select option{background:#fff;color:var(--text);padding:8px}
  .event-booking-add-table-v038{flex-direction:column}.event-booking-add-table-v038>.event-table-combo-v038{width:100%}.event-booking-add-table-v038>.event-ctrl-v036{width:100%}
  .event-booking-actions-v038{min-width:120px}.event-booking-price-preview-v038{flex-direction:column;align-items:stretch}
 }
+
+/* v0.39: readable per-table batch checkout, estimate provenance, and external portions */
+.event-table-group-list-v039{display:grid;gap:13px;margin-top:13px}
+.event-table-group-v039{background:#fff;border:1px solid #e6dbe4;border-radius:17px;overflow:hidden;box-shadow:0 3px 10px rgba(55,31,49,.035)}
+.event-table-detail-v039>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:16px 18px;flex-wrap:wrap;color:#66465d}
+.event-table-detail-v039>summary::-webkit-details-marker{display:none}
+.event-table-detail-v039>summary:hover{background:#faf6f9}
+.event-table-detail-v039>summary:focus-visible{outline:3px solid #b28aa5;outline-offset:-3px}
+.event-table-detail-v039>summary>strong{font-size:15px;min-width:90px;color:#322434}
+.event-table-detail-v039>summary>span{font-size:12px}
+.event-table-detail-v039 .table-wrap{padding:0 13px 10px;overflow-x:auto}
+.event-table-detail-v039 .table{margin:0}
+.event-table-arrow-v039{font-size:22px;color:#6e4864;transform:rotate(0deg);transition:transform .16s}
+.event-table-detail-v039[open] .event-table-arrow-v039{transform:rotate(180deg)}
+.event-table-due-v039{margin-inline-start:auto;color:#65334c;font-weight:750;font-size:14px!important}
+.event-table-group-action-v039{padding:10px 18px 16px;display:flex;justify-content:flex-start;align-items:center;border-top:1px solid #f1e7ee}
+.event-table-group-action-v039 .event-ctrl-v036{white-space:normal;min-height:40px;font-weight:750;padding:10px 18px;border-radius:12px}
+.event-bulk-pay-lines-v039{background:#fff;border:1px solid #eee2ea;border-radius:13px;padding:10px 14px;margin:10px 0;max-height:200px;overflow:auto}
+.event-bulk-pay-lines-v039>div{display:flex;justify-content:space-between;gap:10px;padding:9px 0;font-size:12px;border-bottom:1px solid #f1eaf0}
+.event-bulk-pay-lines-v039>div:last-child{border-bottom:0}
+.event-estimate-toggle-v039{display:flex;align-items:center;gap:8px;padding:10px 11px;margin-top:9px;background:#fcfafc;border:1px solid #eadde8;border-radius:10px;font-size:12px;cursor:pointer;color:#694f61}
+.event-estimate-toggle-v039 input{width:16px;height:16px;accent-color:#754c6b}
+.event-estimate-field-v039{padding:14px;border-radius:12px;border:1px solid #e4c8b7;background:#fffbf4}
+.event-estimate-field-v039[hidden]{display:none!important}
+.event-estimate-label-v039{color:#936334!important;font-weight:700}
+.event-external-serving-v039 .event-unit-quick-button-v037{width:auto;max-width:100%}
+.event-external-serving-v039 .event-price-live-v038{margin:0}
+@media(max-width:650px){
+ .event-table-detail-v039>summary{gap:9px;padding:13px}
+ .event-table-due-v039{width:100%;margin-inline-start:0}
+ .event-table-group-action-v039{padding:10px 13px}
+ .event-table-group-action-v039 .event-ctrl-v036{width:100%}
+}
+
+.event-guest-plan-strip-v039{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.event-guest-plan-strip-v039>div{border:1px solid #e6d9e3;background:#fcfafc;border-radius:13px;display:flex;flex-direction:column;gap:7px;padding:12px 16px}
+.event-guest-plan-strip-v039 small{font-size:12px;color:#8b7384}
+.event-guest-plan-strip-v039 strong{font-size:23px;line-height:1.2;color:#614059;font-variant-numeric:tabular-nums}
+.event-guest-plan-strip-v039 p{grid-column:1/-1;font-size:12px;margin:0;color:#836e7b}
+@media(max-width:630px){.event-guest-plan-strip-v039{grid-template-columns:1fr 1fr}.event-guest-plan-strip-v039>div:first-child{grid-column:1/-1}}
