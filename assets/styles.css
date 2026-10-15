@@ -1406,3 +1406,40 @@ select option{background:#fff;color:var(--text);padding:8px}
 .event-guest-plan-strip-v039 strong{font-size:23px;line-height:1.2;color:#614059;font-variant-numeric:tabular-nums}
 .event-guest-plan-strip-v039 p{grid-column:1/-1;font-size:12px;margin:0;color:#836e7b}
 @media(max-width:630px){.event-guest-plan-strip-v039{grid-template-columns:1fr 1fr}.event-guest-plan-strip-v039>div:first-child{grid-column:1/-1}}
+
+/* Maria CFO v0.40 — clear separation of event planning and reservation operations */
+.event-context-title-v040{color:#775a70;font-size:13px;font-weight:750;margin:6px 0!important}
+.event-plan-steps-v040{display:flex;flex-wrap:wrap;justify-content:space-around;gap:9px;padding:13px;background:#fff;border:1px solid #e9dce5;border-radius:15px;margin:14px 0}
+.event-plan-steps-v040 span{font-size:12px;white-space:nowrap;font-weight:700;color:#75536b}
+.event-plan-disclaimer-v040{padding:11px 15px;border-right:3px solid #ae839e;border-radius:11px;background:#fcf5fa;color:#73586b;font-size:12px;margin:0 0 14px;line-height:1.75}
+.event-booking-kpis-v040{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:15px 0}
+.event-booking-kpis-v040>.card{display:flex;flex-direction:column;gap:8px;padding:17px 18px;min-height:118px}
+.event-booking-kpis-v040 strong{font-size:clamp(18px,2.15vw,25px);font-weight:850;color:#603c58;direction:ltr;text-align:right;line-height:1.25;font-variant-numeric:tabular-nums}
+.event-booking-kpis-v040 small{color:#846f80;font-size:11px;line-height:1.6}
+.event-booking-seat-map-v040{grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:14px}
+.event-booking-map-card-v040{border:1px solid #dfd7dc;background:#fff}
+.event-booking-map-card-v040.is-booked{background:#fdf9fc;border-color:#d2b9c8}
+.event-booking-map-card-v040 .event-seat-map-note-v040{font-size:11px;line-height:1.65;color:#76566d;align-self:center}
+.event-booking-map-card-v040 .event-table-actions-v034 .event-ctrl-v036{min-height:37px}
+.event-book-collect-checkbox-v040{display:flex;align-items:flex-start;gap:12px;padding:15px;background:#f5f8f5;border:1px solid #c9dccb;border-radius:13px;cursor:pointer;line-height:1.7}
+.event-book-collect-checkbox-v040 input{flex:0 0 19px;width:19px;height:19px;accent-color:#61836a;margin:3px 0}
+.event-book-collect-checkbox-v040 strong{display:block;color:#3f654a;font-size:14px}
+.event-book-collect-checkbox-v040 small{display:block;font-size:11px;color:#607769;margin-top:3px}
+.event-collect-inline-v040{display:grid;gap:9px;margin-top:5px}
+.event-collect-inline-v040 [hidden],.event-booking-form-v038 [hidden]{display:none!important}
+.event-demand-intro-v040{background:#f4f8f5;border:1px solid #cddccd;padding:18px 20px;border-radius:15px;margin:8px 0 14px}
+.event-demand-intro-v040 strong{color:#41664a;font-size:15px}
+.event-demand-intro-v040 p{color:#56735a;line-height:1.85;margin:6px 0 0;font-size:12px}
+.event-demand-kpis-v040{margin-bottom:14px}
+.event-demand-kpis-v040 .metric-value{font-size:21px;overflow-wrap:anywhere}
+.event-demand-table-v040{min-width:750px}
+.event-demand-table-v040 td small{display:block;color:#897587;font-size:11px;margin-top:4px}
+.event-demand-available-v040{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:12px;margin:10px 0 20px}
+.event-demand-available-v040>div{border:1px solid #e8d9e3;border-radius:14px;padding:15px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.event-demand-available-v040 strong{font-size:14px;color:#432e3e}
+.event-demand-available-v040 span{font-size:12px;color:#856a7c}
+.event-vendor-name-v040 strong{display:block;line-height:1.7;font-weight:760}
+.event-vendor-name-v040 small{display:block;margin-top:9px!important;padding-top:6px;color:#8a7384;line-height:1.7;font-size:12px}
+.event-on-demand-help-v040{font-size:12px;color:#726172;line-height:1.65}
+@media(max-width:880px){.event-booking-kpis-v040{grid-template-columns:repeat(2,minmax(0,1fr))}.event-plan-steps-v040{justify-content:flex-start}.event-booking-kpis-v040 strong{font-size:19px}}
+@media(max-width:470px){.event-booking-kpis-v040{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.event-booking-kpis-v040>.card{padding:12px;min-height:110px}.event-booking-kpis-v040 strong{font-size:16px}.event-plan-steps-v040 span{font-size:11px}.event-demand-kpis-v040{grid-template-columns:1fr}.event-book-collect-checkbox-v040{padding:12px}}

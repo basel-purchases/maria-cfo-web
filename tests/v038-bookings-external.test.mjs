@@ -71,8 +71,8 @@ test('v0.38 new UI has integrated table selection, both booking prices, external
  assert.match(js,/validateTableDistributionV038/);assert.match(js,/data-alloc-count/);
  assert.match(js,/name="unitPrice"/);assert.match(js,/name="amount"/);
  assert.match(js,/EVENT_BOOKING_STATUS_AR_V038/);assert.match(js,/data-book-amount/);
- assert.match(js,/eventExternalDishesV038/);assert.match(js,/eventSaveExternalServingV0(?:38|39)/);assert.match(js,/eventPayExternalDishV038/);
+ assert.match(js,/eventExternalDishesV038/);assert.match(js,/eventSaveExternalServingV0(?:38|39|40)/);assert.match(js,/eventPayExternalDishV038/);
  assert.match(js,/ticketFromMarginV038/);assert.match(js,/eventGuestSummaryV038/);
  assert.match(api,/eventSetBookingAmountV038/);
- assert.match(html,/app\.js\?v=0\.39/);
+ assert.match(html,/app\.js\?v=0\.(?:39|40)/);
 });

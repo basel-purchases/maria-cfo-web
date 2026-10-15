@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=0.27';
-import * as api from './api.js?v=0.39';
+import * as api from './api.js?v=0.40';
 import { esc } from './utils.js?v=0.27';
 import { toast, friendlyError, modal } from './ui.js?v=0.33';
 import { renderDashboard } from './pages/dashboard.js?v=0.27';
@@ -17,7 +17,7 @@ import {
 } from './pages/daily.js?v=0.27';
 import { renderEmployees, renderAttendance } from './pages/employees.js?v=0.33';
 import {renderBonusesV032} from './pages/bonuses.js?v=0.33';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.39';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=0.40';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=0.34';
 import { renderReports } from './pages/reports.js?v=0.27';
 import { renderAssistant } from './pages/assistant.js?v=0.27';
@@ -110,7 +110,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v0.39</div>
+        <div class="sidebar-foot">Web v0.40</div>
       </aside>
 
       <main class="main">
@@ -278,7 +278,7 @@ function active(hash) {
     'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
-    'events-list': 'events', reports: 'reports-hub', images: 'images',
+    'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
   }[key] || key;
   app.querySelectorAll('.nav a').forEach((a) => {
     const routeKey = a.dataset.route.replace('#/', '');
@@ -326,8 +326,10 @@ async function route() {
     'employees-list': 'الموظفون',
     attendance: 'الدوام',
     payroll: 'الرواتب',
-    'events-list': 'الحفلات والحجوزات',
-    event: 'تفاصيل الحفلة',
+    'events-list': 'بناء الحفلة وتجهيزها',
+    'event-reservations': 'حجوزات الحفلات',
+    'event-bookings': 'حجوزات الحفلة',
+    event: 'تخطيط وتكاليف الحفلة',
     reports: 'التقرير المالي',
   };
 
@@ -362,6 +364,8 @@ async function route() {
       case 'attendance': return renderAttendance(root);
       case 'payroll': return renderPayrollV034(root);
       case 'events-list': return renderEventsV034(root);
+      case 'event-reservations': return renderEventsV034(root,'booking');
+      case 'event-bookings': return renderEventDetailV034(root,id,'booking');
       case 'event': return renderEventDetailV034(root,id);
       case 'reports': return renderReports(root);
       case 'assistant': return renderAssistant(root);

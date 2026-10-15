@@ -34,7 +34,7 @@ test('v035 SQL keeps batch and group changes atomic and owner-only',()=>{
 test('v035 UI creates tables in bulk, named group bookings and segregated tabs',()=>{
  const ui=read('js/pages/events-v034.js');
  assert.match(ui,/eventBulkTablesV035/);
- assert.match(ui,/eventGroupBookingV035/);
+ assert.match(ui,/eventBookAndCollectV040/); // new RPC wraps the original v035 reservation atomically
  assert.match(ui,/bookingsHtml\(\)/);
  assert.match(ui,/event-booking-suggestion-v035/);
  assert.match(ui,/eventGuestsV035/);

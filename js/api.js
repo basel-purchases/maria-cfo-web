@@ -1317,3 +1317,26 @@ export const eventSaveServingWithEstimateV039=(eventId,input,estimate=null)=>rpc
  p_servings_per_menu_item:Number(input.servingsPerMenuItem),p_group_id:input.plateId||null,
  p_estimate:estimate===null||estimate===''?null:Number(estimate),
 });
+
+// v0.40: a paid reservation is one transaction, and on-demand hospitality uses an issue ledger.
+export const eventBookAndCollectV040=(id,data)=>rpc('event_book_and_collect_v040',{
+ p_event_id:id,p_customer_name:data.name,p_guest_count:Number(data.guests),
+ p_amount:Number(data.amount),p_allocations:data.allocations,p_guest_names:data.names||[],
+ p_phone:data.phone||null,p_note:data.note||null,
+ p_collected:Boolean(data.collected),p_cashbox_id:data.collected?data.cashboxId:null,
+});
+export const eventOnDemandV040=id=>list('event_on_demand_v040',{eq:{event_id:id},order:'created_at',ascending:true,limit:300});
+export const eventOnDemandIssuesV040=id=>list('event_on_demand_issues_v040',{eq:{event_id:id},order:'created_at',ascending:true,limit:3000});
+export const eventSaveOnDemandV040=(eventId,data)=>rpc('event_save_on_demand_v040',{
+ p_event_id:eventId,p_menu_item_id:data.menuItemId||null,p_external_dish_id:data.externalDishId||null,
+ p_limit:Number(data.limit),p_conversion_id:data.conversionId||null,p_note:data.note||null,
+});
+export const eventIssueOnDemandV040=(itemId,tableId,servings,note)=>rpc('event_issue_on_demand_v040',{
+ p_on_demand_id:itemId,p_table_id:tableId,p_servings:Number(servings),p_note:note||null,
+});
+export const eventVoidOnDemandIssueV040=(issueId,reason)=>rpc('event_void_on_demand_issue_v040',{
+ p_issue_id:issueId,p_reason:reason,
+});
+export const eventCompleteWithDemandV040=(eventId,note)=>rpc('complete_event_with_demand_v040',{
+ p_event_id:eventId,p_notes:note||null,
+});
