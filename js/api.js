@@ -380,27 +380,64 @@ export async function menuItems(){
   return master.map(m=>({...m,...(costMap[String(m.id)]||{}),...m}));
 }
 
-// Keep recipe costs for just the visible page; the menu can contain thousands of meals.
-export async function menuItemsPageV025({page=1,pageSize=18,categoryId='',query=''}={}){
+// v1.0.4: server-side search includes canonical and alternative names, and
+// pagination remains correct even with a missing-cost filter.
+async function menuSearchPageV104({page=1,pageSize=18,categoryId='',query='',missingOnly=false}={}){
   const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||18));
-  const from=(Math.max(1,Math.trunc(page)||1)-1)*size;
-  let request=need().from('menu_items').select('*',{count:'exact'});
-  if(categoryId)request=request.eq('category_id',categoryId);
+  const offset=(Math.max(1,Math.trunc(page)||1)-1)*size;
+  let q=need().from('menu_item_search_v104').select('id',{count:'exact'});
+  if(categoryId)q=q.eq('category_id',categoryId);
+  if(missingOnly)q=q.eq('cost_is_missing',true);
   if(String(query||'').trim()){
-    const term=String(query).trim().replace(/[\%_]/g,s=>'\\'+s);
-    request=request.ilike('name',`%${term}%`);
+    const term=String(query).trim().replace(/[\\%_]/g,'\\$&');
+    q=q.ilike('search_text',`%${term}%`);
   }
-  const {data,error,count}=await request.order('name',{ascending:true}).order('id',{ascending:true})
-    .range(from,from+size-1);
+  const {data,error,count}=await q.order('name',{ascending:true}).order('id',{ascending:true})
+    .range(offset,offset+size-1);
   if(error)throw error;
-  const master=data||[],ids=master.map(r=>r.id);
-  if(!ids.length)return {rows:master,total:count??0};
-  let costs=[];
-  try{costs=await dataOrThrow(need().from('menu_item_costs').select('*').in('id',ids));}
-  catch(e){console.info('Menu cost view not available for visible-page enrichment.',e?.code||'');}
-  const costById=new Map(costs.map(r=>[String(r.id),r]));
-  return {rows:master.map(r=>({...costById.get(String(r.id)),...r})),total:count??(from+master.length)};
+  const ids=(data||[]).map(x=>x.id);
+  if(!ids.length)return {rows:[],total:count??0};
+  const [masters,costs]=await Promise.all([
+    dataOrThrow(need().from('menu_items').select('*').in('id',ids)),
+    dataOrThrow(need().from('menu_item_costs').select('*').in('id',ids)).catch(()=>[]),
+  ]);
+  const mm=new Map(masters.map(x=>[String(x.id),x]));
+  const cm=new Map(costs.map(x=>[String(x.id),x]));
+  return {rows:ids.map(id=>({...cm.get(String(id)),...mm.get(String(id))})),total:count??ids.length};
 }
+export const menuItemsPageV025=options=>menuSearchPageV104(options);
+
+export async function menuAliasesForIdsV104(ids=[]){
+  if(!ids.length)return [];
+  const results=[];
+  for(let i=0;i<ids.length;i+=70){
+    const rows=await dataOrThrow(need().from('menu_item_aliases_v104')
+      .select('menu_item_id,alias_name').in('menu_item_id',ids.slice(i,i+70))
+      .order('alias_name',{ascending:true}));
+    results.push(...(rows||[]));
+  }
+  return results;
+}
+export async function menuAliasChoicesV104(){
+  const all=[];
+  for(let page=0;page<50;page++){
+    const rows=await dataOrThrow(need().from('menu_item_search_v104')
+      .select('id,name,aliases_text').order('name',{ascending:true})
+      .order('id',{ascending:true}).range(page*200,(page+1)*200-1));
+    all.push(...(rows||[]));
+    if(!rows||rows.length<200)return all;
+  }
+  throw new Error('MENU_CATALOG_TOO_LARGE');
+}
+export const menuSaveV104=({id=null,name,categoryId=null,price=null,foodCost=null,discount=0,estimatedCost=null,aliases=[]})=>
+  rpc('menu_save_v104',{
+    p_menu_id:id,p_name:String(name||'').trim(),p_category_id:categoryId||null,
+    p_price:price===''||price==null?null:Number(price),
+    p_food_cost:foodCost===''||foodCost==null?null:Number(foodCost),
+    p_discount:discount===''||discount==null?0:Number(discount),
+    p_estimate:estimatedCost===''||estimatedCost==null?null:Number(estimatedCost),
+    p_aliases:aliases,
+  });
 
 export async function createMenuItem({name,price=null,foodCost=null,discount=null,categoryId=null}){
   const payload={
@@ -1353,27 +1390,7 @@ export const ameenDailyDaysV041=()=>rpc('ameen_daily_days_v041');
 export const ameenPriceUndoV041=id=>rpc('ameen_price_undo_v041',{p_audit_id:Number(id)});
 export const ameenDailyHistoryV041=()=>list('ameen_daily_imports_v041',{order:'created_at',limit:150});
 export const menuCostStatusV041=()=>list('menu_cost_status_v041',{order:'name',ascending:true,limit:1200});
-export async function menuMissingCostPageV041({page=1,pageSize=18,query='',categoryId=''}={}){
-  const size=Math.max(1,Math.min(100,Math.trunc(pageSize)||18));
-  const offset=(Math.max(1,Math.trunc(page)||1)-1)*size;
-  let q=need().from('menu_cost_status_v041').select('id',{count:'exact'}).eq('cost_is_missing',true);
-  if(categoryId)q=q.eq('category_id',categoryId);
-  if(String(query||'').trim())q=q.ilike('name',`%${String(query).trim().replace(/[\\%_]/g,'\\$&')}%`);
-  const {data,error,count}=await q.order('name',{ascending:true}).order('id',{ascending:true}).range(offset,offset+size-1);
-  if(error)throw error;
-  const ids=(data||[]).map(r=>r.id);
-  if(!ids.length)return {rows:[],total:count??0};
-  const [masters,costs,estimates]=await Promise.all([
-    dataOrThrow(need().from('menu_items').select('*').in('id',ids)),
-    dataOrThrow(need().from('menu_item_costs').select('*').in('id',ids)).catch(()=>[]),
-    dataOrThrow(need().from('event_menu_cost_estimates_v039').select('*').in('menu_item_id',ids)).catch(()=>[]),
-  ]);
-  const mm=new Map(masters.map(r=>[String(r.id),r]));
-  const cm=new Map(costs.map(r=>[String(r.id),r]));
-  const em=new Map(estimates.map(r=>[String(r.menu_item_id),r]));
-  return {rows:ids.map(id=>({...cm.get(String(id)),...mm.get(String(id)),
-    estimated_unit_cost_base:em.get(String(id))?.estimated_unit_cost_base??null})),total:count??ids.length};
-}
+export const menuMissingCostPageV041=options=>menuSearchPageV104({...options,missingOnly:true});
 export const menuSetEstimateV041=(menuItemId,cost)=>rpc('menu_set_estimate_v041',{
   p_menu_item_id:menuItemId,p_cost:cost==null||cost===''?null:Number(cost)
 });

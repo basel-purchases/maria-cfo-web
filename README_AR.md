@@ -1,3 +1,5 @@
+**دليل الإصدار الحالي v1.0.4:** [README_v1.0.4_MENU_ALIASES_ORDERS_AR.md](README_v1.0.4_MENU_ALIASES_ORDERS_AR.md). يتطلب تطبيق SQL v1.0.4 قبل رفع الموقع، مع الاحتفاظ بـ `config.js`.
+
 # Maria CFO Web v0.40
 
 أحدث دليل للإصدار: **[README_v040_AR.md](README_v040_AR.md)**.

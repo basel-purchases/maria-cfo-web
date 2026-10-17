@@ -47,7 +47,7 @@ test('v1.0: sidebar, page heading, import action and report use neutral product 
  assert.match(daily,/data-price-index="\$\{p.originalIndex\}"/);
  assert.match(hub,/#\/daily-orders/);
  assert.match(read('index.html'),/app\.js\?v=1\.0/);
- assert.equal(read('VERSION').trim(),'1.0.3');
+ assert.equal(read('VERSION').trim(),'1.0.4');
  for(const dir of ['js','js/pages'])for(const name of readdirSync(join(base,dir)).filter(n=>n.endsWith('.js'))){
   const src=read(join(dir,name));
   assert.doesNotMatch(src,/الأمين|الامين/,`${dir}/${name}: no external product branding in UI`);
@@ -55,9 +55,11 @@ test('v1.0: sidebar, page heading, import action and report use neutral product 
 });
 test('v1.0: review states are readable and color coded without changing the backend price decision',()=>{
  const page=read('js/pages/ameen-daily-v041.js'),css=read('assets/styles.css');
- assert.match(page,/<span class="badge red">غير مطابق<\/span>/);
- assert.match(page,/<span class="badge green">مطابق<\/span>/);
- assert.match(page,/<span class="badge yellow">صنف جديد<\/span>/);
+ assert.match(page,/badgeClass=.*red/);
+ assert.match(page,/badgeClass=.*green/);
+ assert.match(page,/badgeClass=.*yellow/);
+ assert.match(page,/const badge=.*غير مطابق/);
+ assert.match(page,/const badge=.*مطابق/);
  assert.match(page,/prepared\.prices\.indexOf\(p\)/);
  assert.match(css,/\.daily-price-review-v100/);
  assert.match(css,/\.daily-preview-v041 > \.grid > \.card strong/);

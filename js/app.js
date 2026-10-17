@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0';
+import * as api from './api.js?v=1.0.4';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
@@ -7,7 +7,7 @@ import { renderHub } from './pages/hubs.js?v=1.0';
 import { renderMaterials } from './pages/materials.js?v=1.0.3';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=1.0';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0';
-import { renderMenu } from './pages/menu.js?v=1.0';
+import { renderMenu } from './pages/menu.js?v=1.0.4';
 import {
   renderInventory,
   renderCashboxes,
@@ -26,7 +26,7 @@ import { renderSettings } from './pages/settings.js?v=1.0';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
-import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0';
+import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.4';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0';
 
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.3</div>
+        <div class="sidebar-foot">Web v1.0.4</div>
       </aside>
 
       <main class="main">

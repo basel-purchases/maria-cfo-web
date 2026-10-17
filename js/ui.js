@@ -15,6 +15,16 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('ameen_order_cashbox_required')) return 'حدد صندوق هذا الأوردر قبل اعتماد بيانات المصدر.';
   if(msg.includes('ameen_source_conflict')) return 'يوجد تعارض بين الأوردر وسجل البيانات المستوردة ويحتاج مراجعة يدوية.';
   if(msg.includes('ameen_item_mapping_changed_review_required')) return 'تغيّرت مطابقة مادة مستوردة. لم نكتب على مادة أخرى تلقائيًا؛ راجع الاسم والوحدة.';
+  if(msg.includes('daily_item_needs_explicit_create_or_alias')) return 'يوجد صنف غير معروف لم تحدد له إنشاء جديد أو اسمًا بديلًا. أعد المعاينة واختر القرار لكل صنف.';
+  if(msg.includes('daily_alias_target_required')||msg.includes('menu_alias_target_not_found')) return 'اختر وجبة صحيحة من قائمة البحث لربط الاسم البديل بها.';
+  if(msg.includes('daily_alias_conflict')||msg.includes('menu_alias_collides_with_menu_name')||msg.includes('menu_alias_used_by_another_item')||msg.includes('menu_name_collides_with_alias')) return 'هذا الاسم مستخدم بالفعل لوجبة أخرى. لا يمكن ربط الاسم بوجبتين؛ راجع الأسماء الأساسية والبديلة.';
+  if(msg.includes('menu_name_already_exists')) return 'اسم الوجبة موجود مسبقًا؛ افتح الوجبة الحالية وأضف اسمًا بديلًا إن لزم.';
+  if(msg.includes('menu_too_many_aliases')) return 'يمكن حفظ حتى 40 اسمًا بديلًا لكل وجبة.';
+  if(msg.includes('menu_alias_invalid_name')) return 'الاسم البديل يجب ألا يكون فارغًا أو أطول من 180 حرفًا.';
+  if(msg.includes('daily_ambiguous_menu')) return 'هناك أكثر من وجبة بنفس الاسم، ولا يمكن اختيار واحدة تلقائيًا. راجع أسماء المنيو المكررة أولًا.';
+  if(msg.includes('daily_line_menu_not_resolved')) return 'تعذر تحديد وجبة أحد بنود الأوردر بأمان؛ لم يحفظ التقرير جزئيًا.';
+  if(msg.includes('daily_item_already_matched')) return 'الصنف مرتبط بوجبة موجودة بالفعل. لا يمكن إنشاؤه مرة ثانية.';
+  if(msg.includes('menu_save_v104')||msg.includes('menu_item_search_v104')||msg.includes('menu_item_aliases_v104')) return 'تحتاج تشغيل تحديث قاعدة البيانات v1.0.4 قبل استخدام هذه النسخة.';
   if(msg.includes('ameen_')) return 'توقفت عملية الاستيراد حفاظًا على السجلات. راجع بيانات الملف وتحديث قاعدة Maria CFO v0.24.';
   if(msg.includes('recipe_unit_not_configured')) return 'هذه الوحدة غير مربوطة بالمادة بعد. اضغط «تحويل وحدة» وحدد العلاقة ثم حاول مجددًا.';
   if(msg.includes('purchase unit conversion not configured')) return 'تم تعريف الوحدة للمادة، لكن قاعدة البيانات ما زالت على منطق الشراء القديم. شغّل تحديث v0.10 مرة واحدة في Supabase ثم أعد المحاولة.';
