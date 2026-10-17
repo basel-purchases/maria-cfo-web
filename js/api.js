@@ -422,7 +422,7 @@ export async function menuAliasChoicesV104(){
   const all=[];
   for(let page=0;page<50;page++){
     const rows=await dataOrThrow(need().from('menu_item_search_v104')
-      .select('id,name,aliases_text').order('name',{ascending:true})
+      .select('id,name,aliases_text,menu_price').order('name',{ascending:true})
       .order('id',{ascending:true}).range(page*200,(page+1)*200-1));
     all.push(...(rows||[]));
     if(!rows||rows.length<200)return all;
@@ -1380,11 +1380,12 @@ export const eventCompleteWithDemandV040=(eventId,note)=>rpc('complete_event_wit
  p_event_id:eventId,p_notes:note||null,
 });
 
-// v0.41: independent Al-Ameen daily cashier ledger (read-only financially).
+// v1.0.5: source-net cashier cash receipts, posted exactly once per new order.
 export const ameenPricePreviewV041=(records)=>rpc('ameen_price_preview_v041',{p_records:records});
-export const ameenImportDailyV041=(filename,sha256,records,actions=[],reportedCashboxId=null)=>
-  rpc('ameen_import_daily_v041',{p_filename:filename,p_sha256:sha256,p_records:records,
-    p_actions:actions,p_reported_cashbox_id:reportedCashboxId});
+export const ameenImportDailyV041=(filename,sha256,records,actions=[],cashboxId=null)=>
+  rpc('ameen_import_daily_v105',{p_filename:filename,p_sha256:sha256,p_records:records,
+    p_actions:actions,p_cashbox_id:cashboxId});
+export const ameenCashboxReconciliationV105=day=>rpc('ameen_cashbox_reconciliation_v105',{p_day:day});
 export const ameenDailyReportV041=day=>rpc('ameen_daily_report_v041',{p_day:day});
 export const ameenDailyDaysV041=()=>rpc('ameen_daily_days_v041');
 export const ameenPriceUndoV041=id=>rpc('ameen_price_undo_v041',{p_audit_id:Number(id)});

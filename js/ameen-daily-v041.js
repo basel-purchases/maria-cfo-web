@@ -34,15 +34,18 @@ export function dailyCashboxes(orders=[]){
  return [...map.values()].map(x=>({...x,total:roundAmount(x.total)}));
 }
 export function dailyPriceDifferences(lines=[]){
- let increase=0,decrease=0,changed=0;
+ let increase=0,decrease=0,changed=0,unitVariations=0;
  for(const line of lines){
+  // e.g. one kilogram vs one 200g portion: never claim a price difference
+  // until the per-meal serving weight is explicitly known.
+  if(['unit_prefix','alias_unit_prefix'].includes(line.matchKind)){unitVariations++;continue;}
   if(line.referencePrice===null||line.referencePrice===undefined)continue;
   const delta=(Number(line.unitPrice)-Number(line.referencePrice))*Number(line.qty);
   if(Math.abs(delta)<=0.0001)continue;
   changed++;
   if(delta>0)increase+=delta;else decrease+=-delta;
  }
- return {increase:roundAmount(increase),decrease:roundAmount(decrease),changed};
+ return {increase:roundAmount(increase),decrease:roundAmount(decrease),changed,unitVariations};
 }
 export function normalizeMenuQuery(name=''){
  return String(name).normalize('NFKC').replace(/[\u064b-\u065f\u0670\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').trim().replace(/\s+/g,' ').toLocaleLowerCase('ar');

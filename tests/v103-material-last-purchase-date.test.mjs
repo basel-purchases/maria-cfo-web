@@ -34,8 +34,8 @@ test('new version invalidates cached materials module and stylesheet while prese
   const app = read('js/app.js');
   const index = read('index.html');
   assert.match(app, /materials\.js\?v=1\.0\.3/);
-  assert.match(index, /styles\.css\?v=1\.0\.4/);
-  assert.match(index, /app\.js\?v=1\.0\.4/);
+  assert.match(index, /styles\.css\?v=1\.0\.5/);
+  assert.match(index, /app\.js\?v=1\.0\.5/);
   assert.match(index, /<script src="\.\/config\.js"><\/script>/);
-  assert.equal(read('VERSION').trim(), '1.0.4');
+  assert.equal(read('VERSION').trim(), '1.0.5');
 });

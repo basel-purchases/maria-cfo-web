@@ -2,7 +2,7 @@ import * as api from '../api.js?v=1.0';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
-import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034} from '../payroll-workbench-v034.js?v=1.0';
+import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034} from '../payroll-workbench-v034.js?v=1.0';
 
 const MONTH_NAMES=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
 const PAY_TYPE={monthly:'شهري',daily:'يومي',hourly:'ساعي',fixed:'مقطوع'};
@@ -30,6 +30,7 @@ export async function renderPayrollV034(root){
    <button type="button" role="tab" aria-selected="false" class="payroll-tab-v034" data-pay-tab="paid">الرواتب المدفوعة</button>
   </div>
  </section>
+ <div id="payroll-total-v105" class="grid cols-3 payroll-totals-v105" aria-live="polite"></div>
  <div id="payroll-data-v034">${loader()}</div>`;
  const panel=root.querySelector('#payroll-data-v034');
  const boxSelect=root.querySelector('#payroll-box-v034');
@@ -73,7 +74,13 @@ export async function renderPayrollV034(root){
   root.querySelectorAll('[data-pay-tab]').forEach(b=>{const active=b.dataset.payTab===state.tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
  }
  function paint(){
-  tabs();panel.innerHTML=state.tab==='ready'?readyHtml():paidHtml();
+  tabs();
+  const normalizedMonth=state.ready.map(normalizedPayrollRowV034);
+  const totals=root.querySelector('#payroll-total-v105');
+  if(totals)totals.innerHTML=`<div class="card"><div class="metric-label">إجمالي صافي الرواتب في مسيرات الشهر</div><div class="metric-note">${amountGroup(normalizedMonth,'net')}</div><small>تشمل المسيرات الظاهرة في قاعدة البيانات، ولا تشمل راتبًا لم يُنشأ له مسير.</small></div>
+    <div class="card"><div class="metric-label">إجمالي ما دُفع في الشهر</div><div class="metric-note">${amountGroup(state.paid,'amount_original')}</div><small>حركات الدفع الحقيقية فقط، موزعة حسب العملة.</small></div>
+    <div class="card"><div class="metric-label">إجمالي الرواتب المتبقية في مسيرات الشهر</div><div class="metric-note">${amountGroup(normalizedMonth,'remaining')}</div><small>بما فيها المسودات؛ الاعتماد لا يعني الصرف.</small></div>`;
+  panel.innerHTML=state.tab==='ready'?readyHtml():paidHtml();
   state.tab==='ready'?bindReady():bindPaid();
  }
  const draftMonths=()=>state.runs.filter(r=>r.status==='draft');

@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.4';
+import * as api from './api.js?v=1.0.5';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
@@ -18,7 +18,7 @@ import {
 import { renderEmployees, renderAttendance } from './pages/employees.js?v=1.0';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.5';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0';
@@ -26,7 +26,7 @@ import { renderSettings } from './pages/settings.js?v=1.0';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
-import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.4';
+import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0';
 
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.4</div>
+        <div class="sidebar-foot">Web v1.0.5</div>
       </aside>
 
       <main class="main">
