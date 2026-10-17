@@ -7,6 +7,7 @@ import { formatSmartStock } from '../material-stock-display.js?v=1.0';
 import {sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=1.0';
 import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
 
 const PAGE_SIZE=10;
 
@@ -130,9 +131,9 @@ export async function renderMaterials(root) {
 
       if(list.querySelector('.materials-table')) registerTableExport(list.querySelector('.materials-table'),()=>({
         title:'المواد - حسب الفلتر',
-        headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','الجرد المستورد','سعر التقرير'],
+        headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','تاريخ آخر شراء معروف','الجرد المستورد','سعر التقرير'],
         rows:filtered.map(x=>{const source=importedRowsFor(x,importedIndex),price=purchasePrices.get(String(x.id))??priceOf(x);const sprice=importedPrice(source);
-          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',importedStockSummary(source),sprice??''];})
+          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',formatMaterialLastPurchaseDate(x.last_purchase_at),importedStockSummary(source),sprice??''];})
       }));
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
@@ -184,6 +185,7 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
             <th>الرصيد الموجود</th>
             <th>الحد الأدنى قبل التنبيه</th>
             <th>آخر سعر شراء معروف</th>
+            <th title="يشمل التواريخ المرجعية المستوردة، حتى إن لم تُسجّل فاتورة شراء داخل البرنامج">تاريخ آخر شراء معروف</th>
             <th>المستودع والكمية في آخر جرد مستورد</th>
             <th>سعر التقرير (مرجعي)</th>
             <th>إجراء</th>
@@ -207,6 +209,7 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
                 <td><strong class="smart-stock-main" title="${esc(shownStock.original)}">${esc(shownStock.text)}</strong>${shownStock.converted?`<small class="smart-stock-sub">الأساس: ${esc(shownStock.original)}<span> · ${esc(shownStock.relationship)}</span></small>`:''}</td>
                 <td>${target == null ? '—' : `<span title="${esc(shownTarget.original)}">${esc(shownTarget.text)}</span>`}</td>
                 <td>${price != null ? `${money(price)} / ${esc(unit || 'وحدة')}` : '—'}</td>
+                <td><span class="material-last-purchase-date" dir="ltr">${formatMaterialLastPurchaseDate(r.last_purchase_at)}</span></td>
                 <td><span class="source-stock-summary">${esc(importedStockSummary(source))}</span>${importedRowHasWarning(source)?'<span class="badge yellow">مراجعة</span>':''}</td>
                 <td>${sourcePrice != null ? money(sourcePrice,'SYP') : '—'}</td>
                 <td>

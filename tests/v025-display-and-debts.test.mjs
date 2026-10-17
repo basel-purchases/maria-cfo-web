@@ -64,7 +64,7 @@ test('Actual pages request server-side order and recipe paging; there are no unb
 test('CSS protects visible controls from one-letter-per-line materials table breakage and styles all RTL dropdowns',()=>{
  const css=read('assets/styles.css');
  assert.match(css,/materials-table-scroll \.materials-table/);
- assert.match(css,/min-width:1650px/);
+ assert.match(css,/min-width:1810px/);
  assert.match(css,/material-actions \.mini-btn/);
  assert.match(css,/white-space:nowrap/);
  assert.match(css,/select:not\(\[multiple\]\):not\(\[size\]\)/);

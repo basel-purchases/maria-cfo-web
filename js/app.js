@@ -4,7 +4,7 @@ import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
 import { renderHub } from './pages/hubs.js?v=1.0';
-import { renderMaterials } from './pages/materials.js?v=1.0';
+import { renderMaterials } from './pages/materials.js?v=1.0.3';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=1.0';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0';
 import { renderMenu } from './pages/menu.js?v=1.0';
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.2</div>
+        <div class="sidebar-foot">Web v1.0.3</div>
       </aside>
 
       <main class="main">
