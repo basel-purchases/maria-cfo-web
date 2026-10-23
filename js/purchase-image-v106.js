@@ -1,10 +1,10 @@
 // Purchase receipt OCR interpretation: suggestions only. Never fabricate quantity/price.
 import {normalizeArabicNumbers,reviewedOcrItemCandidates} from './image-document-rules.js?v=1.0.7';
 import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.7';
-import {invoiceAmountV107,amountNearV107} from './invoice-amount-v107.js?v=1.0.7';
+import {invoiceAmountV107,amountNearV107,invoiceDigitWarningV108} from './invoice-amount-v107.js?v=1.0.8';
 const AR=/[\u0621-\u064a]/;
 const NOISE=/^(?:فاتورة|التاريخ|المطلوب|الهاتف|تلفون|موبايل|رقم|رقم الفاتورة|المجموع|الاجمالي|الإجمالي|الصافي|total|invoice|date|عنوان|السعر|العدد|نوع البضاعة|الكمية|الاجور|الملاحظة|البيان)/i;
-const FOOTER=/(?:^|\s)(?:المجموع|الاجمالي|الإجمالي|الصافي|المبلغ النهائي|المجموع فقط|total|subtotal)(?:\s|:|$)/i;
+const FOOTER=/(?:^|\s)(?:المجموع|مجموع\s*الكمية|الاجمالي|الإجمالي|الصافي|الرصيد\s*السابق|الصافي\s*للدفع|المبلغ النهائي|المجموع فقط|total|subtotal|balance)(?:\s|:|$)/i;
 const UNIT=/(?:كيلوغرام|كيلوجرام|كيلو|كغ|kg|غرام|جرام|غ|g|ليتر|لتر|ltr|l|مل|ml|كرتون|علبة|باكيت|قطعة|حبة|حبه|ربطة|صندوق|دزينة|دستة|طن|وحدة)/i;
 function number(s){const v=invoiceAmountV107(s);return v!==null&&v>0?v:null;}
 const near=amountNearV107;
@@ -19,7 +19,8 @@ export function receiptHeaderV106({supplier='',number:invoiceNumber='',items='',
   if(key.length>=4&&lines.some(line=>materialKeyV106(line).includes(key))){supplierName=known.name;break;}
  }
  if(!supplierName){
-  const candidates=lines.filter(l=>AR.test(l)&&l.length>=5&&l.length<=95&&!NOISE.test(l)&&!FOOTER.test(l)
+ const candidates=lines.filter(l=>AR.test(l)&&l.length>=5&&l.length<=95&&!NOISE.test(l)&&!FOOTER.test(l)
+    &&!/^(?:اسم\s*(?:المورد|العميل|الزبون)|العميل|زبون|اسم\s*المشتري)(?:\s|:|$)/.test(l)
     &&(l.match(/[\u0621-\u064a]/g)||[]).length>=4&&!/\d{5,}/.test(l));
   // Only infer an unknown supplier from a dedicated selection or a strong business heading.
   if(supplier)candidates.length&&(supplierName=candidates[0]);
@@ -27,13 +28,17 @@ export function receiptHeaderV106({supplier='',number:invoiceNumber='',items='',
  }
  const numberLines=getLines(invoiceNumber||full).slice(0,invoiceNumber?15:25);
  let detectedNumber='';
- for(const line of numberLines){
-  const explicit=line.match(/(?:رقم\s*(?:الفاتورة|الطلب|المستند)?|invoice\s*(?:no|number|#)?|no\.?|#)\s*[:#\-]?\s*(\d{2,10})/i);
-  if(explicit){detectedNumber=explicit[1];break;}
+ for(let i=0;i<numberLines.length;i++){
+  const line=numberLines[i];
+  const heading=line.match(/(?:رقم\s*(?:الفاتورة|الطلب|المستند)?|invoice\s*(?:no|number|#)?|no\.?|#)\s*[:#-]?\s*/i);
+  if(!heading)continue;
+  const sameLine=line.slice(heading.index+heading[0].length).match(/\d{1,10}(?:[_/-]\d{1,10})*/);
+  const nextLine=numberLines[i+1]?.match(/^\s*[.#-]?\s*(\d{1,10}(?:[_/-]\d{1,10})*)\s*$/);
+  if(sameLine||nextLine){detectedNumber=sameLine?.[0]||nextLine[1];break;}
  }
  if(!detectedNumber&&invoiceNumber){
-  const standalone=numberLines.flatMap(l=>l.match(/\b\d{2,8}\b/g)||[])
-    .filter(v=>v.length<=8);
+  const standalone=numberLines.flatMap(l=>l.match(/\d{1,10}(?:[_/-]\d{1,10})*/g)||[])
+    .filter(v=>v.length>=2);
   if(standalone.length===1)detectedNumber=standalone[0];
  }
  let invoiceTotal=null;
@@ -72,12 +77,17 @@ function markdownHeader(cells){
  if(!cells||cells.length<3)return null;
  const labels=cells.map(tableHeaderLabel);
  const lookup=regex=>labels.findIndex(s=>regex.test(s));
- const name=lookup(/نوع\s*البضاع|اسم\s*(?:الماد|الصنف)|الماد|الصنف|البيان|description|item/);
+ const name=lookup(/نوع\s*البضاع|اسم\s*(?:الماد|الصنف|المنتج)|الماد|الصنف|البيان|الوجبة|المنتج|الوصف|description|item|product/);
  const price=lookup(/سعر\s*(?:الوحد|الماد)?|price/);
  const total=lookup(/اجمال|قيم|مبلغ|total|amount/);
  const count=lookup(/^(?:العدد|عدد|الكميه|كمية|الكمية|quantity|qty|count|حبات|قطع)/);
  const weight=lookup(/كيلو|كغ|صافي|وزن|weight|net/);
- if(name<0||price<0||count<0&&weight<0)return null;
+ // Some POS receipts print an item description inside the column headed
+ // "الكمية". Permit that layout only with explicit price AND total headings;
+ // later rows still require an actual product description.
+ if(name<0&&(count<0||price<0||total<0))return null;
+ if(name>=0&&price<0)return null;
+ if(name>=0&&count<0&&weight<0&&total<0)return null;
  // Do not interpret a loose, unlabelled series of numbers as a purchase row.
  return {name,price,total,count,weight,labels};
 }
@@ -92,7 +102,9 @@ function baseIsWeight(material,units){
  return TABLE_WEIGHT.test(String(base.name||'')+' '+String(base.code||''));
 }
 function markdownTableRows(text,materials,limit,units){
- const lines=normalizeArabicNumbers(text).split(/\r?\n/);
+ // Preserve the original Unicode digit glyphs for OCR ambiguity warnings.
+ // invoiceAmountV107 converts Arabic-Indic, Persian and Western digits safely.
+ const lines=String(text??'').split(/\r?\n/);
  const rows=[];let header=null,seenTable=false;
  for(const rawLine of lines){
   if(rows.length>=limit)break;
@@ -102,10 +114,16 @@ function markdownTableRows(text,materials,limit,units){
   const detected=markdownHeader(cells);
   if(detected){header=detected;seenTable=true;continue;}
   if(!header)continue;
-  if(cells.length<=header.name||cells.length<=header.price)continue;
-  const name=String(cells[header.name]||'').replace(/^[\s:;.,-]+|[\s:;.,-]+$/g,'').trim();
-  if(!AR.test(name)||name.length<2||name.length>100||FOOTER.test(name))continue;
-  const qtyCount=header.count<0?null:number(cells[header.count]);
+  if(cells.length<=header.price||header.name>=0&&cells.length<=header.name)continue;
+  // Never read a packaging count such as "48 قطعة" inside an item description
+  // as the purchased quantity. Preserve it in the editable product name.
+  const descriptiveCount=header.name<0&&header.count>=0&&AR.test(String(cells[header.count]||''));
+  const nameIndex=header.name>=0?header.name:descriptiveCount?header.count:-1;
+  if(nameIndex<0)continue;
+  const name=String(cells[nameIndex]||'').replace(/^[\s:;.,-]+|[\s:;.,-]+$/g,'').trim();
+  if(!AR.test(name)||name.length<2||name.length>120||FOOTER.test(name))continue;
+  if(/^(?:اسم\s*العميل|زبون|الرصيد\s*السابق|القيمة|الكمية|السعر)(?:\s|$)/.test(name))continue;
+  const qtyCount=header.count<0||descriptiveCount?null:number(cells[header.count]);
   const qtyWeight=header.weight<0?null:number(cells[header.weight]);
   const price=number(cells[header.price]);
   const total=header.total<0?null:number(cells[header.total]);
@@ -126,9 +144,20 @@ function markdownTableRows(text,materials,limit,units){
    if(weighted===false)chosen=candidates.find(c=>c.source==='count')||candidates[0];
    else chosen=candidates.find(c=>c.source==='weight')||candidates[0];
   }
-  const qty=chosen?.qty??null;
+  let qty=chosen?.qty??null;
+  let inferred=false;
+  if(qty===null&&price!==null&&total!==null&&price>0&&total>0){
+   const ratio=total/price;
+   // A mathematical proposal, not an OCR reading. The user MUST confirm it
+   // against the photo before any invoice posting.
+   if(Number.isFinite(ratio)&&ratio>0&&ratio<=100000&&near(ratio*price,total)){
+    qty=Number(ratio.toPrecision(10));inferred=true;
+   }
+  }
   const mathOK=qty!==null&&price!==null&&total!==null&&near(qty*price,total);
-  const unitUnresolved=header.weight>=0&&weighted!==false&&qtyWeight===null&&chosen?.source==='count';
+  const isPackDescription=inferred&&/\d+\s*(?:قطعة|قطع|حبة|حبات|علبة|علب|كرتون|عبوة|pack|pieces|pcs)/i.test(name);
+  const missingWeight=header.weight>=0&&weighted!==false&&qtyWeight===null&&chosen?.source==='count';
+  const unitUnresolved=missingWeight||isPackDescription;
   const notes=[];
   if(!price)notes.push('سعر الوحدة غير واضح؛ راجعه في الصورة.');
   if(qty===null)notes.push('الكمية غير واضحة؛ راجع الصورة.');
@@ -137,12 +166,17 @@ function markdownTableRows(text,materials,limit,units){
   if(total!==null&&qty!==null&&price!==null&&!mathOK)
    notes.push(`إجمالي البند المقروء (${total}) لا يساوي الكمية × السعر (${Number((qty*price).toFixed(6))}). راجع الصورة.`);
   if(total===null)notes.push('إجمالي البند غير واضح؛ راجع الصورة.');
-  if(unitUnresolved)notes.push('لم يُقرأ وزن صافٍ صالح؛ استُخدم العدد مؤقتًا ويجب تحديد وحدة الشراء يدويًا.');
+  if(inferred)notes.push('الكمية مقترحة حسابيًا من إجمالي البند ÷ سعر الوحدة، ولم تُقرأ صراحة؛ راجعها مع الصورة قبل الحفظ. العدد داخل وصف العبوة ليس كمية الشراء.');
+  const digitWarning=invoiceDigitWarningV108(cells.join(' '));
+  if(digitWarning)notes.push(digitWarning);
+  if(missingWeight)notes.push('لم يُقرأ وزن صافٍ صالح؛ استُخدم العدد مؤقتًا ويجب تحديد وحدة الشراء يدويًا.');
+  if(isPackDescription)notes.push('يوجد حجم عبوة أو عدد قطع داخل الوصف؛ حدد وحدة الشراء بنفسك لتجنب اعتبار العبوة قطعًا منفردة.');
   const reviewRequired=notes.length>0;
   rows.push(makeRow(name,qty,price,rawLine,{
    unit_text:chosen?.unit||'',
    ...(total!==null?{ocr_line_total:String(total)}:{}),
    ocr_source:'markdown_columns',
+   ocr_quantity_inferred:inferred,
    ocr_review_required:reviewRequired,
    ocr_reviewed:false,
    ocr_unit_unresolved:unitUnresolved,

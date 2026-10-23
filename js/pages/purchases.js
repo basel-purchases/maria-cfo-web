@@ -29,7 +29,7 @@ export async function renderPurchases(root){
           <h2>فواتير الشراء</h2>
           <p>سجّل ما دخل المخزون. المورد اختياري، وإذا كان موجودًا سيظهر هنا لتسهيل المتابعة.</p>
         </div>
-        <button class="btn new">فاتورة جديدة</button>
+        <div class="page-head-actions"><button class="btn new">فاتورة جديدة</button><a class="btn secondary purchase-to-images-v108" href="#/images">الإدخال بالصور</a></div>
       </div>
       ${rows.length?`
         <div class="table-wrap table-fit">
@@ -132,6 +132,7 @@ export async function renderPurchaseDetail(root,id){
           <p>${direct?'شراء مباشر بدون مورد':`المورد: ${esc(supplier?.name||'—')}`}</p>
         </div>
         <div class="page-head-actions">
+          <a class="btn secondary purchase-to-images-v108" href="#/images">الإدخال بالصور</a>
           ${draft?'<button class="btn secondary delete-draft-detail">حذف المسودة</button>':''}
           ${posted&&!invoice.is_ameen_legacy_v029?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
         </div>
@@ -151,6 +152,7 @@ export async function renderPurchaseDetail(root,id){
           <h3>إدخال الفاتورة</h3>
           <p>أضف بندًا يدويًا، اختر من مواد هذا المورد السابقة، أو حلّل صورة الفاتورة بالذكاء الاصطناعي.</p>
           <div class="quick-actions purchase-actions">
+            <a class="btn secondary purchase-to-images-v108" href="#/images">الانتقال إلى الصور</a>
             <button class="btn add" ${!draft?'disabled':''}>إضافة مادة</button>
             <button class="btn secondary reuse" ${!draft||direct?'disabled':''}>مواد هذا المورد</button>
             <button class="btn secondary ocr" ${!draft?'disabled':''}>تحليل صورة الفاتورة</button>

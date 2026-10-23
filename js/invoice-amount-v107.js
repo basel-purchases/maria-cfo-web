@@ -34,3 +34,16 @@ export function invoiceAmountV107(value){
 export function amountNearV107(a,b){
  return Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=Math.max(.05,Math.abs(b)*.015);
 }
+
+// Arabic-Indic ٠ is zero (a dot-shaped glyph), while ٥ is five (a ring).
+// OCR sometimes confuses the ring with Latin "0". Never change one to the
+// other automatically: surface mixed-script or solitary-dot cells for review.
+export function invoiceDigitWarningV108(value){
+ const original=String(value??'');
+ if(!original.trim())return '';
+ if(/^[.·•۔]$/.test(original.trim()))
+  return 'علامة النقطة قد تكون صفرًا عربيًا (٠) أو علامة ترقيم؛ اقرأ الخانة من الصورة.';
+ if(/[٠-٩۰-۹]/.test(original)&&/0/.test(original))
+  return 'توجد أرقام عربية مع صفر إنكليزي (0): تحقّق من عدم التباسه مع الخمسة العربية (٥).';
+ return '';
+}

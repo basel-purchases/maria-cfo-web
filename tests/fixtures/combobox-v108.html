@@ -1,0 +1,26 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="stylesheet" href="../../assets/styles.css?v=1.0.8"></head><body>
+<div class="image-purchase-wrap-v106" style="width:560px;overflow-x:auto;padding:30px"><table><tr><td><select id="qa-catalog" aria-label="اختيار مادة" data-field="material_id"><option value="">اختر مادة</option><option value="1">أرز</option><option value="2">برك جبنة</option><option value="3">بندورة</option><option value="4">خيار</option><option value="5">ليمون</option><option value="6">كوسا</option><option value="7">بطاطا</option><option value="8">سكر</option><option value="9">زيت</option><option value="10">ملفوف</option></select></td></tr></table></div>
+<pre id="qa-result">pending</pre>
+<script type="module">
+import {installSearchableSelectsV033} from '../../js/searchable-select-v033.js?v=1.0.8';
+let count=0;
+const select=document.querySelector('#qa-catalog');
+select.addEventListener('change',()=>{
+  count++;
+  // Real invoice editor remounts after committed selection, never mid-query.
+  if(count>0)document.querySelector('#qa-result').dataset.committed='true';
+});
+installSearchableSelectsV033();
+const input=document.querySelector('.maria-combo-input-v033');
+input.focus();
+input.value='ب';input.dispatchEvent(new Event('input',{bubbles:true}));
+const firstOk=input.isConnected&&!document.querySelector('.maria-combo-menu-v033').hidden&&count===0;
+input.value='بر';input.dispatchEvent(new Event('input',{bubbles:true}));
+const menu=document.querySelector('.maria-combo-menu-v033');
+const secondOk=input.isConnected&&menu.textContent.includes('برك جبنة')&&count===0&&menu.classList.contains('is-fixed-v108')&&menu.style.position!=='absolute';
+const option=[...menu.querySelectorAll('.maria-combo-option-v033')].find(o=>o.textContent.includes('برك جبنة'));
+option?.click();
+const commitOk=select.value==='2'&&count===1;
+document.querySelector('#qa-result').textContent=JSON.stringify({firstOk,secondOk,commitOk,optionCount:menu.querySelectorAll('button').length,selected:select.value,changes:count,all:firstOk&&secondOk&&commitOk});
+</script>
+</body></html>

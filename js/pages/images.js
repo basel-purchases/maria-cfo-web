@@ -1,4 +1,4 @@
-// Maria CFO Web v1.0.7 — inspected-column OCR and supervised purchase invoice posting.
+// Maria CFO Web v1.0.8 — OCR correction, stable material search and purchase navigation.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
 import * as api from '../api.js?v=1.0.7';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
@@ -8,8 +8,8 @@ import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.7';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
 import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
 import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.7';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.7';
-import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.7';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.8';
+import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.8';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
@@ -114,26 +114,26 @@ export async function renderImages(root){
   const matched=!!row.catalog_id&&row.material_mode!=='new';
   const mode=matched?(row.material_mode==='existing'?'existing':'matched'):(row.material_mode||'unresolved');
   const material=catalog.materials.find(m=>String(m.id)===String(row.catalog_id));
-  const hint=row.name&&materialKeyV106(row.name)!==materialKeyV106(material?.name)?`<small class="image-source-name-v106">بالفاتورة: ${esc(row.name)}</small>`:'';
+  const editName=`<label class="image-edit-name-v108"><span>اسم البند المستخرج <small>قابل للتعديل</small></span><input type="text" data-field="name" value="${esc(row.name||'')}" placeholder="صحح الاسم بحسب الفاتورة" autocomplete="off" aria-label="تصحيح اسم البند ${i+1}"></label>`;
   const manual=mode==='existing'||mode==='matched';
   const materialBox=manual?`
    <div class="image-material-picker-v106">
     <select data-field="material_id" aria-label="اختيار مادة البند ${i+1}" ${processing?'disabled':''}>${materialChoiceOptions(catalog.materials,row.catalog_id,supplierIds())}</select>
-    ${hint}${mode==='existing'&&row.catalog_id&&row.name&&materialKeyV106(row.name)!==materialKeyV106(material?.name)?`<label class="image-alias-opt-v106"><input type="checkbox" data-field="remember_alias" ${row.remember_alias?'checked':''}> اعتماد اسم الفاتورة كاسم ثانوي لاحقًا</label>`:''}
+    ${mode==='existing'&&row.catalog_id&&row.name&&materialKeyV106(row.name)!==materialKeyV106(material?.name)?`<label class="image-alias-opt-v106"><input type="checkbox" data-field="remember_alias" ${row.remember_alias?'checked':''}> اعتماد اسم الفاتورة كاسم ثانوي لاحقًا</label>`:''}
     ${!row.catalog_id?`<button type="button" class="mini-btn" data-mode="unresolved" data-row="${i}">رجوع</button>`:''}
    </div>`:mode==='new'?`
    <div class="image-new-material-v106">
      <input data-field="new_name" value="${esc(row.new_name??row.name??'')}" placeholder="اسم المادة الجديدة" aria-label="اسم المادة الجديدة">
      <select data-field="new_base_unit_id" aria-label="وحدة المادة الجديدة">${options(baseUnits(),row.new_base_unit_id,'— الوحدة الأساسية —')}</select>
      <button type="button" class="mini-btn" data-mode="unresolved" data-row="${i}">رجوع</button>
-   </div>`:`<div class="image-unmatched-v106"><strong>—</strong><small>${esc(row.name||'لم يقرأ الاسم')}</small>
+   </div>`:`<div class="image-unmatched-v106"><strong>—</strong><small>لم تتم مطابقة المادة بعد؛ صحح الاسم أو اختر مادة.</small>
     <div class="image-match-actions-v106"><button type="button" class="mini-btn" data-mode="new" data-row="${i}">إضافة كجديد</button><button type="button" class="mini-btn" data-mode="existing" data-row="${i}">ربط بمادة موجودة</button></div>
     ${row.name&&materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).length?`<div class="image-hints-v106">${materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).map(m=>`<button type="button" class="image-suggest-v106" data-suggest="${esc(m.id)}" data-row="${i}">${esc(m.name)}</button>`).join('')}</div>`:''}
    </div>`;
   const unitBox=mode==='new'?`<span class="image-unit-readonly-v106">${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.new_base_unit_id)))||'—')}</span>`:
    manual&&row.catalog_id?`<select data-field="unit_id" aria-label="وحدة المادة ${i+1}">${chosenUnitOptions(row)}</select>`:'—';
   return `<tr data-image-item="${i}">
-   <td data-heading="المادة" class="image-catalog-cell">${materialBox}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
+   <td data-heading="المادة" class="image-catalog-cell">${editName}${materialBox}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
     ${row.ocr_review_required?`<label class="image-ocr-confirm-v107"><input type="checkbox" data-field="ocr_reviewed" ${row.ocr_reviewed?'checked':''}><span>راجعت الأرقام والوحدة مع الفاتورة</span></label>`:''}</td>
    <td data-heading="الوحدة">${unitBox}</td>
    <td data-heading="الكمية"><input type="text" inputmode="decimal" dir="ltr" data-field="quantity" value="${esc(row.quantity??'')}" aria-label="كمية البند ${i+1}"></td>
@@ -212,10 +212,13 @@ export async function renderImages(root){
      const e=tr.querySelector(`[data-field="${field}"]`);
      return e?.type==='checkbox'?Boolean(e.checked):e?.value;
     };
-    const updated={...old,quantity:val('quantity')??old.quantity??'',unit_price:val('unit_price')??old.unit_price??'',discount:val('discount')??old.discount??'0'};
+    const nextName=String(val('name')??old.name??'').trim();
+    const nameChanged=materialKeyV106(nextName)!==materialKeyV106(old.name);
+    const updated={...old,name:nextName,quantity:val('quantity')??old.quantity??'',unit_price:val('unit_price')??old.unit_price??'',discount:val('discount')??old.discount??'0'};
     if(val('ocr_reviewed')!==undefined)updated.ocr_reviewed=val('ocr_reviewed');
     if(updated.material_mode==='new'){
       updated.new_name=val('new_name')??old.new_name??old.name;
+      if(nameChanged&&(!old.new_name||materialKeyV106(old.new_name)===materialKeyV106(old.name)))updated.new_name=nextName;
       updated.new_base_unit_id=val('new_base_unit_id')??old.new_base_unit_id??'';
       updated.catalog_id='';updated.unit_id=updated.new_base_unit_id;
     }else if(updated.material_mode==='existing'||updated.material_mode==='matched'){
@@ -225,6 +228,17 @@ export async function renderImages(root){
       updated.unit_id=next?(val('unit_id')!==undefined?val('unit_id'):(old.unit_id??mat?.base_unit_id??'')):'';
       updated.remember_alias=val('remember_alias')??old.remember_alias??false;
     }else {updated.catalog_id='';updated.unit_id='';}
+    if(nameChanged){
+      updated.remember_alias=false;
+      // Automatically matched OCR names can become wrong after manual editing.
+      // Re-evaluate exact aliases, or require a fresh manual match. A deliberate
+      // "existing" selection stays linked until the user changes it.
+      if(updated.material_mode==='matched'||updated.material_mode==='unresolved'){
+        const match=materialExactV106(nextName,catalog.materials);
+        if(match){updated.catalog_id=String(match.id);updated.unit_id=updated.ocr_unit_unresolved?'':(findUnit(updated.unit_text,match)||String(match.base_unit_id));updated.material_mode='matched';}
+        else {updated.catalog_id='';updated.unit_id='';updated.material_mode='unresolved';}
+      }
+    }
     return updated;
   });
   if(doc.text||doc.items.length)doc.status='review';
@@ -254,6 +268,7 @@ export async function renderImages(root){
   <div class="card image-toolbar"><div class="image-toolbar-buttons">
    <label class="btn" for="images-pick">إضافة صور</label><input id="images-pick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
    <button type="button" class="btn secondary" data-bulk-ocr="3" ${buttonDisabled()}>استخراج <span class="ocr-progress-pill" hidden></span></button>
+   <button type="button" class="btn secondary image-go-purchases-v108" data-go-purchases><span aria-hidden="true">↗</span> فواتير الشراء</button>
   </div><div class="image-usage-cards image-single-usage-v106"><div><strong>Engine 3</strong><span class="ocr-usage-num" data-counter="3">${count(3)}</span></div></div>
   <div class="metric-note">عند تحديد صور تُستخرج المحددة فقط؛ وإلا فتُعالج الصور التي لم تُحفظ في البرنامج.</div><div id="image-progress" role="status" aria-live="polite"></div></div>
   <div class="image-workspace"><aside class="card image-gallery"><div class="section-head-inline"><h3>مكتبة الصور (${records.length})</h3><span class="muted-small">${selected.size} محددة</span></div>
@@ -463,6 +478,10 @@ export async function renderImages(root){
    try{await saveCurrent();await extractMany((selected.size?records.filter(d=>selected.has(d.id)):records));}
    catch(e){toast(friendlyError(e),'error');}
   });
+  root.querySelector('[data-go-purchases]')?.addEventListener('click',async()=>{
+   try{await saveCurrent();location.hash='#/purchases';}
+   catch(e){toast('تعذر حفظ تعديلات الصورة الحالية؛ لم نغادر الصفحة حتى لا تضيع.', 'error');}
+  });
   root.querySelector('[data-ocr]')?.addEventListener('click',async()=>{
    try{await saveCurrent();await extractMany(current()?[current()]:[]);}catch(e){toast(friendlyError(e),'error');}
   });
@@ -490,6 +509,7 @@ export async function renderImages(root){
    if(btn.dataset.suggest){
     const mat=catalog.materials.find(m=>String(m.id)===String(btn.dataset.suggest));
     if(!mat)return;row.material_mode='existing';row.catalog_id=String(mat.id);row.unit_id=findUnit(row.unit_text,mat)||String(mat.base_unit_id);
+    if(row.ocr_unit_unresolved)row.unit_id='';
     row.remember_alias=false;
    }else{
     row.material_mode=btn.dataset.mode;
@@ -502,7 +522,7 @@ export async function renderImages(root){
   root.querySelectorAll('[data-field="material_id"]').forEach(el=>el.addEventListener('change',async()=>{
    syncEditor();const doc=current();const idx=Number(el.closest('[data-image-item]')?.dataset.imageItem);const row=doc.items[idx];
    const mat=catalog.materials.find(m=>String(m.id)===String(row.catalog_id));
-   row.unit_id=mat?(findUnit(row.unit_text,mat)||String(mat.base_unit_id)):'';
+   row.unit_id=mat&&!row.ocr_unit_unresolved?(findUnit(row.unit_text,mat)||String(mat.base_unit_id)):'';
    row.material_mode='existing';row.remember_alias=false;await saveLocalImage(doc);refresh();
   }));
   root.querySelectorAll('[data-field="quantity"],[data-field="unit_price"],[data-field="discount"]').forEach(el=>el.addEventListener('input',recomputeTotals));

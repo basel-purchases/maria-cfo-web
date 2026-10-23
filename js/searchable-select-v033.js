@@ -29,6 +29,8 @@ function enhance(select){
  const toggle=document.createElement('button');toggle.className='maria-combo-toggle-v033';
  toggle.type='button';toggle.textContent='⌄';toggle.setAttribute('aria-label','عرض الخيارات');
  const menu=document.createElement('div');menu.id=id;menu.className='maria-combo-menu-v033';menu.setAttribute('role','listbox');menu.hidden=true;
+ const fixedMenu=Boolean(select.closest('.image-purchase-wrap-v106'));
+ if(fixedMenu)menu.classList.add('is-fixed-v108');
  select.parentNode.insertBefore(wrap,select);
  // Clicking an existing <label for=...> must focus the visible combobox.
  if(select.id){
@@ -39,10 +41,20 @@ function enhance(select){
  shell.append(input,toggle);wrap.append(shell,menu,select);
  select.classList.add('maria-combo-native-v033');select.tabIndex=-1;select.setAttribute('aria-hidden','true');
  // Keep the native control in the DOM so existing required/name/value logic is intact.
- let opened=false,typing=false,active=0,shown=[];
+ let opened=false,typing=false,active=0,shown=[],selectionBeforeQuery='';
  const originalSelectValue=()=>String(select.value||'');
  const chosenLabel=()=>[...select.options].find(o=>o.value===originalSelectValue())?.textContent?.trim()||'';
  const display=()=>{if(!typing)input.value=chosenLabel();};
+ function positionMenu(){
+  if(!fixedMenu||!opened)return;
+  const r=shell.getBoundingClientRect();
+  if(r.width<10)return;
+  const height=Math.min(245,Math.max(90,window.innerHeight*.42));
+  const openAbove=window.innerHeight-r.bottom<Math.min(height,175)&&r.top>Math.min(height,175);
+  menu.style.left=`${Math.max(5,r.left)}px`;
+  menu.style.width=`${Math.min(r.width,window.innerWidth-10)}px`;
+  menu.style.top=openAbove?`${Math.max(6,r.top-Math.min(menu.scrollHeight||height,height)-5)}px`:`${r.bottom+5}px`;
+ }
  function close(reset=true){
   opened=false;menu.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');
   if(reset){typing=false;display();}
@@ -67,6 +79,7 @@ function enhance(select){
    menu.append(item);
   });
   input.setAttribute('aria-activedescendant',`${id}-item-${active}`);
+  positionMenu();
  }
  function open(resetQuery=false){
   if(select.disabled)return;
@@ -83,13 +96,23 @@ function enhance(select){
  }
  input.addEventListener('focus',()=>{if(!opened)open();input.select();});
  input.addEventListener('click',()=>{if(!opened)open();});
- wrap.addEventListener('focusout',()=>{setTimeout(()=>{if(!wrap.contains(document.activeElement))close();},0);});
- // Typing is not a selection. Clear the native value until the user picks
- // a result, so a bonus can never be filed under a previously selected name.
+ wrap.addEventListener('focusout',()=>{setTimeout(()=>{
+  if(wrap.contains(document.activeElement))return;
+  const clearedSelection=typing&&Boolean(selectionBeforeQuery)&&!originalSelectValue();
+  close();
+  // Notify forms about abandoning a previously selected option only once the
+  // user has LEFT the field, never on each keystroke. A chosen option instead
+  // emits its normal change in choose().
+  if(clearedSelection)select.dispatchEvent(new Event('change',{bubbles:true}));
+ },0);});
+ // Typing is not a selection. Clear the native value immediately, but DO NOT
+ // emit "change" until a real option was chosen. Many pages redraw their
+ // entire form on native change; sending it for every keystroke destroyed the
+ // combobox during typing (notably OCR item/material selectors).
  input.addEventListener('input',()=>{
+  if(!typing)selectionBeforeQuery=originalSelectValue();
   typing=true;select.value='';
-  select.dispatchEvent(new Event('change',{bubbles:true}));
-  typing=true;active=0;open();
+  active=0;open();
  });
  toggle.addEventListener('click',()=>{if(opened){close();input.blur();}else{input.focus();open(true);}});
  input.addEventListener('keydown',e=>{
@@ -107,7 +130,7 @@ function enhance(select){
  select.addEventListener('invalid',()=>{input.setCustomValidity('');input.focus();});
  // Not a second visible input: the native select is accessible via its sibling.
  display();
- const instance={select,wrap,close,sync:()=>{if(!typing)display();if(opened)renderOptions();}};
+ const instance={select,wrap,close,positionMenu,sync:()=>{if(!typing)display();if(opened)renderOptions();}};
  cache.set(select,instance);instances.add(instance);
 }
 export function installSearchableSelectsV033(root=document){
@@ -123,6 +146,12 @@ export function installSearchableSelectsV033(root=document){
   document.addEventListener('pointerdown',event=>{
    for(const instance of instances)if(instance.wrap.isConnected&&!instance.wrap.contains(event.target))instance.close();
   },true);
+  document.addEventListener('scroll',()=>{
+   for(const instance of instances)if(instance.wrap.isConnected)instance.positionMenu();
+  },true);
+  window.addEventListener('resize',()=>{
+   for(const instance of instances)if(instance.wrap.isConnected)instance.positionMenu();
+  });
   listenerAdded=true;
  }
  let queued=false;
