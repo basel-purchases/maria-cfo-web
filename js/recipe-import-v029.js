@@ -1,5 +1,5 @@
 // Maria CFO Web v0.29 — strict, selective recipe import. No guessing, no zero costs.
-import * as api from './api.js?v=1.0';
+import * as api from './api.js?v=1.0.6';
 import {esc,money} from './utils.js?v=1.0';
 import {toast,loader,friendlyError} from './ui.js?v=1.0';
 import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=1.0';

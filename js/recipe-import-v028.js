@@ -1,6 +1,6 @@
 // Maria CFO Web v0.28 — re-import approved recipes and link prices from live materials.
 // Never import the zero/estimated 'price' from the Excel workbook.
-import * as api from './api.js?v=1.0';
+import * as api from './api.js?v=1.0.6';
 import {esc,money} from './utils.js?v=1.0';
 import {toast,loader,friendlyError} from './ui.js?v=1.0';
 import {readAmeenWorkbook,sha256Hex} from './ameen-import-parser.js?v=1.0';

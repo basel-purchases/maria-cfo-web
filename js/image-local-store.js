@@ -47,7 +47,7 @@ export function newLocalDocument(file){
   return {
     id:crypto.randomUUID(),file,file_name:file.name||'صورة',mime_type:file.type,
     created_at:now.toISOString(),updated_at:now.toISOString(),
-    type:'order',date:[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'),
+    type:'purchase',regions:{},date:[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'),
     currency:'SYP',number:'',supplier:'',cashbox_id:'',
     text:'',items:[],ocr_mode:'',ocr_confidence:null,status:'unprocessed',
     server_id:null,server_kind:null,error:null,

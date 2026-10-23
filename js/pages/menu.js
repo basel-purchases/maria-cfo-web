@@ -1,4 +1,5 @@
-import * as api from '../api.js?v=1.0.4';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.6';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -386,7 +387,7 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
     const populateMaterials=()=>{
       const used=new Set(rows.map(x=>String(x.material_id)));
       const available=mats.filter(x=>!used.has(String(x.id)));
-      materialSel.innerHTML=`<option value="">اختر مادة جديدة</option>${available.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}`;
+      materialSel.innerHTML=`<option value="">اختر مادة جديدة</option>${available.map(x=>`<option data-search="${esc(materialSearchTextV106(x))}" value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}`;
       materialSel.disabled=available.length===0;
       openEntryBtn.disabled=available.length===0;
       if(available.length===0){

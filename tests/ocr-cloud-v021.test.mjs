@@ -55,14 +55,14 @@ test('new purchase material requires a selected valid base unit, not an invented
   assert.equal(ok.prepared[0].new_material,true);
   assert.equal(ok.prepared[0].unit_id,'kg');
 });
-test('new order menu cannot be auto-created during OCR text extraction',()=>{
+test('legacy order records remain protected and invoice OCR cannot create an order',()=>{
   const order={type:'order',date:'2026-10-09',currency:'SYP',cashbox_id:'cash',items:[{name:'New food',catalog_query:'New food',quantity:'1',unit_price:'50'}]};
   assert.equal(validateImageDocument(order,{menu:[],cashboxes:[{id:'cash',is_active:true}]}).ready,false);
   const segment=images.split('async function extractOne(')[1].split('async function extractMany(')[0];
-  assert.doesNotMatch(segment,/doc\.items\s*=/);
+  assert.match(segment,/doc\.items\s*=/);
   assert.doesNotMatch(segment,/api\.createMenuItem|api\.insertFirst|api\.createOrder/);
-  assert.match(images,/data-create-menu/);
-  assert.match(images,/api\.addRecipeItem/);
+  assert.match(images,/data-mode="new"/);
+  assert.match(images,/api\.materialIdentityCreateV106/);
 });
 test('document detail is full width, gallery is horizontal and cashbox belongs in publish panel',()=>{
   assert.match(images,/image-gallery-strip/);
@@ -74,8 +74,8 @@ test('document detail is full width, gallery is horizontal and cashbox belongs i
 test('financial transactions remain on existing validated RPC and confirmation paths',()=>{
   assert.match(images,/await confirmBox/);
   assert.match(images,/api\.createPurchase/);
-  assert.match(images,/api\.createOrder/);
-  assert.match(images,/api\.postOrder/);
+  assert.doesNotMatch(images,/api\.createOrder/);
+  assert.doesNotMatch(images,/api\.postOrder/);
   assert.match(images,/api\.postPurchase/);
   assert.doesNotMatch(sql,/DROP CONSTRAINT|DISABLE TRIGGER|DELETE FROM public\.cashbox_transactions/i);
 });

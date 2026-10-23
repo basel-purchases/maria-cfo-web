@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0';
+import * as api from '../api.js?v=1.0.6';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -8,6 +8,8 @@ import {sourceIndex,importedRowsFor} from '../table-presenter-v025.js?v=1.0';
 import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSourceDialog} from '../imported-source-ui-v025.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
+
+import {materialMatchesV106} from '../material-search-v106.js?v=1.0.6';
 
 const PAGE_SIZE=10;
 
@@ -62,7 +64,7 @@ function filterRows(rows,query){
   return rows.filter(r=>{
     const name=String(r.name||'').toLowerCase();
     const code=String(materialCode(r)||'').toLowerCase();
-    return name.includes(q) || code.includes(q);
+    return materialMatchesV106(r,q) || code.includes(q);
   });
 }
 
@@ -95,7 +97,7 @@ export async function renderMaterials(root) {
         <div class="list-toolbar">
           <div class="search-box">
             <span aria-hidden="true">⌕</span>
-            <input id="material-search" type="search" placeholder="ابحث باسم المادة أو الكود" autocomplete="off">
+            <input id="material-search" type="search" placeholder="ابحث باسم المادة أو أي اسم ثانوي أو الكود" autocomplete="off">
           </div>
           <select id="material-filter-category"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
           <div class="list-count" id="material-count"></div>
@@ -202,7 +204,7 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
             const shownTarget=target==null?null:formatSmartStock(r,units,materialLinks,target);
             return `
               <tr>
-                <td><strong>${esc(r.name)}</strong></td>
+                <td><strong>${esc(r.name)}</strong>${r.__aliases?.length?`<small class="material-alias-list-v106">${esc(r.__aliases.join(" · "))}</small>`:""}</td>
                 <td>${esc(categoryMap.get(String(r.category_id_v023))||'—')}</td>
                 <td>${esc(unit || '—')}</td>
                 <td><span class="code-chip">${esc(materialCode(r))}</span></td>
@@ -240,6 +242,8 @@ function addMaterial(root, units, rows,categories=[]) {
           <label>اسم المادة</label>
           <input name="material_name" required autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
         </div>
+        <div class="field full"><label>أسماء ثانوية للمادة <span class="optional-badge">اختياري</span></label>
+          <textarea name="aliases" rows="2" placeholder="اسم آخر في فاتورة المورد (كل اسم في سطر مستقل)"></textarea></div>
         <div class="field">
           <label>الكود <span class="optional-badge">اختياري</span></label>
           <input name="material_code" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
@@ -277,6 +281,7 @@ function addMaterial(root, units, rows,categories=[]) {
     onSubmit: async (fd) => {
       try {
         const name = String(fd.get('material_name') || '').trim();
+        const aliases=String(fd.get('aliases')||'').split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
         const requestedCode = String(fd.get('material_code') || '').trim();
         const code = requestedCode || await api.nextMaterialCode(rows);
         const unitText=String(fd.get('base_unit_text')||'').trim();
@@ -311,29 +316,10 @@ function addMaterial(root, units, rows,categories=[]) {
         const baseUnitId=String(baseUnit?.id||'');
         if(!baseUnitId) throw new Error('UNIT_REQUIRED');
 
-        const basePayloads = [
-          {
-            name,
-            quick_code: code,
-            base_unit_id: baseUnitId,
-            ...(targetRaw !== '' ? { target_stock_base: Number(targetRaw) } : {}),
-          },
-          {
-            name,
-            quick_code: code,
-            base_unit_id: baseUnitId,
-            ...(targetRaw !== '' ? { target_stock_quantity_base: Number(targetRaw) } : {}),
-          },
-          {
-            name,
-            code,
-            base_unit_id: baseUnitId,
-            ...(targetRaw !== '' ? { target_stock_base: Number(targetRaw) } : {}),
-          },
-          {name, code, base_unit_id: baseUnitId},
-        ];
-
-        const created = await api.insertFirst('materials', basePayloads.map(p=>({...p,category_id_v023:fd.get('category')||null})));
+        const created=await api.materialIdentityCreateV106({
+          name,code,baseUnitId,categoryId:fd.get('category')||null,
+          target:targetRaw!==''?Number(targetRaw):null,aliases,
+        });
 
         if (targetRaw !== '' && targetOf(created) == null) {
           await api.setMaterialAlertMinimum(created.id, Number(targetRaw), created);
@@ -387,6 +373,8 @@ function editMaterial(root, units, material,categories=[]) {
           <label>اسم المادة</label>
           <input name="name" value="${esc(material.name||'')}" required autocomplete="off">
         </div>
+        <div class="field full"><label>أسماء ثانوية للمادة <span class="optional-badge">اختياري</span></label>
+          <textarea name="aliases" rows="3" placeholder="اسم آخر في الفاتورة (كل اسم في سطر)">${esc((material.__aliases||[]).join('\n'))}</textarea></div>
         <div class="field">
           <label>الكود</label>
           <input name="code" value="${esc(currentCode)}" autocomplete="off">
@@ -423,6 +411,7 @@ function editMaterial(root, units, material,categories=[]) {
       try {
         const name=String(fd.get('name')||'').trim();
         let code=String(fd.get('code')||'').trim();
+        const aliases=String(fd.get('aliases')||'').split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
         const desiredRaw = String(fd.get('desired_stock') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
         const targetRaw = String(fd.get('target') || '').trim();
@@ -433,10 +422,7 @@ function editMaterial(root, units, material,categories=[]) {
         }
         if(!code) code=await api.nextMaterialCode();
 
-        await api.updateFirst('materials',material.id,[
-          {name,quick_code:code,category_id_v023:fd.get('category')||null},
-          {name,code,category_id_v023:fd.get('category')||null},
-        ]);
+        await api.materialIdentityUpdateV106({id:material.id,name,code,categoryId:fd.get('category')||null,aliases});
 
         if (targetRaw !== '') {
           await api.setMaterialAlertMinimum(material.id, Number(targetRaw), material);

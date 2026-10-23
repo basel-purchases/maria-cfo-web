@@ -1,3 +1,4 @@
+import {materialExactV106} from './material-search-v106.js?v=1.0.6';
 import { parseColumnarOcrItems } from "./image-column-parser.js?v=1.0";
 // Deterministic extraction hints and validation; AI does not invent required values.
 const LETTERS=/[\p{L}]/u;
@@ -15,7 +16,7 @@ export function normalizedName(value){
 export function exactCatalogId(name,catalog){
   const wanted=normalizedName(name);
   if(!wanted)return '';
-  const hits=catalog.filter(x=>normalizedName(x.name)===wanted);
+  const hits=catalog.filter(x=>[x.name,...(x.__aliases||[])].some(name=>normalizedName(name)===wanted));
   return hits.length===1?String(hits[0].id):'';
 }
 export function parseOcrLines(text,limit=80){
@@ -56,13 +57,21 @@ export function validateImageDocument(doc,{menu=[],materials=[],units=[],materia
   const prepared=[];
   for(const [index,row] of (doc.items||[]).entries()){
     const rowNo=index+1;
-    const requested=String(row.catalog_query||row.name||'').trim();
-    const known=allowed.find(item=>String(item.id)===String(row.catalog_id)) ||
-      allowed.find(item=>normalizedName(item.name)===normalizedName(requested));
-    const newMaterial=purchase&&!known&&!!requested;
-    if(!known&&!newMaterial){problems.push(`البند ${rowNo}: اختر ${purchase?'مادة':'صنفًا'} من القائمة`);continue;}
+    const mode=String(row.material_mode||'');
+    const requested=String((mode==='new'?row.new_name:row.catalog_query)||row.name||'').trim();
+    // Explicitly unresolved OCR names are NEVER auto-created by validation.
+    const found=allowed.find(item=>String(item.id)===String(row.catalog_id)) ||
+      (purchase?materialExactV106(requested,allowed):allowed.find(item=>normalizedName(item.name)===normalizedName(requested)));
+    const known=mode==='new'||mode==='unresolved'?null:found;
+    const newMaterial=purchase&&(mode==='new'||(!mode&&!!requested&&!known));
+    if(mode==='unresolved'||mode==='existing'&&!known||!known&&!newMaterial){
+      problems.push(`البند ${rowNo}: اربط الاسم بمادة موجودة أو اختر إضافة كجديد`);continue;
+    }
+    if(newMaterial&&(!requested||requested.length>250))problems.push(`البند ${rowNo}: اكتب اسم المادة الجديدة`);
     if(newMaterial&&!units.some(u=>String(u.id)===String(row.new_base_unit_id)))
       problems.push(`البند ${rowNo}: حدد وحدة أساسية للمادة الجديدة`);
+    if(newMaterial&&materialExactV106(requested,materials))
+      problems.push(`البند ${rowNo}: الاسم موجود مسبقًا؛ اربطه بالمادة المسجلة بدل التكرار`);
     const qty=Number(normalizeArabicNumbers(row.quantity));
     const price=Number(normalizeArabicNumbers(row.unit_price));
     const discount=Number(normalizeArabicNumbers(row.discount||0));

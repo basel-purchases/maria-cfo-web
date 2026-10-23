@@ -1,4 +1,5 @@
-import * as api from '../api.js?v=1.0';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.6';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
@@ -316,7 +317,7 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
       <div class="field"><label>المادة المرتبطة</label>
         ${existing?`<input type="hidden" name="material_id" value="${esc(currentId)}"><input value="${esc(linkedMaterial?.name||'—')}" disabled>`:
           `<select name="material_id" required><option value="">— اختر المادة —</option>
-            ${materials.map(mat=>`<option value="${esc(mat.id)}" ${String(mat.id)===currentId?'selected':''}>${esc(mat.name)}</option>`).join('')}
+            ${materials.map(mat=>`<option data-search="${esc(materialSearchTextV106(mat))}" value="${esc(mat.id)}" ${String(mat.id)===currentId?'selected':''}>${esc(mat.name)}</option>`).join('')}
           </select>`}
       </div>
       <div class="field"><label>قيمة الوحدة</label>

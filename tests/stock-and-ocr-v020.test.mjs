@@ -57,17 +57,17 @@ test('weak OCR is marked uncertain; confidence is an estimate, not posting permi
   assert.equal(recognitionQuality({text:'معلومات',confidence:20}).uncertain,true);
   assert.equal(recognitionQuality({text:'شاي أرز ٢ ١٠٠٠',confidence:85}).uncertain,false);
 });
-test('OCR only modifies the text; no automatic line items or DB writes on extraction',()=>{
+test('OCR generates editable invoice lines but never posts to Supabase on extraction',()=>{
   const src=readFileSync(join(base,'js/pages/images.js'),'utf8');
   const segment=src.split('async function extractOne')[1].split('async function extractMany')[0];
-  assert.match(segment,/doc\.text=result\.text/);
-  assert.doesNotMatch(segment,/doc\.items\s*=/);
+  assert.match(segment,/doc\.text=/);
+  assert.match(segment,/doc\.items\s*=/);
   assert.doesNotMatch(segment,/api\.post|api\.create|api\.add/);
   assert.match(src,/data-clear-items/);
   assert.match(src,/data-remove-item/);
-  assert.match(src,/reviewedOcrItemCandidates/);
+  assert.match(src,/receiptItemsV106/);
   assert.match(src,/ocr-progress-pill/);
-  assert.match(src,/data-toggle-crop/);
+  assert.match(src,/data-region-mode/);
 });
 
 test('editing an existing legacy sachet named ظرف is allowed; creating another ambiguous name is not',()=>{

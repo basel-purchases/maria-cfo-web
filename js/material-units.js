@@ -1,4 +1,4 @@
-import * as api from './api.js?v=1.0';
+import * as api from './api.js?v=1.0.6';
 import { modal, toast, friendlyError } from './ui.js?v=1.0';
 import { esc, unitDisplay, num } from './utils.js?v=1.0';
 import { isContextualUnit, isProtectedUnit, isVagueContextualName, normalizedUnitName } from './unit-catalog.js?v=1.0';

@@ -1,4 +1,4 @@
-import * as api from './api.js?v=1.0.2';
+import * as api from './api.js?v=1.0.6';
 import {esc} from './utils.js?v=1.0';
 import {toast,friendlyError,modal,loader,confirmBox} from './ui.js?v=1.0';
 import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from './ameen-import-parser.js?v=1.0';

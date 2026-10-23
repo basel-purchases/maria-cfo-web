@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0';
+import * as api from '../api.js?v=1.0.6';
 import {esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {toast,friendlyError} from '../ui.js?v=1.0';
 import {datePeriod,dateInRange} from '../date-range-batch.js?v=1.0';

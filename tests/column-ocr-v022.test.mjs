@@ -48,10 +48,11 @@ test('ambiguous comma decimals are rejected rather than misread as 100x',()=>{
   const bad=documentText.replace('200.00\n200.00\n1.00\nunit','1,50\n200.00\n1.00\nunit');
   assert.equal(parseColumnarOcrItems(bad).rows.length,0);
 });
-test('OCR remains separate from creation of rows, financial calls use existing workflow',()=>{
+test('OCR generates editable review rows without triggering financial calls automatically',()=>{
   const ui=readFileSync(join(root,'js/pages/images.js'),'utf8');
   const segment=ui.split('async function extractOne(')[1].split('async function extractMany(')[0];
-  assert.doesNotMatch(segment,/doc\.items\s*=/);
+  assert.match(segment,/doc\.items\s*=/);
+  assert.doesNotMatch(segment,/api\.postPurchase|api\.createPurchase|api\.addPurchaseItem/);
   assert.match(ui,/data-reparse/);
   assert.match(ui,/review_note/);
   assert.match(ui,/await confirmBox/);

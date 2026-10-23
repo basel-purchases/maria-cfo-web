@@ -24,6 +24,10 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('daily_ambiguous_menu')) return 'هناك أكثر من وجبة بنفس الاسم، ولا يمكن اختيار واحدة تلقائيًا. راجع أسماء المنيو المكررة أولًا.';
   if(msg.includes('daily_line_menu_not_resolved')) return 'تعذر تحديد وجبة أحد بنود الأوردر بأمان؛ لم يحفظ التقرير جزئيًا.';
   if(msg.includes('daily_item_already_matched')) return 'الصنف مرتبط بوجبة موجودة بالفعل. لا يمكن إنشاؤه مرة ثانية.';
+  if(msg.includes('material_aliases_v106_migration_required')||msg.includes('material_aliases_v106')) return 'يجب تشغيل ملف SQL الإصدار v1.0.6 في Supabase أولًا، ثم تحديث الموقع.';
+  if(msg.includes('material_alias_collides')||msg.includes('material_alias_used_by_another')||msg.includes('material_name_collides_with_alias')) return 'هذا الاسم الثانوي مرتبط بمادة أخرى. راجع أسماء المواد والمرادفات قبل الحفظ.';
+  if(msg.includes('material_too_many_aliases')) return 'يمكن وضع حتى 40 اسمًا ثانويًا للمادة.';
+  if(msg.includes('material_alias_invalid_name')) return 'الاسم الثانوي يجب ألا يكون فارغًا أو أطول من 180 حرفًا.';
   if(msg.includes('menu_save_v104')||msg.includes('menu_item_search_v104')||msg.includes('menu_item_aliases_v104')) return 'تحتاج تشغيل تحديث قاعدة البيانات v1.0.4 قبل استخدام هذه النسخة.';
   if(msg.includes('ameen_')) return 'توقفت عملية الاستيراد حفاظًا على السجلات. راجع بيانات الملف وتحديث قاعدة Maria CFO v0.24.';
   if(msg.includes('recipe_unit_not_configured')) return 'هذه الوحدة غير مربوطة بالمادة بعد. اضغط «تحويل وحدة» وحدد العلاقة ثم حاول مجددًا.';

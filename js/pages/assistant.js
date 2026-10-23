@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0';
+import * as api from '../api.js?v=1.0.6';
 import { esc } from '../utils.js?v=1.0';
 
 const LINKS={

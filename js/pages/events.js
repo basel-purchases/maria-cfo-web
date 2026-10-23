@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0';
+import * as api from '../api.js?v=1.0.6';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, dateOnly, todayISO } from '../utils.js?v=1.0';
 

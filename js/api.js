@@ -91,12 +91,48 @@ export async function notifications(){
   catch(_){return list('notifications',{order:'created_at',limit:30});}
 }
 
-export async function materials(){
-  try{return await list('materials',{order:'created_at',ascending:true,limit:1000});}
-  catch(_){
-    try{return await list('materials',{order:'id',ascending:true,limit:1000});}
-    catch(__){return list('materials',{order:'name',ascending:true,limit:1000});}
+export async function materialAliasesV106(){
+  const rows=[];
+  // Do not silently hide missing migration or a partially loaded alias index.
+  for(let offset=0;offset<20000;offset+=500){
+    const chunk=await dataOrThrow(need().from('material_aliases_v106')
+      .select('material_id,alias_name').order('material_id',{ascending:true})
+      .order('alias_name',{ascending:true}).range(offset,offset+499));
+    rows.push(...(chunk||[]));
+    if(!chunk||chunk.length<500)return rows;
   }
+  throw new Error('MATERIAL_ALIAS_CATALOG_TOO_LARGE');
+}
+export const materialAliasesSetV106=(materialId,names)=>rpc('material_aliases_set_v106',{
+  p_material_id:materialId,p_names:names,
+});
+export const materialAliasAddV106=(materialId,name)=>rpc('material_alias_add_v106',{
+  p_material_id:materialId,p_name:String(name||'').trim(),
+});
+export const materialIdentityCreateV106=async({name,code,baseUnitId,categoryId=null,target=null,aliases=[]})=>{
+  const id=await rpc('material_identity_create_v106',{
+    p_name:name,p_code:code,p_base_unit_id:baseUnitId,p_category_id:categoryId,
+    p_target:target,p_aliases:aliases,
+  });
+  return one('materials',id);
+};
+export const materialIdentityUpdateV106=({id,name,code,categoryId=null,aliases=[]})=>
+  rpc('material_identity_update_v106',{
+    p_material_id:id,p_name:name,p_code:code,p_category_id:categoryId,p_aliases:aliases,
+  });
+export async function materials(){
+  let rows;
+  try{rows=await list('materials',{order:'created_at',ascending:true,limit:1000});}
+  catch(_){
+    try{rows=await list('materials',{order:'id',ascending:true,limit:1000});}
+    catch(__){rows=await list('materials',{order:'name',ascending:true,limit:1000});}
+  }
+  let aliases;
+  try{aliases=await materialAliasesV106();}
+  catch(e){throw new Error('MATERIAL_ALIASES_V106_MIGRATION_REQUIRED: '+(e.message||e));}
+  const byId=new Map();
+  for(const a of aliases){const id=String(a.material_id);if(!byId.has(id))byId.set(id,[]);byId.get(id).push(a.alias_name);}
+  return rows.map(m=>({...m,__aliases:byId.get(String(m.id))||[]}));
 }
 
 // Actual latest purchase movement by occurred_at, not the latest row insertion time.

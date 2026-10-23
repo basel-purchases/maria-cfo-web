@@ -1,4 +1,5 @@
-import * as api from '../api.js?v=1.0';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.6';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
@@ -827,7 +828,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
      <div class="field"><label>كم حصة من هذه الوحدة في وجبة المنيو كاملة؟</label><input name="yieldCount" required type="number" min="0.0001" step="0.0001" max="100000" placeholder="مثال: 10"></div>
      <div class="notice green">عرّف عدد الحصص التي تنتج من وحدة الصنف الأصلية. سيحسب البرنامج ما يعادل حصص الضيوف من الصنف عند التخطيط.</div>
      <label class="event-unit-link-toggle-v037"><input type="checkbox" name="linkMaterial" ${recipeMaterials.length?'':'disabled'}> ربط هذه الوحدة بمادة مخزون أيضًا (اختياري)</label>
-     <div class="event-unit-material-details-v037" hidden><div class="field"><label>المادة الموجودة في وصفة الصنف</label><select name="material"><option value="">اختر المادة</option>${recipeMaterials.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</select></div>
+     <div class="event-unit-material-details-v037" hidden><div class="field"><label>المادة الموجودة في وصفة الصنف</label><select name="material"><option value="">اختر المادة</option>${recipeMaterials.map(m=>`<option data-search="${esc(materialSearchTextV106(m))}" value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</select></div>
      <div class="field"><label>وحدة القياس المرجعية</label><select name="referenceUnit"></select></div>
      <div class="field"><label data-material-qty-label>قيمة التحويل</label><input name="quantityInBase" type="number" step="any" min="0.00000001" placeholder="مثال: 100 أو 10"></div>
      <label class="event-unit-link-toggle-v037"><input type="checkbox" name="inverse"> أعكس علاقة التحويل إلى وحدة المادة الأصلية</label>

@@ -88,13 +88,13 @@ test('local pictures are not sent to Supabase; saving drafts uses existing prote
   assert.match(store,/indexedDB\.open/);
   assert.doesNotMatch(store,/\.functions\.invoke|\.storage\.from|fetch\(/);
   assert.match(images,/await saveLocalImage\(/);
-  assert.match(images,/api\.createOrder\(/);
+  assert.doesNotMatch(images,/api\.createOrder\(/);
   assert.match(images,/api\.createPurchase\(/);
-  assert.match(images,/api\.postOrder\(/);
+  assert.doesNotMatch(images,/api\.postOrder\(/);
   assert.match(images,/api\.postPurchase\(/);
-  assert.match(images,/actual\?\.status!==['"]posted['"]/);
+  assert.match(images,/posted\?\.status!==['"]posted['"]/);
   assert.match(images,/await confirmBox\(/);
-  assert.match(images,/filter\(isReady\)/);
+  assert.match(images,/validateImageDocument\(doc,catalog\)/);
 });
 
 test('two OCR modes available, both default to Arabic and English',()=>{
@@ -111,6 +111,6 @@ test('new images route and styles integrated without changing config.js',()=>{
   assert.match(app,/case 'images': return renderImages\(root\)/);
   assert.match(css,/\.image-document-grid\{/);
   assert.match(images,/data-ocr="3"/);
-  assert.match(images,/حفظ محلي/);
-  assert.match(images,/نشر الجاهزة/);
+  assert.match(images,/حفظ العمل مؤقتًا/);
+  assert.match(images,/حفظ الفاتورة/);
 });

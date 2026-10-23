@@ -1,4 +1,5 @@
-import * as api from '../api.js?v=1.0';
+import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.6';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
@@ -368,8 +369,7 @@ function fileToBase64(file){
 }
 
 function bestMaterialMatch(name,mats){
-  const n=normalizeName(name);
-  return mats.find(m=>normalizeName(m.name)===n) || mats.find(m=>normalizeName(m.name).includes(n)||n.includes(normalizeName(m.name))) || null;
+  return materialExactV106(name,mats) || null; // Never fuzzy-link an invoice to the wrong stock item.
 }
 
 async function queuePurchaseOcr(root,{file,invoice,supplier}){
@@ -439,7 +439,7 @@ async function openPurchaseOcrReview(root,{result,job=null,invoice,mats,units,su
                 <label class="catalog-material-check"><input type="checkbox" name="pick_${i}" ${r.material?'checked':'disabled'}><span><strong>اعتماد البند</strong><small>${r.material?`مطابقة حالية: ${esc(r.material.name)}`:'اختر المادة المرتبطة أولًا'}</small></span></label>
               </div>
               <div class="field compact"><label>اسم المادة المقروء</label><input name="raw_name_${i}" autocomplete="off" value="${esc(r.raw.name||r.raw.material_name||'')}"></div>
-              <div class="field compact"><label>المادة في Maria CFO</label><select name="material_${i}"><option value="">اختر</option>${mats.map(mat=>`<option value="${esc(mat.id)}" ${r.material&&String(mat.id)===String(r.material.id)?'selected':''}>${esc(mat.name)}${mat.quick_code||mat.code?` — ${esc(mat.quick_code||mat.code)}`:''}</option>`).join('')}</select></div>
+              <div class="field compact"><label>المادة في Maria CFO</label><select name="material_${i}"><option value="">اختر</option>${mats.map(mat=>`<option data-search="${esc(materialSearchTextV106(mat))}" value="${esc(mat.id)}" ${r.material&&String(mat.id)===String(r.material.id)?'selected':''}>${esc(mat.name)}${mat.quick_code||mat.code?` — ${esc(mat.quick_code||mat.code)}`:''}</option>`).join('')}</select></div>
               <div class="field compact"><label>الوحدة</label><select name="unit_${i}">${r.choices.map(c=>`<option value="${esc(c.unitId)}" ${r.preferred&&String(c.unitId)===String(r.preferred)?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
               <div class="field compact"><label>الكمية</label><input name="qty_${i}" type="number" step="any" min="0.000001" value="${esc(qty||1)}"></div>
               <div class="field compact"><label>سعر الوحدة</label><input name="price_${i}" type="number" step="any" min="0" value="${esc(price||0)}"></div>
@@ -576,7 +576,7 @@ function normalizeName(value){
 function addItem(root,id,mats,units,currency='SYP'){
   const unitListId=`purchase-material-base-units-${Date.now()}`;
   const materialOptions=()=>mats.length
-    ? mats.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}${x.quick_code||x.code?` — ${esc(x.quick_code||x.code)}`:''}</option>`).join('')
+    ? mats.map(x=>`<option data-search="${esc(materialSearchTextV106(x))}" value="${esc(x.id)}">${esc(x.name)}${x.quick_code||x.code?` — ${esc(x.quick_code||x.code)}`:''}</option>`).join('')
     : '<option value="">أضف مادة جديدة أولًا</option>';
 
   const m=modal({
@@ -684,9 +684,9 @@ function addItem(root,id,mats,units,currency='SYP'){
   const createBtn=m.form.querySelector('.create-material-inline');
 
   const findDuplicate=()=>{
-    const wanted=normalizeName(nameInput.value);
-    if(!wanted) return null;
-    return mats.find(x=>normalizeName(x.name)===wanted)||null;
+    const wanted=nameInput.value.trim();
+    if(!wanted)return null;
+    return materialExactV106(wanted,mats);
   };
 
   const refreshDuplicate=()=>{
@@ -720,6 +720,7 @@ function addItem(root,id,mats,units,currency='SYP'){
     if(!option){
       option=document.createElement('option');
       option.value=material.id;
+      option.dataset.search=materialSearchTextV106(material);
       option.textContent=`${material.name}${material.quick_code||material.code?` — ${material.quick_code||material.code}`:''}`;
       materialSel.appendChild(option);
     }

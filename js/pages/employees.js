@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0';
+import * as api from '../api.js?v=1.0.6';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import {currencyLabel, esc, money, todayISO, dateOnly, statusBadge } from '../utils.js?v=1.0';
 import { EMPLOYEE_RATE_COLUMNS, calculatedShortageHours } from '../business-rules.js?v=1.0';
