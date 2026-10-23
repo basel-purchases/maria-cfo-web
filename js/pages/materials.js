@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.7';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -9,7 +9,7 @@ import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSou
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
 
-import {materialMatchesV106} from '../material-search-v106.js?v=1.0.6';
+import {materialMatchesV106} from '../material-search-v106.js?v=1.0.7';
 
 const PAGE_SIZE=10;
 

@@ -1681,3 +1681,28 @@ select option{background:#fff;color:var(--text);padding:8px}
  .image-items-controls-v106 button{min-width:0}
  .image-review-summary-v106{grid-template-columns:1fr 1fr}
 }
+
+/* v1.0.7 — scoped OCR region reset and explicit numeric-review controls. */
+.image-reset-regions-v107{
+  margin-inline-start:auto;display:inline-flex!important;gap:8px;align-items:center;justify-content:center;
+  border:1px solid #d9b6c6!important;background:#fff6f8!important;color:#8b405e!important;
+  font-size:12px!important;font-weight:750!important;min-height:38px;border-radius:11px!important;
+  padding:8px 13px!important;box-shadow:none!important;transition:background .15s,border-color .15s;
+}
+.image-reset-regions-v107:hover:not(:disabled){background:#fae9ef!important;border-color:#bf8ca2!important}
+.image-reset-regions-v107:focus-visible{outline:3px solid #ad7b94;outline-offset:3px}
+.image-reset-regions-v107 svg{flex:none}
+.image-ocr-confirm-v107{
+  display:flex;gap:7px;align-items:flex-start;margin:7px 0 0;padding:7px 9px;
+  background:#fff7e9;border:1px solid #e9d4ad;border-radius:9px;
+  color:#78521c;font-size:11px;font-weight:700;line-height:1.55;
+}
+.image-ocr-confirm-v107 input{flex:0 0 15px!important;width:15px!important;min-width:15px!important;height:15px!important;margin:2px 0 0!important;accent-color:#987137}
+.image-purchase-wrap-v106 input[data-field="quantity"],
+.image-purchase-wrap-v106 input[data-field="unit_price"],
+.image-purchase-wrap-v106 input[data-field="discount"]{
+  font-variant-numeric:tabular-nums;direction:ltr;text-align:right;min-width:75px;
+}
+@media(max-width:530px){.image-reset-regions-v107{grid-column:1/-1;margin-inline-start:0;width:100%}}
+.image-ocr-reparse-actions-v107{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.image-reparse-v107{font-weight:700!important;font-size:12px!important;min-height:36px}

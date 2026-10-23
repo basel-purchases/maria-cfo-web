@@ -1,5 +1,5 @@
 // Maria CFO v1.0.5: cashier imports post source-net cash exactly once per new order.
-import * as api from '../api.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.7';
 import {esc,money,todayISO} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
 import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from '../ameen-import-parser.js?v=1.0';

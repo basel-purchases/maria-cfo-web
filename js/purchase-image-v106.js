@@ -1,16 +1,14 @@
 // Purchase receipt OCR interpretation: suggestions only. Never fabricate quantity/price.
-import {normalizeArabicNumbers,reviewedOcrItemCandidates} from './image-document-rules.js?v=1.0.6';
-import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.6';
+import {normalizeArabicNumbers,reviewedOcrItemCandidates} from './image-document-rules.js?v=1.0.7';
+import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.7';
+import {invoiceAmountV107,amountNearV107} from './invoice-amount-v107.js?v=1.0.7';
 const AR=/[\u0621-\u064a]/;
 const NOISE=/^(?:فاتورة|التاريخ|المطلوب|الهاتف|تلفون|موبايل|رقم|رقم الفاتورة|المجموع|الاجمالي|الإجمالي|الصافي|total|invoice|date|عنوان|السعر|العدد|نوع البضاعة|الكمية|الاجور|الملاحظة|البيان)/i;
 const FOOTER=/(?:^|\s)(?:المجموع|الاجمالي|الإجمالي|الصافي|المبلغ النهائي|المجموع فقط|total|subtotal)(?:\s|:|$)/i;
 const UNIT=/(?:كيلوغرام|كيلوجرام|كيلو|كغ|kg|غرام|جرام|غ|g|ليتر|لتر|ltr|l|مل|ml|كرتون|علبة|باكيت|قطعة|حبة|حبه|ربطة|صندوق|دزينة|دستة|طن|وحدة)/i;
-const NUMBER='\\d+(?:[.,]\\d+)?';
-function number(s){
- const v=Number(String(s||'').replace(/,/g,''));return Number.isFinite(v)&&v>0&&v<1e12?v:null;
-}
-const near=(a,b)=>Math.abs(a-b)<=Math.max(0.05,Math.abs(b)*.015);
-const numericToken=s=>/^\d+(?:\.\d+)?$/.test(String(s).replace(/,/g,''));
+function number(s){const v=invoiceAmountV107(s);return v!==null&&v>0?v:null;}
+const near=amountNearV107;
+const numericToken=s=>invoiceAmountV107(s)!==null;
 function cleanText(text){return normalizeArabicNumbers(text).replace(/،/g,',').replace(/\u00a0/g,' ').replace(/\u066c/g,',');}
 function getLines(text){return cleanText(text).split(/\r?\n/).map(l=>l.replace(/[|\t]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);}
 export function receiptHeaderV106({supplier='',number:invoiceNumber='',items='',full=''}={},suppliers=[]){
@@ -56,6 +54,103 @@ function makeRow(name,qty,unitPrice,rawLine,extra={}){
  return {name,quantity:qty==null?'':String(qty),unit_price:unitPrice==null?'':String(unitPrice),
   discount:'0',unit_id:'',catalog_id:'',new_base_unit_id:'',raw_line:rawLine,...extra};
 }
+// OCR.space Engine 3 can return a real Markdown table. Keep column boundaries:
+// dropping pipes made the v1.0.6 parser confuse row numbers, quantities, and prices.
+const TABLE_WEIGHT=/كيلو|كيلوغ|كغ|وزن|صافي|kg|gram|غرام|جرام|^غ$/i;
+const TABLE_PIECES=/عدد|حبات|قطع|كمية|quantity|pieces|qty|count/i;
+function tableHeaderLabel(s){
+ return materialKeyV106(s).replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+}
+function tableCells(line){
+ if(!line.includes('|'))return null;
+ const cells=line.split('|').map(v=>v.trim());
+ if(!cells[0])cells.shift();
+ if(!cells.at(-1))cells.pop();
+ return cells;
+}
+function markdownHeader(cells){
+ if(!cells||cells.length<3)return null;
+ const labels=cells.map(tableHeaderLabel);
+ const lookup=regex=>labels.findIndex(s=>regex.test(s));
+ const name=lookup(/نوع\s*البضاع|اسم\s*(?:الماد|الصنف)|الماد|الصنف|البيان|description|item/);
+ const price=lookup(/سعر\s*(?:الوحد|الماد)?|price/);
+ const total=lookup(/اجمال|قيم|مبلغ|total|amount/);
+ const count=lookup(/^(?:العدد|عدد|الكميه|كمية|الكمية|quantity|qty|count|حبات|قطع)/);
+ const weight=lookup(/كيلو|كغ|صافي|وزن|weight|net/);
+ if(name<0||price<0||count<0&&weight<0)return null;
+ // Do not interpret a loose, unlabelled series of numbers as a purchase row.
+ return {name,price,total,count,weight,labels};
+}
+function weightUnit(header){
+ if(header.includes('غرام')||header.includes('جرام'))return 'غرام';
+ return 'كغ';
+}
+function baseIsWeight(material,units){
+ if(!material)return null;
+ const base=(units||[]).find(u=>String(u.id)===String(material.base_unit_id));
+ if(!base)return null;
+ return TABLE_WEIGHT.test(String(base.name||'')+' '+String(base.code||''));
+}
+function markdownTableRows(text,materials,limit,units){
+ const lines=normalizeArabicNumbers(text).split(/\r?\n/);
+ const rows=[];let header=null,seenTable=false;
+ for(const rawLine of lines){
+  if(rows.length>=limit)break;
+  const cells=tableCells(rawLine);
+  if(!cells){if(header&&rawLine.trim())header=null;continue;}
+  if(cells.every(x=>/^:?-{2,}:?$/.test(x)))continue;
+  const detected=markdownHeader(cells);
+  if(detected){header=detected;seenTable=true;continue;}
+  if(!header)continue;
+  if(cells.length<=header.name||cells.length<=header.price)continue;
+  const name=String(cells[header.name]||'').replace(/^[\s:;.,-]+|[\s:;.,-]+$/g,'').trim();
+  if(!AR.test(name)||name.length<2||name.length>100||FOOTER.test(name))continue;
+  const qtyCount=header.count<0?null:number(cells[header.count]);
+  const qtyWeight=header.weight<0?null:number(cells[header.weight]);
+  const price=number(cells[header.price]);
+  const total=header.total<0?null:number(cells[header.total]);
+  if(qtyCount===null&&qtyWeight===null&&price===null&&total===null)continue;
+  const material=materialExactV106(name,materials);
+  const weighted=baseIsWeight(material,units);
+  const candidates=[
+   ...(qtyWeight!==null?[{qty:qtyWeight,source:'weight',unit:weightUnit(header.labels[header.weight])}]:[]),
+   ...(qtyCount!==null?[{qty:qtyCount,source:'count',unit:''}]:[]),
+  ];
+  let chosen=null;
+  if(price!==null&&total!==null){
+   const verified=candidates.filter(c=>near(c.qty*price,total));
+   if(verified.length===1)chosen=verified[0];
+   else if(verified.length>1)chosen=weighted===false?verified.find(x=>x.source==='count')||verified[0]:verified.find(x=>x.source==='weight')||verified[0];
+  }
+  if(!chosen){
+   if(weighted===false)chosen=candidates.find(c=>c.source==='count')||candidates[0];
+   else chosen=candidates.find(c=>c.source==='weight')||candidates[0];
+  }
+  const qty=chosen?.qty??null;
+  const mathOK=qty!==null&&price!==null&&total!==null&&near(qty*price,total);
+  const unitUnresolved=header.weight>=0&&weighted!==false&&qtyWeight===null&&chosen?.source==='count';
+  const notes=[];
+  if(!price)notes.push('سعر الوحدة غير واضح؛ راجعه في الصورة.');
+  if(qty===null)notes.push('الكمية غير واضحة؛ راجع الصورة.');
+  if(qtyCount!==null&&qtyWeight!==null&&qtyCount!==qtyWeight&&!mathOK)
+   notes.push(`ورد العدد ${qtyCount} والوزن ${qtyWeight}؛ تم اقتراح ${chosen?.source==='weight'?'الوزن الصافي':'العدد'} ككمية، تحقق من الوحدة.`);
+  if(total!==null&&qty!==null&&price!==null&&!mathOK)
+   notes.push(`إجمالي البند المقروء (${total}) لا يساوي الكمية × السعر (${Number((qty*price).toFixed(6))}). راجع الصورة.`);
+  if(total===null)notes.push('إجمالي البند غير واضح؛ راجع الصورة.');
+  if(unitUnresolved)notes.push('لم يُقرأ وزن صافٍ صالح؛ استُخدم العدد مؤقتًا ويجب تحديد وحدة الشراء يدويًا.');
+  const reviewRequired=notes.length>0;
+  rows.push(makeRow(name,qty,price,rawLine,{
+   unit_text:chosen?.unit||'',
+   ...(total!==null?{ocr_line_total:String(total)}:{}),
+   ocr_source:'markdown_columns',
+   ocr_review_required:reviewRequired,
+   ocr_reviewed:false,
+   ocr_unit_unresolved:unitUnresolved,
+   ...(notes.length?{review_note:notes.join(' ')}:{}),
+  }));
+ }
+ return seenTable?rows:[];
+}
 function tableRows(text,limit=80){
  const rows=[];
  for(const line of getLines(text)){
@@ -93,12 +188,13 @@ function tableRows(text,limit=80){
  }
  return rows;
 }
-export function receiptItemsV106(text,materials=[],limit=80){
+export function receiptItemsV106(text,materials=[],limit=80,units=[]){
  const raw=String(text||'').trim();if(!raw)return [];
- const columnar=reviewedOcrItemCandidates(raw,materials,limit);
- // Trust the existing tested columnar parser when it found full triples.
+ const markdown=markdownTableRows(raw,materials,limit,units);
+ const columnar=markdown.length?[]:reviewedOcrItemCandidates(raw,materials,limit);
+ // Read explicitly labelled Markdown cells first, otherwise preserve the v1.0.6 fallbacks.
  const verified=columnar.filter(x=>x.ocr_source==='column_aligned');
- let rows=verified.length?verified:tableRows(raw,limit);
+ let rows=markdown.length?markdown:verified.length?verified:tableRows(raw,limit);
  if(!rows.length){
   // The existing line parser supplies suggestions when quantity and price are explicit.
   rows=columnar.filter(x=>x.quantity&&x.unit_price).slice(0,limit);
@@ -115,11 +211,11 @@ export function suggestSupplierMaterialsV106(query,materials,historyRows){
 export function receiptMathV106(doc){
  let sum=0,valid=true;
  for(const item of doc.items||[]){
-  const qty=number(cleanText(item.quantity)),price=number(cleanText(item.unit_price));
-  const discount=Number(cleanText(item.discount||0));
+  const qty=number(item.quantity),price=number(item.unit_price);
+  const discount=invoiceAmountV107(item.discount??'0');
   if(qty===null||price===null||!Number.isFinite(discount)||discount<0){valid=false;continue;}
   sum+=qty*price-discount;
  }
- const expected=number(cleanText(doc.ocr_total));
+ const expected=number(doc.ocr_total);
  return {sum,valid,expected,discrepancy:expected!=null&&valid&&!near(sum,expected)};
 }

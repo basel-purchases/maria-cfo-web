@@ -76,7 +76,7 @@ test('photo route is purchase-only, engine 3 only, scoped crops, hidden raw text
  assert.match(src,/data-bulk-ocr="3"/);
  assert.match(src,/data-ocr="3"/);
  assert.doesNotMatch(src,/data-bulk-ocr="1"|data-ocr="1"|api\.createOrder\(|api\.postOrder\(/);
- assert.match(src,/receiptItemsV106\(itemText,catalog\.materials\)\.map\(fillRow\)/);
+ assert.match(src,/receiptItemsV106\(itemText,catalog\.materials,80,catalog\.units\)\.map\(fillRow\)/);
  assert.match(src,/data-review-invoice/);
  assert.match(src,/title:'مراجعة فاتورة الشراء قبل الحفظ'/);
  assert.match(src,/submitText:'حفظ ونشر الفاتورة'/);

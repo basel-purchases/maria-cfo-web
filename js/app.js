@@ -1,28 +1,28 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.6';
+import * as api from './api.js?v=1.0.7';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
 import { renderHub } from './pages/hubs.js?v=1.0';
-import { renderMaterials } from './pages/materials.js?v=1.0.6';
+import { renderMaterials } from './pages/materials.js?v=1.0.7';
 import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=1.0';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.6';
-import { renderMenu } from './pages/menu.js?v=1.0.6';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.7';
+import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=1.0.6';
+} from './pages/daily.js?v=1.0.7';
 import { renderEmployees, renderAttendance } from './pages/employees.js?v=1.0';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.6';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.7';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.5';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
-import { renderImages } from './pages/images.js?v=1.0.6';
-import { renderSettings } from './pages/settings.js?v=1.0.6';
+import { renderImages } from './pages/images.js?v=1.0.7';
+import { renderSettings } from './pages/settings.js?v=1.0.7';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.6</div>
+        <div class="sidebar-foot">Web v1.0.7</div>
       </aside>
 
       <main class="main">

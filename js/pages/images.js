@@ -1,14 +1,15 @@
-// Maria CFO Web v1.0.6 — supervised purchase-invoice OCR.
+// Maria CFO Web v1.0.7 — inspected-column OCR and supervised purchase invoice posting.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
-import * as api from '../api.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.7';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox,modal} from '../ui.js?v=1.0';
-import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.6';
-import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.6';
+import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.7';
+import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.7';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
-import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.6';
-import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.6';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.6';
+import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
+import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.7';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.7';
+import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.7';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
@@ -19,8 +20,8 @@ const options=(rows,current='',placeholder='— اختر —')=>
  `<option value="">${esc(placeholder)}</option>`+(rows||[]).map(u=>`<option value="${esc(u.id)}" ${String(current)===String(u.id)?'selected':''}>${esc(unitDisplay(u)||u.name||'')}</option>`).join('');
 const currencyName=c=>c==='USD'?'USD':'ل.س';
 function itemTotal(row){
- const q=Number(normalizeArabicNumbers(row.quantity||'')),p=Number(normalizeArabicNumbers(row.unit_price||'')),d=Number(normalizeArabicNumbers(row.discount||0));
- return q>0&&p>0&&Number.isFinite(d)&&d>=0?q*p-d:null;
+ const q=invoiceAmountV107(row.quantity),p=invoiceAmountV107(row.unit_price),d=invoiceAmountV107(row.discount??'0');
+ return q!==null&&q>0&&p!==null&&p>0&&d!==null&&d>=0?q*p-d:null;
 }
 function materialChoiceOptions(materials,id='',supplierIds=[]){
  const supplierSet=new Set(supplierIds.map(String));
@@ -66,23 +67,39 @@ export async function renderImages(root){
   const mat=catalog.materials.find(m=>String(m.id)===String(row.catalog_id));
   if(!mat)return options([],null,'—');
   const allowed=new Set([String(mat.base_unit_id),...catalog.materialLinks.filter(x=>String(x.material_id)===String(mat.id)).map(x=>String(x.unit_id))]);
-  return options(catalog.units.filter(u=>allowed.has(String(u.id))),row.unit_id||mat.base_unit_id);
+  return options(catalog.units.filter(u=>allowed.has(String(u.id))),row.unit_id??mat.base_unit_id,'— اختر وحدة شراء —');
  }
  const baseUnits=()=>{
   return catalog.units.filter(u=>u.is_material_specific!==true&&u.is_active!==false);
  };
+ function detectedUnit(text){
+  const name=materialKeyV106(text);
+  const forms=/^(?:كغ|كيلو|كيلوغرام|كيلوجرام|kg)$/i.test(name)?['KG','كيلوغرام','كغ']:
+    /^(?:غرام|جرام|غ|g)$/i.test(name)?['G','غرام']:
+    [text];
+  for(const word of forms){const match=api.findUnitByText(word,catalog.units);if(match)return match;}
+  return null;
+ }
  function findUnit(text,mat){
   if(!text||!mat)return '';
-  const unit=api.findUnitByText(text,catalog.units);
+  const unit=detectedUnit(text);
   if(!unit)return '';
   const allowed=new Set([String(mat.base_unit_id),...catalog.materialLinks.filter(l=>String(l.material_id)===String(mat.id)).map(l=>String(l.unit_id))]);
   return allowed.has(String(unit.id))?String(unit.id):'';
  }
  function fillRow(row){
   const match=materialExactV106(row.name,catalog.materials);
-  if(match){row.catalog_id=String(match.id);row.material_mode='matched';row.unit_id=findUnit(row.unit_text,match)||String(match.base_unit_id);}
+  if(match){
+   row.catalog_id=String(match.id);row.material_mode='matched';
+   const recognized=row.unit_text?findUnit(row.unit_text,match):'';
+   row.unit_id=row.ocr_unit_unresolved?'':row.unit_text?(recognized||''):String(match.base_unit_id);
+   if(row.unit_text&&!recognized){
+    row.review_note=[row.review_note,'وحدة الفاتورة غير مرتبطة بالمادة؛ اختر وحدة الشراء الصحيحة.'].filter(Boolean).join(' ');
+    row.ocr_review_required=true;
+   }
+  }
   else {row.catalog_id='';row.material_mode='unresolved';row.unit_id='';}
-  const u=api.findUnitByText(row.unit_text||'',catalog.units);
+  const u=detectedUnit(row.unit_text||'');
   if(u&&baseUnits().some(b=>String(b.id)===String(u.id)))row.new_base_unit_id=String(u.id);
   return row;
  }
@@ -116,12 +133,13 @@ export async function renderImages(root){
   const unitBox=mode==='new'?`<span class="image-unit-readonly-v106">${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.new_base_unit_id)))||'—')}</span>`:
    manual&&row.catalog_id?`<select data-field="unit_id" aria-label="وحدة المادة ${i+1}">${chosenUnitOptions(row)}</select>`:'—';
   return `<tr data-image-item="${i}">
-   <td data-heading="المادة" class="image-catalog-cell">${materialBox}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}</td>
+   <td data-heading="المادة" class="image-catalog-cell">${materialBox}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
+    ${row.ocr_review_required?`<label class="image-ocr-confirm-v107"><input type="checkbox" data-field="ocr_reviewed" ${row.ocr_reviewed?'checked':''}><span>راجعت الأرقام والوحدة مع الفاتورة</span></label>`:''}</td>
    <td data-heading="الوحدة">${unitBox}</td>
-   <td data-heading="الكمية"><input type="number" step="any" min="0.000001" data-field="quantity" value="${esc(row.quantity??'')}"></td>
-   <td data-heading="سعر الوحدة"><input type="number" step="any" min="0.000001" data-field="unit_price" value="${esc(row.unit_price??'')}"></td>
+   <td data-heading="الكمية"><input type="text" inputmode="decimal" dir="ltr" data-field="quantity" value="${esc(row.quantity??'')}" aria-label="كمية البند ${i+1}"></td>
+   <td data-heading="سعر الوحدة"><input type="text" inputmode="decimal" dir="ltr" data-field="unit_price" value="${esc(row.unit_price??'')}" aria-label="سعر الوحدة للبند ${i+1}"></td>
    <td data-heading="الإجمالي"><strong data-line-total="${i}" class="image-line-total-v106">${itemTotal(row)===null?'—':money(itemTotal(row),doc.currency)}</strong>${row.ocr_line_total?`<small class="image-source-name-v106">بالفاتورة: ${esc(row.ocr_line_total)}</small>`:''}</td>
-   <td data-heading="خصم"><input type="number" step="any" min="0" data-field="discount" value="${esc(row.discount??'0')}"></td>
+   <td data-heading="خصم"><input type="text" inputmode="decimal" dir="ltr" data-field="discount" value="${esc(row.discount??'0')}" aria-label="خصم البند ${i+1}"></td>
    <td data-heading="إجراء"><button type="button" class="mini-btn danger-lite" data-remove-item="${i}" aria-label="حذف البند">حذف</button></td>
   </tr>`;
  }
@@ -145,7 +163,7 @@ export async function renderImages(root){
        </div></div>
        <div class="image-crop-actions image-region-controls-v106">
         ${REGIONS.map(r=>`<button type="button" class="btn secondary image-region-button-v106 region-${r.key} ${cropMode===r.key?'is-selected':''}" data-region-mode="${r.key}" ${locked||processing?'disabled':''}>${r.symbol} ${r.label}${doc.regions?.[r.key]?' ✓':''}</button>`).join('')}
-        ${Object.keys(doc.regions||{}).length?`<button type="button" class="mini-btn" data-reset-regions ${locked||processing?'disabled':''}>مسح التحديدات</button>`:''}
+        ${Object.keys(doc.regions||{}).length?`<button type="button" class="btn secondary image-reset-regions-v107" data-reset-regions ${locked||processing?'disabled':''} title="إزالة مربعات التحديد الثلاثة فقط دون مسح الصورة أو البنود"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="13" height="13" rx="2" stroke-dasharray="3 2"/><path d="M10 21h9a2 2 0 002-2v-9"/><path d="M7 12l7-7"/></svg><span>مسح التحديدات</span></button>`:''}
        </div>
        <p class="metric-note">${cropMode?'اسحب مستطيلًا على الصورة لتحديد المنطقة. يمكنك استخدام اللمس أو الماوس.':Object.keys(doc.regions||{}).length?'سيُقرأ كل مربع محدد فقط بلونه. أي بيانات لم تحدد لها منطقة يمكن مراجعتها يدويًا.':'حدد مناطق الاسم والرقم والبنود لتقليل أخطاء القراءة. إذا تركتها كلها بلا تحديد سيحاول الاستخراج من الصورة كاملة.'}</p>
       </div>
@@ -157,10 +175,10 @@ export async function renderImages(root){
          <div class="field"><label>اسم المورد</label><input data-doc="supplier" list="image-supplier-list" value="${esc(doc.supplier||'')}" autocomplete="off" placeholder="ابحث عن مورد أو اكتب الاسم"><datalist id="image-supplier-list">${catalog.suppliers.map(s=>`<option value="${esc(s.name)}"></option>`).join('')}</datalist></div>
         </div>
         ${historySupplierId?`<div class="image-supplier-history-v106">${historyLoading?'تحميل مواد المورد...':`<strong>مواد سبق شراؤها من هذا المورد: ${history.length}</strong> · تُقدّم في نتائج المطابقة دون تغيير أسعار الفاتورة.`}</div>`:''}
-        <div class="image-ocr-actions"><button class="btn" type="button" data-ocr="3">استخراج <span class="ocr-progress-pill" hidden></span></button></div>
+        <div class="image-ocr-actions image-ocr-reparse-actions-v107"><button class="btn" type="button" data-ocr="3">استخراج <span class="ocr-progress-pill" hidden></span></button>
+         ${doc.text?.trim()?`<button type="button" class="btn secondary image-reparse-v107" data-reparse title="استخدم النص المستخرج المحفوظ دون طلب OCR جديد">تحديث البنود من النص المحفوظ</button>`:''}</div>
         <div class="image-raw-toggle-v106"><button class="mini-btn" type="button" data-toggle-raw ${!doc.text?.trim()?'disabled':''}>عرض النص الأصلي المستخرج</button></div>
-        <div class="image-raw-panel-v106" data-raw-panel hidden><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea>
-           <button type="button" class="mini-btn" data-reparse>إعادة تحليل النص المعدّل</button></div>
+        <div class="image-raw-panel-v106" data-raw-panel hidden><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea></div>
        </fieldset></div>
     </div>
     <div class="image-items-full"><fieldset ${locked||processing?'disabled':''}>
@@ -195,6 +213,7 @@ export async function renderImages(root){
      return e?.type==='checkbox'?Boolean(e.checked):e?.value;
     };
     const updated={...old,quantity:val('quantity')??old.quantity??'',unit_price:val('unit_price')??old.unit_price??'',discount:val('discount')??old.discount??'0'};
+    if(val('ocr_reviewed')!==undefined)updated.ocr_reviewed=val('ocr_reviewed');
     if(updated.material_mode==='new'){
       updated.new_name=val('new_name')??old.new_name??old.name;
       updated.new_base_unit_id=val('new_base_unit_id')??old.new_base_unit_id??'';
@@ -203,7 +222,7 @@ export async function renderImages(root){
       const next=val('material_id')??old.catalog_id??'';
       updated.catalog_id=next;
       const mat=catalog.materials.find(m=>String(m.id)===String(next));
-      updated.unit_id=next?(val('unit_id')||old.unit_id||mat?.base_unit_id||''):'';
+      updated.unit_id=next?(val('unit_id')!==undefined?val('unit_id'):(old.unit_id??mat?.base_unit_id??'')):'';
       updated.remember_alias=val('remember_alias')??old.remember_alias??false;
     }else {updated.catalog_id='';updated.unit_id='';}
     return updated;
@@ -274,7 +293,7 @@ export async function renderImages(root){
   if(header.number&&!doc.number)doc.number=header.number;
   doc.ocr_total=header.invoiceTotal;
   const itemText=sections.items||sections.full||'';
-  const found=receiptItemsV106(itemText,catalog.materials).map(fillRow);
+  const found=receiptItemsV106(itemText,catalog.materials,80,catalog.units).map(fillRow);
   doc.items=found;
   doc.status='review';doc.error=null;
   await saveLocalImage(doc);
@@ -460,9 +479,9 @@ export async function renderImages(root){
   });
   root.querySelector('[data-reparse]')?.addEventListener('click',async()=>{
    syncEditor();const doc=current();
-   if(doc.items?.length&&!(await confirmBox('ستُستبدل البنود الحالية بنتيجة تحليل النص المعدّل. هل تتابع؟','إعادة التحليل')))return;
+   if(doc.items?.length&&!(await confirmBox('سيعاد تحليل نص OCR المحفوظ دون تشغيل الخدمة مجددًا، وستُستبدل البنود الحالية بما فيها تعديلاتك اليدوية. هل تتابع؟','إعادة التحليل')))return;
    const text=String(doc.text||'').replace(/^(?:الاسم|الرقم|البنود والإجمالي|النص الكامل):/gm,'');
-   doc.items=receiptItemsV106(text,catalog.materials).map(fillRow);
+   doc.items=receiptItemsV106(text,catalog.materials,80,catalog.units).map(fillRow);
    const head=receiptHeaderV106({full:text},catalog.suppliers);if(!doc.supplier)doc.supplier=head.supplier;if(!doc.number)doc.number=head.number;
    doc.ocr_total=head.invoiceTotal;doc.status='review';await saveLocalImage(doc);await loadSupplierHistory(doc);refresh();
   });

@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.6';
+import * as api from '../api.js?v=1.0.7';
 import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=1.0';
 import {currencyLabel, esc, money, dateOnly, todayISO} from '../utils.js?v=1.0';
 import {employeeName} from '../payroll-ui.js?v=1.0';

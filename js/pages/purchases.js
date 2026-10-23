@@ -1,5 +1,5 @@
-import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.6';
-import * as api from '../api.js?v=1.0.6';
+import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.7';
+import * as api from '../api.js?v=1.0.7';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';

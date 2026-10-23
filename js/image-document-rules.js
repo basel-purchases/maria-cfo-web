@@ -1,4 +1,5 @@
-import {materialExactV106} from './material-search-v106.js?v=1.0.6';
+import {invoiceAmountV107} from './invoice-amount-v107.js?v=1.0.7';
+import {materialExactV106} from './material-search-v106.js?v=1.0.7';
 import { parseColumnarOcrItems } from "./image-column-parser.js?v=1.0";
 // Deterministic extraction hints and validation; AI does not invent required values.
 const LETTERS=/[\p{L}]/u;
@@ -72,12 +73,13 @@ export function validateImageDocument(doc,{menu=[],materials=[],units=[],materia
       problems.push(`البند ${rowNo}: حدد وحدة أساسية للمادة الجديدة`);
     if(newMaterial&&materialExactV106(requested,materials))
       problems.push(`البند ${rowNo}: الاسم موجود مسبقًا؛ اربطه بالمادة المسجلة بدل التكرار`);
-    const qty=Number(normalizeArabicNumbers(row.quantity));
-    const price=Number(normalizeArabicNumbers(row.unit_price));
-    const discount=Number(normalizeArabicNumbers(row.discount||0));
+    const qty=invoiceAmountV107(row.quantity);
+    const price=invoiceAmountV107(row.unit_price);
+    const discount=invoiceAmountV107(row.discount??'0');
     if(!Number.isFinite(qty)||qty<=0)problems.push(`البند ${rowNo}: الكمية أكبر من صفر`);
     if(!Number.isFinite(price)||price<=0)problems.push(`البند ${rowNo}: سعر الوحدة أكبر من صفر`);
     if(!Number.isFinite(discount)||discount<0||discount>(purchase?qty*price:100))problems.push(`البند ${rowNo}: خصم صالح`);
+    if(purchase&&row.ocr_review_required&&!row.ocr_reviewed)problems.push(`البند ${rowNo}: راجع قراءة الكمية والسعر والوحدة وأكّدها`);
     const rowData={catalog_id:known?.id||null,name:known?.name||requested,quantity:qty,unit_price:price,discount,new_material:newMaterial};
     if(purchase){
       const unitId=newMaterial?row.new_base_unit_id:row.unit_id;
