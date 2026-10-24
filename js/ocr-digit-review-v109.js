@@ -43,7 +43,7 @@ export function parseUnlabelledReceiptTableV109(text,limit=80){
   rows.push({name,quantity:'',unit_price:'',discount:'0',unit_id:'',catalog_id:'',new_base_unit_id:'',
    raw_line:line,ocr_source:'unlabelled_columns',ocr_numeric_candidates:numeric,
    ocr_review_required:true,ocr_reviewed:false,
-   review_note:'الجدول بلا عناوين موثوقة للأرقام؛ عُرضت قراءات أعمدته مع الصفر العربي المحتمل (٠). تحقّق من الكمية والسعر من الصورة؛ لم يُفترض أن رقم السطر كمية.'});
+   review_note:''});
   if(rows.length>=limit)break;
  }
  return wasTable||rows.length?rows:[];

@@ -33,9 +33,9 @@ test('materials screen has a matching date column in HTML and all-filtered-rows 
 test('new version invalidates cached materials module and stylesheet while preserving config reference', () => {
   const app = read('js/app.js');
   const index = read('index.html');
-  assert.match(app, /materials\.js\?v=1\.0\.11/);
-  assert.match(index, /styles\.css\?v=1\.0\.11/);
-  assert.match(index, /app\.js\?v=1\.0\.11/);
+  assert.match(app, /materials\.js\?v=1\.0\.12/);
+  assert.match(index, /styles\.css\?v=1\.0\.12/);
+  assert.match(index, /app\.js\?v=1\.0\.12/);
   assert.match(index, /<script src="\.\/config\.js"><\/script>/);
-  assert.equal(read('VERSION').trim(), '1.0.11');
+  assert.equal(read('VERSION').trim(), '1.0.12');
 });

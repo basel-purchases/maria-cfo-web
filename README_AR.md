@@ -1,3 +1,5 @@
+**الإصدار الحالي v1.0.12:** راجع [README_v1.0.12_INVOICE_USD_PRICING_AR.md](README_v1.0.12_INVOICE_USD_PRICING_AR.md). نفّذ `database/Maria-CFO-Web-v1.0.12-PRICING-REPAIR.sql` قبل نشر الموقع واحتفظ بـ `config.js` الحالي.
+
 **الإصدار الحالي v1.0.11:** اقرأ [README_v1.0.11_PRICING_IMAGES_AR.md](README_v1.0.11_PRICING_IMAGES_AR.md). **شغّل SQL v1.0.11 قبل رفع الموقع**، ولا تستبدل `config.js` الموجود على الاستضافة.
 
 **توثيق الإصدار السابق v1.0.10:** [README_v1.0.10_OCR_USD_PRICING_AR.md](README_v1.0.10_OCR_USD_PRICING_AR.md). ملف SQL v1.0.11 الجديد يشمل متطلبات التسعير السابقة؛ نفذ الجديد فقط.

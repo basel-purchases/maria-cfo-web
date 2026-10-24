@@ -107,5 +107,5 @@ test('New UI is a single extraction control without separate magnifier or reread
  assert.match(src,/Number\(candidate\?\.value\)/,'reviewed Arabic zero candidate can be accepted by a deliberate click');
  assert.match(src,/annotateSupplierOcrV110/);
  const index=source('index.html');const app=source('js/app.js');
- assert.match(index,/Web v1\.0\.11/);assert.match(app,/Web v1\.0\.11/);
+ assert.match(index,/Web v1\.0\.12/);assert.match(app,/Web v1\.0\.12/);
 });

@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.11';
+import * as api from '../api.js?v=1.0.12';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -9,9 +9,9 @@ import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSou
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
 
-import {materialMatchesV106} from '../material-search-v106.js?v=1.0.11';
-import {pricingPreviewV110} from '../material-pricing-v110.js?v=1.0.11';
-import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.11';
+import {materialMatchesV106} from '../material-search-v106.js?v=1.0.12';
+import {pricingPreviewV110} from '../material-pricing-v110.js?v=1.0.12';
+import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
 
 const PAGE_SIZE=10;
 
@@ -489,18 +489,26 @@ function priceAllMaterialsUSD(root,rows){
       <div class="form-grid"><div class="field"><label>كم ليرة سورية يساوي الدولار الآن؟</label>
         <input name="rate" type="number" min="0.000001" step="any" required placeholder="مثال: 15000" autocomplete="off"></div>
         <div class="field"><label>المواد التي يمكن تسعيرها</label><div class="pricing-preview-v110" data-pricing-preview>أدخل سعر الصرف لعرض المعاينة.</div></div></div>
-      <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد ذات السعر الصفري أو غير المعروف تبقى بلا تسعير، ولا نستخدم صفرًا بدل السعر المجهول.</p>`,
+      <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد ذات السعر الصفري أو غير المعروف تبقى بلا تسعير، ولا نستخدم صفرًا بدل السعر المجهول.</p>
+      <div class="notice rose pricing-error-v112" data-pricing-error hidden role="alert"></div>`,
     onSubmit:async fd=>{
       const rate=Number(fd.get('rate'));
       if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر دولار موجبًا وصحيحًا.','error');return false;}
       const stats=pricingPreviewV110(rows,rate);
       if(!stats.priced){toast('لا توجد مواد بأسعار ليرة معروفة لتحويلها إلى الدولار.','error');return false;}
-      if(!(await confirmBox(`سيُسعّر ${stats.priced} مادة بالدولار عند 1 USD = ${rate.toLocaleString('en-US')} ل.س، وسيبقى ${stats.unpriced} دون سعر. سيُعاد احتساب ${stats.overridden} سعر دولار موجود من سعر الليرة المرجعي. تأكيد؟`,'نعم، اعتماد التسعير')))return false;
+      const errorBox=dialog.form.querySelector('[data-pricing-error]');
+      if(errorBox){errorBox.hidden=true;errorBox.textContent='';}
       try{
         const result=await api.materialPriceInitializeUsdV110(rate);
-        toast(`تم اعتماد تسعير ${result?.priced??stats.priced} مادة بالدولار. المواد غير المسعّرة: ${result?.without_known_syp_price??stats.unpriced}.`,'success');
+        if(!result||!Number.isFinite(Number(result.priced)))throw new Error('PRICING_RESULT_NOT_CONFIRMED');
+        toast(`تم اعتماد تسعير ${result.priced} مادة بالدولار. المواد غير المسعّرة: ${result.without_known_syp_price??stats.unpriced}.`,'success');
         await renderMaterials(root);return true;
-      }catch(e){toast(materialPricingErrorV111(e),'error');return false;}
+      }catch(e){
+        console.error('Material USD pricing was not confirmed',e);
+        const message=materialPricingErrorV111(e);
+        if(errorBox){errorBox.textContent=message;errorBox.hidden=false;}
+        toast(message,'error');return false;
+      }
     },
   });
   const input=dialog.form.querySelector('[name="rate"]');

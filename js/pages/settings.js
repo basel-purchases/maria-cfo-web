@@ -1,6 +1,6 @@
-import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.11';
-import * as api from '../api.js?v=1.0.11';
-import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.11';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
+import * as api from '../api.js?v=1.0.12';
+import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';

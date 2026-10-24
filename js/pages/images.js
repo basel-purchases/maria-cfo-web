@@ -1,17 +1,17 @@
 // Maria CFO Web v1.0.10 — one-click purchase OCR, Arabic zero-cell review, supplier hints.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
-import * as api from '../api.js?v=1.0.11';
+import * as api from '../api.js?v=1.0.12';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox,modal} from '../ui.js?v=1.0';
 import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.7';
-import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.11';
+import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.12';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
 import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
-import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.11';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.11';
-import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.11';
-import {supplierOcrSuggestionsV110,annotateSupplierOcrV110} from '../supplier-ocr-v110.js?v=1.0.11';
-import {chooseBestOcrRowsV110} from '../ocr-selection-v110.js?v=1.0.11';
+import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.12';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.12';
+import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.12';
+import {supplierOcrSuggestionsV110,annotateSupplierOcrV110} from '../supplier-ocr-v110.js?v=1.0.12';
+import {chooseBestOcrRowsV110} from '../ocr-selection-v110.js?v=1.0.12';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
@@ -28,7 +28,10 @@ function conciseReviewNoteV111(value){
   'الكمية مقترحة حسابيًا من إجمالي البند ÷ سعر الوحدة، ولم تُقرأ صراحة؛ راجعها مع الصورة قبل الحفظ. العدد داخل وصف العبوة ليس كمية الشراء.',
   'يوجد حجم عبوة أو عدد قطع داخل الوصف؛ حدد وحدة الشراء بنفسك لتجنب اعتبار العبوة قطعًا منفردة.',
   'الكمية محسوبة من الإجمالي والسعر؛ تحقق منها.',
-  'اختر وحدة الشراء المناسبة.'
+  'اختر وحدة الشراء المناسبة.',
+  'الجدول بلا عناوين موثوقة للأرقام؛ عُرضت قراءات أعمدته مع الصفر العربي المحتمل (٠). تحقّق من الكمية والسعر من الصورة؛ لم يُفترض أن رقم السطر كمية.',
+  'الجدول بلا عناوين موثوقة للأرقام؛ عُرضت قراءات أعمدته مع الصفر العربي المحتمل (٠).',
+  'تحقّق من الكمية والسعر من الصورة؛ لم يُفترض أن رقم السطر كمية.'
  ])text=text.replaceAll(phrase,'');
  return text.replace(/\s{2,}/g,' ').trim();
 }
@@ -48,6 +51,7 @@ export async function renderImages(root){
  const selected=new Set(),urls=[];
  let catalog={materials:[],units:[],materialLinks:[],suppliers:[]};
  let catalogError='',history=[],historySupplierId='',historyLoading=false;
+ let renderedDocumentId=null;
  try{records=await listLocalImages();}catch(e){root.innerHTML=`<div class="notice rose">تعذر فتح مكتبة الصور المحلية: ${esc(e.message||'')}. تحقق من سماح المتصفح بالتخزين.</div>`;return;}
  currentId=records[0]?.id||null;
  const loaded=await Promise.allSettled([api.materials(),api.units(),api.allMaterialUnitLinks(),api.suppliers()]);
@@ -128,7 +132,7 @@ export async function renderImages(root){
   const mode=matched?(row.material_mode==='existing'?'existing':'matched'):(row.material_mode||'unresolved');
   const material=catalog.materials.find(m=>String(m.id)===String(row.catalog_id));
   const shortReviewNote=conciseReviewNoteV111(row.review_note);
-  const editName=`<label class="image-edit-name-v108"><span>اسم البند المستخرج <small>قابل للتعديل</small></span><input type="text" data-field="name" value="${esc(row.name||'')}" placeholder="صحح الاسم بحسب الفاتورة" autocomplete="off" aria-label="تصحيح اسم البند ${i+1}"></label>`;
+  const editName=`<div class="image-item-number-v112">بند ${i+1}</div><label class="image-edit-name-v108"><span>اسم البند المستخرج <small>قابل للتعديل</small></span><input type="text" data-field="name" value="${esc(row.name||'')}" placeholder="صحح الاسم بحسب الفاتورة" autocomplete="off" aria-label="تصحيح اسم البند ${i+1}"></label>`;
   const manual=mode==='existing'||mode==='matched';
   const materialBox=manual?`
    <div class="image-material-picker-v106">
@@ -202,6 +206,7 @@ export async function renderImages(root){
         <button type="button" class="btn secondary" data-add-item>+ إضافة بند</button>
         <button type="button" class="btn secondary image-danger-action-v106" data-clear-items ${(doc.items||[]).length?'':'disabled'}>حذف جميع البنود</button>
       </div></div>
+      ${doc.items?.length?`<nav class="image-item-nav-v112" aria-label="الانتقال السريع بين بنود الفاتورة"><span>انتقل إلى بند:</span><div class="image-item-nav-list-v112">${doc.items.map((_,i)=>`<button type="button" class="image-item-jump-v112" data-jump-item="${i}" aria-label="الانتقال إلى البند ${i+1}">${i+1}</button>`).join('')}</div></nav>`:''}
       <div class="table-wrap image-purchase-wrap-v106 image-items-scroll-v111" tabindex="0" aria-label="بنود الفاتورة؛ استخدم التمرير العمودي"><table class="table image-items-table"><thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الخصم</th><th>إجراء</th></tr></thead>
        <tbody>${doc.items?.length?doc.items.map((row,i)=>renderItem(row,i,doc)).join(''):'<tr><td colspan="7" class="empty">لا توجد بنود. اضغط استخراج أو أضف بندًا.</td></tr>'}</tbody>
       </table></div>
@@ -274,9 +279,24 @@ export async function renderImages(root){
       unit_price:tr.querySelector('[data-field="unit_price"]')?.value,discount:tr.querySelector('[data-field="discount"]')?.value}));
    const all=sums.length&&sums.every(x=>x!==null);
    const el=root.querySelector('[data-invoice-total]');if(el)el.textContent=all?money(sums.reduce((a,b)=>a+b,0),doc.currency):'أكمل الأرقام';
+   // Recalculate save readiness without rebuilding the input DOM or moving scroll.
+   syncEditor();
+   const validation=validateImageDocument(doc,catalog);
+   const button=root.querySelector('[data-review-invoice]');
+   if(button)button.disabled=processing||!validation.ready||['draft','published','uncertain'].includes(doc.status);
+   const message=root.querySelector('.image-publish-panel>.notice');
+   if(message){
+     message.className=validation.ready?'notice sage':'notice image-missing';
+     message.innerHTML=validation.ready?'الحقول مكتملة. راجع الإجمالي والبنود قبل الحفظ النهائي.':
+      `<strong>للاستكمال:</strong> ${esc(validation.problems.slice(0,7).join('، '))}`;
+   }
  }
  function refresh(){
-  if(!root.isConnected){revoke();return;}revoke();
+  if(!root.isConnected){revoke();return;}
+  const existingPanel=root.querySelector('.image-items-scroll-v111');
+  const previousScrollTop=existingPanel?.scrollTop||0;
+  const previousDocumentId=renderedDocumentId;
+  revoke();
   const doc=current();
   root.innerHTML=`<div class="notice image-privacy-notice">الصور محفوظة في هذا المتصفح؛ تُرسل نسخة للقراءة إلى خدمة OCR وقت الاستخراج فقط. راجع الأرقام قبل تسجيل الفاتورة.</div>
   ${catalogError?`<div class="notice rose">تعذر تحميل بيانات المواد/الموردين: ${esc(catalogError)}. شغّل SQL الخاص بالإصدار 1.0.6 وتحقق من الاتصال.</div>`:''}
@@ -293,7 +313,11 @@ export async function renderImages(root){
    </div>`).join('')||'<div class="empty">لا توجد صور</div>'}</div></aside>
    <section class="image-document-area">${doc?renderDocument(doc):'<div class="card empty"><h3>ابدأ بإضافة صورة فاتورة</h3></div>'}</section>
   </div>`;
+  renderedDocumentId=doc?.id??null;
   wire();
+  // Replacing DOM for a matched material/unit must not jump back to row 1.
+  const restoredPanel=root.querySelector('.image-items-scroll-v111');
+  if(restoredPanel&&previousDocumentId===renderedDocumentId)restoredPanel.scrollTop=previousScrollTop;
  }
  function updateOcr(progressValue,label){
   const value=Math.max(0,Math.min(100,Math.round(progressValue)));
@@ -478,6 +502,14 @@ export async function renderImages(root){
   });
  }
  function wire(){
+  root.querySelectorAll('[data-jump-item]').forEach(btn=>btn.addEventListener('click',()=>{
+   const panel=root.querySelector('.image-items-scroll-v111');
+   const target=panel?.querySelector(`[data-image-item="${btn.dataset.jumpItem}"]`);
+   if(!panel||!target)return;
+   const offset=target.getBoundingClientRect().top-panel.getBoundingClientRect().top;
+   panel.scrollTo({top:Math.max(0,panel.scrollTop+offset-10),behavior:'smooth'});
+   root.querySelectorAll('[data-jump-item]').forEach(b=>b.classList.toggle('is-current',b===btn));
+  }));
   root.querySelector('#images-pick')?.addEventListener('change',async e=>{
    let added=0;
    for(const file of [...(e.target.files||[])]){
@@ -557,6 +589,9 @@ export async function renderImages(root){
     if(processing)return;try{
      await saveCurrent();const doc=current();
      if(el.dataset.doc==='supplier'){await loadSupplierHistory(doc);}
+     // Numeric inputs already update the displayed totals on input; never redraw
+     // the entire editor on blur, which formerly reset scroll and disrupted Tab.
+     if(['quantity','unit_price','discount'].includes(el.dataset.field))return;
      refresh();
     }catch(err){toast('تعذر حفظ التعديلات المحلية: '+(err.message||err),'error');}
    });

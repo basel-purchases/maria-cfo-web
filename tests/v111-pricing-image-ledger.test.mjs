@@ -23,7 +23,7 @@ test('Zero or unknown price remains without a USD anchor, including when exchang
 });
 
 test('Pricing errors explain SQL or permissions failures rather than hiding the cause',()=>{
- assert.match(materialPricingErrorV111({code:'PGRST202',message:'Could not find the function'}),/SQL v1.0.11/);
+ assert.match(materialPricingErrorV111({code:'PGRST202',message:'Could not find the function'}),/SQL v1.0.12/);
  assert.match(materialPricingErrorV111({code:'57014',message:'statement timeout'}),/مهلة/);
  assert.match(materialPricingErrorV111({code:'42501',message:'permission denied'}),/صلاحية/);
  assert.match(materialPricingErrorV111({code:'XX001',message:'internal problem'}),/XX001/);

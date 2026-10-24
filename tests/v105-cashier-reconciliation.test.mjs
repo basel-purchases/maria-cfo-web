@@ -95,5 +95,5 @@ test('daily import UI keeps file prices, shows cashbox, monetary warnings and ex
  assert.match(read('assets/styles.css'),/74vh/);
  assert.match(read('js/pages/payroll-v034.js'),/payroll-total-v105/);
  assert.match(read('index.html'),/config\.js/);
- assert.equal(read('VERSION').trim(),'1.0.11');
+ assert.equal(read('VERSION').trim(),'1.0.12');
 });

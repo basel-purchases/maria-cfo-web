@@ -22,7 +22,7 @@ test('Unheaded three-column handwriting keeps numeric glyphs and descriptions wi
  assert.deepEqual(items[2].ocr_numeric_candidates.map(x=>x.value),[190,1220]);
  assert.ok(items.every(x=>x.quantity===''&&x.unit_price===''));
  assert.ok(items.every(x=>x.ocr_review_required===true&&!x.ocr_reviewed));
- assert.match(items[0].review_note,/بلا عناوين/);
+ assert.equal(items[0].review_note,''); // v1.0.12 removes the obsolete long explanatory paragraph
  assert.equal(validateImageDocument({type:'purchase',date:'2026-10-24',currency:'SYP',items},{}).ready,false);
 });
 test('Unknown unlabelled numbers are preserved, not relabelled using math or handwritten glyph folklore',()=>{
