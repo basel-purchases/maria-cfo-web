@@ -1716,3 +1716,22 @@ select option{background:#fff;color:var(--text);padding:8px}
 .image-go-purchases-v108,.purchase-to-images-v108{display:inline-flex;align-items:center;gap:7px;justify-content:center;text-decoration:none!important;white-space:nowrap;min-height:37px}
 .image-purchase-wrap-v106 .maria-combo-menu-v033.is-fixed-v108{position:fixed;right:auto;max-height:min(245px,42vh);z-index:10020}
 @media(max-width:530px){.image-edit-name-v108 input[type=text]{width:100%;min-width:0}}
+
+/* Maria CFO Web v1.0.9: handwritten numeric crops and review-first OCR. */
+.image-region-button-v106.region-digits{border:1.5px solid #8274ad!important;color:#55427f!important;background:#f1eefd!important}
+.image-crop-selection.image-region-digits{border:2px solid #7564a5;background:rgba(124,101,176,.20)}
+.image-region-digits span{background:#68529d}
+.image-digit-audit-btn-v109{border-color:#c9bada!important;background:#f6f1fb!important;color:#584270!important;font-weight:800}
+.image-digit-candidates-v109{margin:8px 0 5px;border:1px solid #e3d8ed;background:#fbf9fe;border-radius:10px;padding:7px;display:grid;gap:6px;min-width:0}
+.image-digit-candidates-v109>small{color:#615077;font-weight:750;font-size:11px;line-height:1.5}
+.image-digit-candidate-v109{display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:#fff;border:1px solid #e8e1ee;padding:4px 6px;border-radius:8px;min-width:0}
+.image-digit-candidate-v109>span{display:flex;flex:1;align-items:center;gap:6px;min-width:96px;flex-wrap:wrap}
+.image-digit-candidate-v109 b{font-size:14px;color:#443451;font-variant-numeric:tabular-nums}
+.image-digit-candidate-v109 em{font-style:normal;font-size:10px;color:#7f7585}
+.image-digit-candidate-v109 .mini-btn{padding:4px 7px;font-size:10px;white-space:nowrap}
+.image-digit-raw-v109{direction:auto;white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;background:#faf8fa;border:1px solid var(--line);border-radius:10px;padding:10px;line-height:1.7;font-size:12px}
+.image-raw-panel-v106>label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:8px 0 5px}
+@media(max-width:850px){.image-digit-candidate-v109{align-items:center}.image-digit-candidates-v109{max-width:none}}
+.image-digit-preview-btn-v109{border-color:#d7c8e4!important;color:#5b4d73!important}
+.image-digit-preview-v109{display:grid;gap:10px}
+.image-digit-preview-img-v109{max-width:100%;width:100%;height:auto;max-height:70vh;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:12px}

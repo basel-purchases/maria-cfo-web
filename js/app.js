@@ -21,7 +21,7 @@ import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.5';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
-import { renderImages } from './pages/images.js?v=1.0.8';
+import { renderImages } from './pages/images.js?v=1.0.9';
 import { renderSettings } from './pages/settings.js?v=1.0.7';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
@@ -112,7 +112,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.8</div>
+        <div class="sidebar-foot">Web v1.0.9</div>
       </aside>
 
       <main class="main">

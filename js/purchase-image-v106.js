@@ -2,6 +2,7 @@
 import {normalizeArabicNumbers,reviewedOcrItemCandidates} from './image-document-rules.js?v=1.0.7';
 import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.7';
 import {invoiceAmountV107,amountNearV107,invoiceDigitWarningV108} from './invoice-amount-v107.js?v=1.0.8';
+import {parseUnlabelledReceiptTableV109} from './ocr-digit-review-v109.js?v=1.0.9';
 const AR=/[\u0621-\u064a]/;
 const NOISE=/^(?:فاتورة|التاريخ|المطلوب|الهاتف|تلفون|موبايل|رقم|رقم الفاتورة|المجموع|الاجمالي|الإجمالي|الصافي|total|invoice|date|عنوان|السعر|العدد|نوع البضاعة|الكمية|الاجور|الملاحظة|البيان)/i;
 const FOOTER=/(?:^|\s)(?:المجموع|مجموع\s*الكمية|الاجمالي|الإجمالي|الصافي|الرصيد\s*السابق|الصافي\s*للدفع|المبلغ النهائي|المجموع فقط|total|subtotal|balance)(?:\s|:|$)/i;
@@ -225,10 +226,11 @@ function tableRows(text,limit=80){
 export function receiptItemsV106(text,materials=[],limit=80,units=[]){
  const raw=String(text||'').trim();if(!raw)return [];
  const markdown=markdownTableRows(raw,materials,limit,units);
- const columnar=markdown.length?[]:reviewedOcrItemCandidates(raw,materials,limit);
+ const unlabeled=markdown.length?[]:parseUnlabelledReceiptTableV109(raw,limit);
+ const columnar=markdown.length||unlabeled.length?[]:reviewedOcrItemCandidates(raw,materials,limit);
  // Read explicitly labelled Markdown cells first, otherwise preserve the v1.0.6 fallbacks.
  const verified=columnar.filter(x=>x.ocr_source==='column_aligned');
- let rows=markdown.length?markdown:verified.length?verified:tableRows(raw,limit);
+ let rows=markdown.length?markdown:unlabeled.length?unlabeled:verified.length?verified:tableRows(raw,limit);
  if(!rows.length){
   // The existing line parser supplies suggestions when quantity and price are explicit.
   rows=columnar.filter(x=>x.quantity&&x.unit_price).slice(0,limit);

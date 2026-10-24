@@ -3,6 +3,7 @@
 import {supabase} from './supabase.js?v=1.0';
 
 import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=1.0';
+import {enhanceHandwritingPixelsV109} from './ocr-digit-review-v109.js?v=1.0.9';
 async function edge(body){
   if(!supabase)throw new Error('SUPABASE_NOT_CONFIGURED');
   const {data,error}=await supabase.functions.invoke('ocr-space',{body});
@@ -38,11 +39,12 @@ async function decode(file){
     return {image:img,width:img.naturalWidth,height:img.naturalHeight,release:()=>URL.revokeObjectURL(url)};
   }catch(e){URL.revokeObjectURL(url);throw e;}
 }
-export async function prepareImageForCloud(blob,{crop=null,onProgress}={}){
+export async function prepareImageForCloud(blob,{crop=null,profile='standard',onProgress}={}){
   const progress=(label,pct)=>onProgress?.(label,pct);
   const area=normalizedCrop(crop);
+  const handwriting=profile==='handwriting';
   progress('Preparing image',6);
-  if(!area&&['image/jpeg','image/png'].includes(blob.type)&&blob.size<=950000){
+  if(!handwriting&&!area&&['image/jpeg','image/png'].includes(blob.type)&&blob.size<=950000){
     progress('Image ready',32);
     return blobToDataUrl(blob);
   }
@@ -50,16 +52,24 @@ export async function prepareImageForCloud(blob,{crop=null,onProgress}={}){
   try{
     const box=area||{x:0,y:0,w:1,h:1};
     const sx=box.x*decoded.width,sy=box.y*decoded.height,sw=box.w*decoded.width,sh=box.h*decoded.height;
-    let limit=2800;
+    let limit=handwriting?2100:2800;
     for(let cycle=0;cycle<7;cycle++){
-      const ratio=Math.min(1,limit/Math.max(sw,sh));
+      // Focused handwriting crops are magnified before OCR and processed without
+      // removing tiny Arabic zero dots or changing the shapes of ٢ and ٣.
+      const ratio=handwriting?Math.min(2.5,limit/Math.max(sw,sh)):Math.min(1,limit/Math.max(sw,sh));
       const canvas=document.createElement('canvas');
       canvas.width=Math.max(1,Math.round(sw*ratio));
       canvas.height=Math.max(1,Math.round(sh*ratio));
       const ctx=canvas.getContext('2d');
       if(!ctx)throw new Error('IMAGE_CANVAS_UNAVAILABLE');
       ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
       ctx.drawImage(decoded.image,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
+      if(handwriting){
+        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+        pixels.data.set(enhanceHandwritingPixelsV109(pixels.data,canvas.width,canvas.height));
+        ctx.putImageData(pixels,0,0);
+      }
       for(const quality of [.90,.82,.72,.60,.48]){
         const data=canvas.toDataURL('image/jpeg',quality);
         if(data.length<=1280000){progress('Image ready',32);return data;}
@@ -69,11 +79,11 @@ export async function prepareImageForCloud(blob,{crop=null,onProgress}={}){
     throw new Error('IMAGE_TOO_LARGE_MAX_1_MB');
   }finally{decoded.release();}
 }
-export async function recognizeCloudImage(blob,{engine=3,crop=null,onProgress}={}){
+export async function recognizeCloudImage(blob,{engine=3,crop=null,profile='standard',onProgress}={}){
   const mode=Number(engine);
   if(!OCR_ENGINES[mode])throw new Error('UNSUPPORTED_OCR_ENGINE');
   const progress=(label,pct)=>onProgress?.(label,pct);
-  const dataUrl=await prepareImageForCloud(blob,{crop,onProgress:progress});
+  const dataUrl=await prepareImageForCloud(blob,{crop,profile,onProgress:progress});
   progress('Waiting for OCR.space response',38);
   const result=await edge({action:'recognize',engine:mode,dataUrl});
   progress('OCR.space returned text',100);

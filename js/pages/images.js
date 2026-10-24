@@ -1,19 +1,21 @@
-// Maria CFO Web v1.0.8 — OCR correction, stable material search and purchase navigation.
+// Maria CFO Web v1.0.9 — handwritten OCR image enhancement, safe digit reread.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
 import * as api from '../api.js?v=1.0.7';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox,modal} from '../ui.js?v=1.0';
 import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.7';
-import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.7';
+import {recognizeCloudImage,fetchOcrUsage,prepareImageForCloud} from '../image-cloud-ocr.js?v=1.0.9';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
 import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
 import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.7';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.8';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.9';
 import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.8';
+import {applyDigitAuditV109} from '../ocr-digit-review-v109.js?v=1.0.9';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
-const REGIONS=[{key:'supplier',name:'اسم المورد',label:'الاسم',symbol:'◉'},{key:'number',name:'رقم الفاتورة',label:'الرقم',symbol:'#'},{key:'items',name:'البنود والإجمالي',label:'البنود والإجمالي',symbol:'▤'}];
+const REGIONS=[{key:'supplier',name:'اسم المورد',label:'الاسم',symbol:'◉'},{key:'number',name:'رقم الفاتورة',label:'الرقم',symbol:'#'},{key:'items',name:'البنود والإجمالي',label:'البنود والإجمالي',symbol:'▤'},
+ {key:'digits',name:'الأرقام',label:'منطقة الأرقام',symbol:'123'}];
 const statusColors={'غير معالج':'grey','يحتاج استكمال':'yellow','جاهز للنشر':'green',
  'مسودة داخل البرنامج':'purple','منشور':'green','مراجعة نتيجة العملية':'red'};
 const options=(rows,current='',placeholder='— اختر —')=>
@@ -130,10 +132,12 @@ export async function renderImages(root){
     <div class="image-match-actions-v106"><button type="button" class="mini-btn" data-mode="new" data-row="${i}">إضافة كجديد</button><button type="button" class="mini-btn" data-mode="existing" data-row="${i}">ربط بمادة موجودة</button></div>
     ${row.name&&materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).length?`<div class="image-hints-v106">${materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).map(m=>`<button type="button" class="image-suggest-v106" data-suggest="${esc(m.id)}" data-row="${i}">${esc(m.name)}</button>`).join('')}</div>`:''}
    </div>`;
+  const digitCandidates=[...(row.ocr_numeric_candidates||[]),...(row.ocr_digit_candidates||[])];
+  const digitChips=digitCandidates.length?`<div class="image-digit-candidates-v109"><small>قراءات أرقام من الصورة — تأكد قبل استخدامها:</small>${digitCandidates.map((c,j)=>`<div class="image-digit-candidate-v109"><span><b dir="ltr">${esc(c.raw)}</b> <em>${esc(c.source||'الأصل')} · ${esc(c.label||'')}</em></span><button type="button" class="mini-btn" data-apply-digit="quantity" data-digit-index="${j}" data-row="${i}">كمية</button><button type="button" class="mini-btn" data-apply-digit="unit_price" data-digit-index="${j}" data-row="${i}">سعر</button></div>`).join('')}</div>`:'';
   const unitBox=mode==='new'?`<span class="image-unit-readonly-v106">${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.new_base_unit_id)))||'—')}</span>`:
    manual&&row.catalog_id?`<select data-field="unit_id" aria-label="وحدة المادة ${i+1}">${chosenUnitOptions(row)}</select>`:'—';
   return `<tr data-image-item="${i}">
-   <td data-heading="المادة" class="image-catalog-cell">${editName}${materialBox}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
+   <td data-heading="المادة" class="image-catalog-cell">${editName}${materialBox}${digitChips}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
     ${row.ocr_review_required?`<label class="image-ocr-confirm-v107"><input type="checkbox" data-field="ocr_reviewed" ${row.ocr_reviewed?'checked':''}><span>راجعت الأرقام والوحدة مع الفاتورة</span></label>`:''}</td>
    <td data-heading="الوحدة">${unitBox}</td>
    <td data-heading="الكمية"><input type="text" inputmode="decimal" dir="ltr" data-field="quantity" value="${esc(row.quantity??'')}" aria-label="كمية البند ${i+1}"></td>
@@ -163,7 +167,8 @@ export async function renderImages(root){
        </div></div>
        <div class="image-crop-actions image-region-controls-v106">
         ${REGIONS.map(r=>`<button type="button" class="btn secondary image-region-button-v106 region-${r.key} ${cropMode===r.key?'is-selected':''}" data-region-mode="${r.key}" ${locked||processing?'disabled':''}>${r.symbol} ${r.label}${doc.regions?.[r.key]?' ✓':''}</button>`).join('')}
-        ${Object.keys(doc.regions||{}).length?`<button type="button" class="btn secondary image-reset-regions-v107" data-reset-regions ${locked||processing?'disabled':''} title="إزالة مربعات التحديد الثلاثة فقط دون مسح الصورة أو البنود"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="13" height="13" rx="2" stroke-dasharray="3 2"/><path d="M10 21h9a2 2 0 002-2v-9"/><path d="M7 12l7-7"/></svg><span>مسح التحديدات</span></button>`:''}
+        <button type="button" class="btn secondary image-digit-preview-btn-v109" data-preview-digits ${processing?'disabled':''} title="معاينة معالجة الأرقام على جهازك دون إرسالها إلى OCR">تكبير الأرقام</button>
+        ${Object.keys(doc.regions||{}).length?`<button type="button" class="btn secondary image-reset-regions-v107" data-reset-regions ${locked||processing?'disabled':''} title="إزالة مربعات التحديد فقط دون مسح الصورة أو البنود"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="13" height="13" rx="2" stroke-dasharray="3 2"/><path d="M10 21h9a2 2 0 002-2v-9"/><path d="M7 12l7-7"/></svg><span>مسح التحديدات</span></button>`:''}
        </div>
        <p class="metric-note">${cropMode?'اسحب مستطيلًا على الصورة لتحديد المنطقة. يمكنك استخدام اللمس أو الماوس.':Object.keys(doc.regions||{}).length?'سيُقرأ كل مربع محدد فقط بلونه. أي بيانات لم تحدد لها منطقة يمكن مراجعتها يدويًا.':'حدد مناطق الاسم والرقم والبنود لتقليل أخطاء القراءة. إذا تركتها كلها بلا تحديد سيحاول الاستخراج من الصورة كاملة.'}</p>
       </div>
@@ -176,9 +181,10 @@ export async function renderImages(root){
         </div>
         ${historySupplierId?`<div class="image-supplier-history-v106">${historyLoading?'تحميل مواد المورد...':`<strong>مواد سبق شراؤها من هذا المورد: ${history.length}</strong> · تُقدّم في نتائج المطابقة دون تغيير أسعار الفاتورة.`}</div>`:''}
         <div class="image-ocr-actions image-ocr-reparse-actions-v107"><button class="btn" type="button" data-ocr="3">استخراج <span class="ocr-progress-pill" hidden></span></button>
+         ${doc.text?.trim()&&!locked?`<button type="button" class="btn secondary image-digit-audit-btn-v109" data-audit-digits title="قراءة ثانية محسّنة لمحرك 3؛ تُحتسب طلبًا إضافيًا ولا تستبدل القيم تلقائيًا" ${processing?'disabled':''}>تدقيق الأرقام · طلب إضافي</button>`:''}
          ${doc.text?.trim()?`<button type="button" class="btn secondary image-reparse-v107" data-reparse title="استخدم النص المستخرج المحفوظ دون طلب OCR جديد">تحديث البنود من النص المحفوظ</button>`:''}</div>
         <div class="image-raw-toggle-v106"><button class="mini-btn" type="button" data-toggle-raw ${!doc.text?.trim()?'disabled':''}>عرض النص الأصلي المستخرج</button></div>
-        <div class="image-raw-panel-v106" data-raw-panel hidden><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea></div>
+        <div class="image-raw-panel-v106" data-raw-panel hidden><label>النص الأصلي</label><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea>${doc.ocr_digit_text?`<label>نص تدقيق الأرقام (قراءة ثانية مستقلة)</label><pre class="image-digit-raw-v109">${esc(doc.ocr_digit_text)}</pre>`:''}</div>
        </fieldset></div>
     </div>
     <div class="image-items-full"><fieldset ${locked||processing?'disabled':''}>
@@ -289,18 +295,19 @@ export async function renderImages(root){
  async function extractOne(doc,index,total){
   if(doc.server_id||['draft','published','uncertain'].includes(doc.status)||legacy(doc))return;
   if((doc.items?.length||doc.text?.trim())&&!(await confirmBox(`سيعاد استخراج «${doc.file_name}»، وقد تُستبدل البنود المقروءة الحالية. احفظ مراجعتك أولًا إذا لزم.`, 'متابعة الاستخراج')))return;
-  const selectedRegions=REGIONS.filter(r=>doc.regions?.[r.key]);
+  const selectedRegions=REGIONS.filter(r=>r.key!=='digits'&&doc.regions?.[r.key]);
   const extracts=selectedRegions.length?selectedRegions:[{key:'full',name:'الفاتورة كاملة'}];
   const sections={};let step=0;
   for(const region of extracts){
-   const result=await recognizeCloudImage(doc.file,{engine:3,crop:doc.regions?.[region.key]||null,onProgress:(msg,pct)=>{
+   const result=await recognizeCloudImage(doc.file,{engine:3,crop:doc.regions?.[region.key]||null,
+    profile:region.key==='items'?'handwriting':'standard',onProgress:(msg,pct)=>{
     updateOcr((index+(step+pct/100)/extracts.length)*100/total,`${doc.file_name} · ${region.name}`);
    }});
    sections[region.key]=result.text||'';
    if(result.usage){usage=result.usage;usageDraw();}
    step++;
   }
-  doc.ocr_region_text=sections;
+  doc.ocr_region_text=sections;doc.ocr_digit_text='';
   doc.text=Object.entries(sections).map(([k,t])=>`${REGIONS.find(r=>r.key===k)?.name||'النص الكامل'}:\n${t}`).join('\n\n');
   doc.ocr_mode='3';doc.ocr_confidence=null;
   const header=receiptHeaderV106({supplier:sections.supplier,number:sections.number,items:sections.items,full:sections.full},catalog.suppliers);
@@ -496,14 +503,55 @@ export async function renderImages(root){
    const panel=root.querySelector('[data-raw-panel]');panel.hidden=!panel.hidden;
    e.target.textContent=panel.hidden?'عرض النص الأصلي المستخرج':'إخفاء النص الأصلي المستخرج';
   });
+  root.querySelector('[data-preview-digits]')?.addEventListener('click',async()=>{
+   try{
+    const doc=current();if(!doc)return;
+    const image=await prepareImageForCloud(doc.file,{crop:doc.regions?.digits||doc.regions?.items||null,profile:'handwriting'});
+    modal({title:'تكبير الأرقام المكتوبة',wide:true,hideActions:true,
+     body:`<div class="image-digit-preview-v109"><p class="metric-note">المعاينة المعالجة على جهازك فقط؛ لم يتم تشغيل OCR أو احتساب طلب. راجع النقطة (٠)، والخمسة (٥)، وأشكال الاثنين والثلاثة بخط اليد.</p><img class="image-digit-preview-img-v109" src="${image}" alt="تكبير موضع الأرقام بعد توضيح الحبر" /></div>`});
+   }catch(e){toast('تعذر عرض التكبير: '+(e.message||e),'error');}
+  });
+  root.querySelector('[data-audit-digits]')?.addEventListener('click',async()=>{
+
+   if(processing)return;
+   try{
+    await saveCurrent();const doc=current();if(!doc||!doc.text?.trim())return;
+    if(!(await confirmBox('سيُرسل قصّ الأرقام المحدد (أو البنود عند عدم تحديده) إلى المحرك 3 في طلب إضافي يُحتسب ضمن العداد. لن تتغير كميات الفاتورة أو أسعارها آليًا؛ ستظهر نتائج للمقارنة والمراجعة فقط. هل تتابع؟','تدقيق الأرقام')))return;
+    processing=true;refresh();progress('تحسين صورة الأرقام وقراءتها بالمحرك 3...');
+    const result=await recognizeCloudImage(doc.file,{engine:3,
+     crop:doc.regions?.digits||doc.regions?.items||null,profile:'handwriting',
+     onProgress:(label,pct)=>progress(`تدقيق الأرقام — ${pct}%`)});
+    if(result.usage){usage=result.usage;usageDraw();}
+    doc.ocr_digit_text=result.text;
+    const audit=applyDigitAuditV109(doc.items,result.text);
+    doc.items=audit.rows;
+    doc.ocr_digit_audit_aligned=audit.matched;
+    doc.status='review';await saveLocalImage(doc);
+    refresh();
+    toast(audit.matched?'ظهرت قراءات الأرقام الثانية بجانب البنود. راجع الاختلافات، ولم يُغيَّر أي مبلغ تلقائيًا.':`استُخرج نص ثانٍ، لكن عدد أسطره (${audit.rowCount}) مختلف عن البنود (${doc.items.length})؛ افتح النص الخام للمقارنة، دون ربط أرقام بصفوف خاطئة.`,audit.matched?'success':'error');
+   }catch(e){toast(friendlyError(e,e.message||'تعذر تدقيق الأرقام.'),'error');}
+   finally{processing=false;refresh();loadUsage();}
+  });
   root.querySelector('[data-reparse]')?.addEventListener('click',async()=>{
+
    syncEditor();const doc=current();
    if(doc.items?.length&&!(await confirmBox('سيعاد تحليل نص OCR المحفوظ دون تشغيل الخدمة مجددًا، وستُستبدل البنود الحالية بما فيها تعديلاتك اليدوية. هل تتابع؟','إعادة التحليل')))return;
    const text=String(doc.text||'').replace(/^(?:الاسم|الرقم|البنود والإجمالي|النص الكامل):/gm,'');
    doc.items=receiptItemsV106(text,catalog.materials,80,catalog.units).map(fillRow);
+   doc.ocr_digit_text='';doc.ocr_digit_audit_aligned=false;
    const head=receiptHeaderV106({full:text},catalog.suppliers);if(!doc.supplier)doc.supplier=head.supplier;if(!doc.number)doc.number=head.number;
    doc.ocr_total=head.invoiceTotal;doc.status='review';await saveLocalImage(doc);await loadSupplierHistory(doc);refresh();
   });
+  root.querySelectorAll('[data-apply-digit]').forEach(btn=>btn.addEventListener('click',async()=>{
+   if(processing)return;syncEditor();const doc=current(),row=doc?.items?.[Number(btn.dataset.row)];if(!row)return;
+   const candidates=[...(row.ocr_numeric_candidates||[]),...(row.ocr_digit_candidates||[])];
+   const candidate=candidates[Number(btn.dataset.digitIndex)];
+   const field=btn.dataset.applyDigit;
+   if(!candidate||!['quantity','unit_price'].includes(field)||invoiceAmountV107(candidate.raw)===null)return;
+   row[field]=String(invoiceAmountV107(candidate.raw));
+   row.ocr_review_required=true;row.ocr_reviewed=false;
+   await saveLocalImage(doc);refresh();
+  }));
   root.querySelectorAll('[data-mode],[data-suggest]').forEach(btn=>btn.addEventListener('click',async()=>{
    syncEditor();const doc=current(),row=doc?.items?.[Number(btn.dataset.row)];if(!row)return;
    if(btn.dataset.suggest){
