@@ -61,12 +61,11 @@ test('Printed totals stay visible; arithmetic conflicts are labelled instead of 
  assert.equal(receiptHeaderV106({number:'رقم الفاتورة:\n. ٣٧٥',items:raw}).number,'375');
  assert.equal(receiptMathV106({items:rows,ocr_total:'١٦٤١٥'}).discrepancy,true);
 });
-test('A flagged OCR mismatch cannot be silently posted; explicit review permits normal validation',()=>{
+test('A flagged OCR mismatch remains visible while saving relies on the final invoice dialog, not an extra checkbox',()=>{
  const row=items()[0];
  const base={type:'purchase',date:'2026-10-23',currency:'SYP',items:[{...row,unit_id:'kg',material_mode:'matched'}]};
  const inventory={materials,units,materialLinks:[{material_id:'tom',unit_id:'kg'}]};
- assert.equal(validateImageDocument(base,inventory).ready,false);
- assert.match(validateImageDocument(base,inventory).problems.join(' '),/راجع قراءة/);
+ assert.equal(validateImageDocument(base,inventory).ready,true);
  assert.equal(validateImageDocument({...base,items:[{...row,unit_id:'kg',material_mode:'matched',ocr_reviewed:true}]},inventory).ready,true);
  assert.equal(validateImageDocument({...base,items:[{...row,unit_id:'kg',material_mode:'matched',ocr_reviewed:true,quantity:'٤٥',unit_price:'٤٥',discount:'٠'}]},inventory).ready,true);
 });
@@ -74,13 +73,13 @@ test('UI supports Arabic numeric keyboard entry, preserves original OCR sources 
  const page=read('js/pages/images.js'),style=read('assets/styles.css'),html=read('index.html');
  assert.match(page,/receiptItemsV106\(sections\.full,catalog\.materials,80,catalog\.units\)/);
  assert.match(page,/data-field="quantity"[^>]*inputmode="decimal"|inputmode="decimal"[^>]*data-field="quantity"/);
- assert.match(page,/data-field="ocr_reviewed"/);
+ assert.doesNotMatch(page,/data-field="ocr_reviewed"/);
  assert.match(page,/image-reset-regions-v107/);
  assert.match(style,/image-reset-regions-v107:focus-visible/);
  assert.match(page,/current\(\)\.regions=\{\};cropMode=''/);
  assert.match(page,/data-raw-panel hidden/);
  assert.doesNotMatch(page,/data-reparse|data-audit-digits|تكبير الأرقام/);
  assert.doesNotMatch(page,/data-bulk-ocr="1"|data-ocr="1"/);
- assert.match(html,/Web v1\.0\.10/);
+ assert.match(html,/Web v1\.0\.11/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

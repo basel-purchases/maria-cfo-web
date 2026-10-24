@@ -1,17 +1,17 @@
 // Maria CFO Web v1.0.10 — one-click purchase OCR, Arabic zero-cell review, supplier hints.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.11';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox,modal} from '../ui.js?v=1.0';
 import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.7';
-import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.10';
+import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.11';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
 import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
-import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.10';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.10';
-import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.10';
-import {supplierOcrSuggestionsV110,annotateSupplierOcrV110} from '../supplier-ocr-v110.js?v=1.0.10';
-import {chooseBestOcrRowsV110} from '../ocr-selection-v110.js?v=1.0.10';
+import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.11';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.11';
+import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.11';
+import {supplierOcrSuggestionsV110,annotateSupplierOcrV110} from '../supplier-ocr-v110.js?v=1.0.11';
+import {chooseBestOcrRowsV110} from '../ocr-selection-v110.js?v=1.0.11';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
@@ -21,6 +21,17 @@ const statusColors={'غير معالج':'grey','يحتاج استكمال':'yell
 const options=(rows,current='',placeholder='— اختر —')=>
  `<option value="">${esc(placeholder)}</option>`+(rows||[]).map(u=>`<option value="${esc(u.id)}" ${String(current)===String(u.id)?'selected':''}>${esc(unitDisplay(u)||u.name||'')}</option>`).join('');
 const currencyName=c=>c==='USD'?'USD':'ل.س';
+// Old local drafts keep OCR notes: hide verbose v1.0.8/1.0.10 explanations too.
+function conciseReviewNoteV111(value){
+ let text=String(value||'');
+ for(const phrase of [
+  'الكمية مقترحة حسابيًا من إجمالي البند ÷ سعر الوحدة، ولم تُقرأ صراحة؛ راجعها مع الصورة قبل الحفظ. العدد داخل وصف العبوة ليس كمية الشراء.',
+  'يوجد حجم عبوة أو عدد قطع داخل الوصف؛ حدد وحدة الشراء بنفسك لتجنب اعتبار العبوة قطعًا منفردة.',
+  'الكمية محسوبة من الإجمالي والسعر؛ تحقق منها.',
+  'اختر وحدة الشراء المناسبة.'
+ ])text=text.replaceAll(phrase,'');
+ return text.replace(/\s{2,}/g,' ').trim();
+}
 function itemTotal(row){
  const q=invoiceAmountV107(row.quantity),p=invoiceAmountV107(row.unit_price),d=invoiceAmountV107(row.discount??'0');
  return q!==null&&q>0&&p!==null&&p>0&&d!==null&&d>=0?q*p-d:null;
@@ -116,6 +127,7 @@ export async function renderImages(root){
   const matched=!!row.catalog_id&&row.material_mode!=='new';
   const mode=matched?(row.material_mode==='existing'?'existing':'matched'):(row.material_mode||'unresolved');
   const material=catalog.materials.find(m=>String(m.id)===String(row.catalog_id));
+  const shortReviewNote=conciseReviewNoteV111(row.review_note);
   const editName=`<label class="image-edit-name-v108"><span>اسم البند المستخرج <small>قابل للتعديل</small></span><input type="text" data-field="name" value="${esc(row.name||'')}" placeholder="صحح الاسم بحسب الفاتورة" autocomplete="off" aria-label="تصحيح اسم البند ${i+1}"></label>`;
   const manual=mode==='existing'||mode==='matched';
   const materialBox=manual?`
@@ -137,10 +149,10 @@ export async function renderImages(root){
   const unitBox=mode==='new'?`<span class="image-unit-readonly-v106">${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.new_base_unit_id)))||'—')}</span>`:
    manual&&row.catalog_id?`<select data-field="unit_id" aria-label="وحدة المادة ${i+1}">${chosenUnitOptions(row)}</select>`:'—';
   return `<tr data-image-item="${i}">
-   <td data-heading="المادة" class="image-catalog-cell">${editName}${materialBox}${digitChips}${row.review_note?`<small class="image-row-warning-v106">${esc(row.review_note)}</small>`:''}
-    ${row.ocr_review_required?`<label class="image-ocr-confirm-v107"><input type="checkbox" data-field="ocr_reviewed" ${row.ocr_reviewed?'checked':''}><span>راجعت الأرقام والوحدة مع الفاتورة</span></label>`:''}</td>
+   <td data-heading="المادة" class="image-catalog-cell">${editName}${materialBox}${digitChips}${shortReviewNote?`<small class="image-row-warning-v106">${esc(shortReviewNote)}</small>`:''}
+   </td>
    <td data-heading="الوحدة">${unitBox}</td>
-   <td data-heading="الكمية"><input type="text" inputmode="decimal" dir="ltr" data-field="quantity" value="${esc(row.quantity??'')}" aria-label="كمية البند ${i+1}"></td>
+   <td data-heading="الكمية"><input type="text" inputmode="decimal" dir="ltr" data-field="quantity" value="${esc(row.quantity??'')}" aria-label="كمية البند ${i+1}">${row.ocr_quantity_inferred?'<small class="image-inferred-flag-v111">مقترحة</small>':''}</td>
    <td data-heading="سعر الوحدة"><input type="text" inputmode="decimal" dir="ltr" data-field="unit_price" value="${esc(row.unit_price??'')}" aria-label="سعر الوحدة للبند ${i+1}"></td>
    <td data-heading="الإجمالي"><strong data-line-total="${i}" class="image-line-total-v106">${itemTotal(row)===null?'—':money(itemTotal(row),doc.currency)}</strong>${row.ocr_line_total?`<small class="image-source-name-v106">بالفاتورة: ${esc(row.ocr_line_total)}</small>`:''}</td>
    <td data-heading="خصم"><input type="text" inputmode="decimal" dir="ltr" data-field="discount" value="${esc(row.discount??'0')}" aria-label="خصم البند ${i+1}"></td>
@@ -159,7 +171,7 @@ export async function renderImages(root){
     <div class="section-head-inline"><div><h3>${esc(doc.file_name)}</h3><span class="image-status ${statusColors[status]||'grey'}">${esc(status)}</span></div>
       <button type="button" class="btn secondary image-delete-v106" data-delete-image ${processing?'disabled':''}>حذف الصورة</button></div>
     ${doc.status==='uncertain'?`<div class="notice rose">${esc(doc.error||'تعذر التأكد من نتيجة العملية. افتح الفاتورة المسجلة قبل أي محاولة أخرى.')}${doc.server_id?` <a href="#/purchase/${esc(doc.server_id)}">فتح الفاتورة</a>`:''}</div>`:''}
-    <div class="image-document-grid">
+    <div class="image-document-grid image-review-workspace-v111">
       <div class="image-preview-pane">
        <div class="image-preview-frame"><div class="image-crop-surface ${cropMode?'is-cropping image-region-'+cropMode:''}" data-crop-surface>
         <img src="${objectUrl(doc.file)}" alt="صورة فاتورة الشراء" draggable="false">${drawRegions(doc)}
@@ -184,14 +196,13 @@ export async function renderImages(root){
 </div>
         <div class="image-raw-toggle-v106"><button class="mini-btn" type="button" data-toggle-raw ${!doc.text?.trim()?'disabled':''}>عرض النص الأصلي المستخرج</button></div>
         <div class="image-raw-panel-v106" data-raw-panel hidden><label>النص الأصلي</label><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea></div>
-       </fieldset></div>
-    </div>
+       </fieldset>
     <div class="image-items-full"><fieldset ${locked||processing?'disabled':''}>
       <div class="image-items-head"><h3>بنود الفاتورة (${(doc.items||[]).length})</h3><div class="image-items-controls-v106">
         <button type="button" class="btn secondary" data-add-item>+ إضافة بند</button>
         <button type="button" class="btn secondary image-danger-action-v106" data-clear-items ${(doc.items||[]).length?'':'disabled'}>حذف جميع البنود</button>
       </div></div>
-      <div class="table-wrap image-purchase-wrap-v106"><table class="table image-items-table"><thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الخصم</th><th>إجراء</th></tr></thead>
+      <div class="table-wrap image-purchase-wrap-v106 image-items-scroll-v111" tabindex="0" aria-label="بنود الفاتورة؛ استخدم التمرير العمودي"><table class="table image-items-table"><thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>الخصم</th><th>إجراء</th></tr></thead>
        <tbody>${doc.items?.length?doc.items.map((row,i)=>renderItem(row,i,doc)).join(''):'<tr><td colspan="7" class="empty">لا توجد بنود. اضغط استخراج أو أضف بندًا.</td></tr>'}</tbody>
       </table></div>
       <div class="image-totals-v106"><span>مجموع البنود بعد الخصم</span><strong data-invoice-total>${summary.valid?money(summary.sum,doc.currency):'أكمل الأرقام'}</strong>
@@ -206,7 +217,8 @@ export async function renderImages(root){
        <button type="button" class="btn" data-review-invoice ${locked||processing||!check.ready?'disabled':''}>حفظ الفاتورة</button>
       </div>
     </div>
-  </div>`;
+   </div>
+  </div></div>`;
  }
  function syncEditor(){
   const doc=current();if(!doc||legacy(doc)||['draft','published','uncertain'].includes(doc.status))return;
@@ -220,7 +232,6 @@ export async function renderImages(root){
     const nextName=String(val('name')??old.name??'').trim();
     const nameChanged=materialKeyV106(nextName)!==materialKeyV106(old.name);
     const updated={...old,name:nextName,quantity:val('quantity')??old.quantity??'',unit_price:val('unit_price')??old.unit_price??'',discount:val('discount')??old.discount??'0'};
-    if(val('ocr_reviewed')!==undefined)updated.ocr_reviewed=val('ocr_reviewed');
     if(updated.material_mode==='new'){
       updated.new_name=val('new_name')??old.new_name??old.name;
       if(nameChanged&&(!old.new_name||materialKeyV106(old.new_name)===materialKeyV106(old.name)))updated.new_name=nextName;
@@ -425,12 +436,10 @@ export async function renderImages(root){
        <td>${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.unit_id)))||'—')}</td><td>${esc(row.quantity)}</td><td>${money(row.unit_price,doc.currency)}</td><td>${money(row.quantity*row.unit_price-row.discount,doc.currency)}</td></tr>`).join('')}</tbody></table></div>
     <div class="image-review-grand-v106"><span>إجمالي الفاتورة من البنود</span><strong>${money(summary.sum,doc.currency)}</strong>
      ${summary.expected!==null?`<small>الإجمالي المستخرج: ${money(summary.expected,doc.currency)}</small>`:''}</div>
-    ${summary.discrepancy?`<div class="notice rose"><strong>تحذير: يوجد اختلاف بين إجمالي الفاتورة المقروء ومجموع البنود.</strong> لا تحفظ قبل فحص الصورة والأرقام.</div>
-       <label class="image-review-ack-v106"><input type="checkbox" name="accept_difference" required> راجعت الصورة وتأكدت أن المبالغ المعروضة صحيحة رغم هذا الاختلاف.</label>`:''}
-    ${doc.items.some(x=>x.review_note)?'<div class="notice">توجد ملاحظات على بعض الصفوف المستخرجة. تأكد من مطابقتها للصورة الأصلية قبل الحفظ.</div>':''}`,
+    ${summary.discrepancy?`<div class="notice rose"><strong>تنبيه: إجمالي الصورة يختلف عن مجموع البنود.</strong> راجع القيم المعروضة قبل الضغط على حفظ ونشر الفاتورة.</div>`:''}
+    ${doc.items.some(x=>conciseReviewNoteV111(x.review_note))?'<div class="notice">توجد ملاحظات على بعض الصفوف المستخرجة. تأكد من مطابقتها للصورة الأصلية قبل الحفظ.</div>':''}`,
    submitText:'حفظ ونشر الفاتورة',
    onSubmit:async fd=>{
-    if(summary.discrepancy&&!fd.get('accept_difference')){toast('راجع اختلاف الإجمالي قبل الحفظ.','error');return false;}
     if(processing)return false;
     processing=true;
     try{

@@ -79,7 +79,6 @@ export function validateImageDocument(doc,{menu=[],materials=[],units=[],materia
     if(!Number.isFinite(qty)||qty<=0)problems.push(`البند ${rowNo}: الكمية أكبر من صفر`);
     if(!Number.isFinite(price)||price<=0)problems.push(`البند ${rowNo}: سعر الوحدة أكبر من صفر`);
     if(!Number.isFinite(discount)||discount<0||discount>(purchase?qty*price:100))problems.push(`البند ${rowNo}: خصم صالح`);
-    if(purchase&&row.ocr_review_required&&!row.ocr_reviewed)problems.push(`البند ${rowNo}: راجع قراءة الكمية والسعر والوحدة وأكّدها`);
     const rowData={catalog_id:known?.id||null,name:known?.name||requested,quantity:qty,unit_price:price,discount,new_material:newMaterial};
     if(purchase){
       const unitId=newMaterial?row.new_base_unit_id:row.unit_id;

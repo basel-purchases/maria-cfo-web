@@ -1,8 +1,10 @@
-**الإصدار الحالي v1.0.10:** اقرأ [README_v1.0.10_OCR_USD_PRICING_AR.md](README_v1.0.10_OCR_USD_PRICING_AR.md). **شغّل SQL v1.0.10 قبل رفع الموقع**، ولا تستبدل `config.js` الموجود على الاستضافة.
+**الإصدار الحالي v1.0.11:** اقرأ [README_v1.0.11_PRICING_IMAGES_AR.md](README_v1.0.11_PRICING_IMAGES_AR.md). **شغّل SQL v1.0.11 قبل رفع الموقع**، ولا تستبدل `config.js` الموجود على الاستضافة.
+
+**توثيق الإصدار السابق v1.0.10:** [README_v1.0.10_OCR_USD_PRICING_AR.md](README_v1.0.10_OCR_USD_PRICING_AR.md). ملف SQL v1.0.11 الجديد يشمل متطلبات التسعير السابقة؛ نفذ الجديد فقط.
 
 ---
 
-**دليل الإصدار الحالي v1.0.4:** [README_v1.0.4_MENU_ALIASES_ORDERS_AR.md](README_v1.0.4_MENU_ALIASES_ORDERS_AR.md). يتطلب تطبيق SQL v1.0.4 قبل رفع الموقع، مع الاحتفاظ بـ `config.js`.
+**دليل تاريخي للإصدار v1.0.4:** [README_v1.0.4_MENU_ALIASES_ORDERS_AR.md](README_v1.0.4_MENU_ALIASES_ORDERS_AR.md). يتطلب تطبيق SQL v1.0.4 قبل رفع الموقع، مع الاحتفاظ بـ `config.js`.
 
 # Maria CFO Web v0.40
 

@@ -31,9 +31,7 @@ test('New three-column layout reads the item name embedded under quantity headin
  assert.equal(row.ocr_quantity_inferred,true);
  assert.equal(row.unit_text,'','48-piece packaging description is NOT the purchase unit');
  assert.equal(row.ocr_unit_unresolved,true,'a 48-piece package needs an explicitly reviewed purchase unit');
- assert.equal(row.ocr_review_required,true);
- assert.equal(row.ocr_reviewed,false);
- assert.match(row.review_note,/مقترحة حسابيًا/);
+ assert.equal(row.ocr_quantity_inferred,true);
  assert.equal(row.catalog_id,'','fuzzy name must never auto-select an inventory ID');
  assert.equal(receiptMathV106({items:rows,ocr_total:'9,200'}).discrepancy,false);
 });
@@ -46,12 +44,11 @@ test('Number containing an underscore survives the invoice header parser',()=>{
  assert.equal(sameLine.number,'30_4114');
 });
 
-test('A derived quantity is blocked from posting unless checked by the user',()=>{
+test('A derived quantity needs a valid unit but no extra review checkbox after the final invoice preview',()=>{
  const row=receiptItemsV106(read('tests/fixtures/v108-ocr-modern-invoice.txt'))[0];
  const cat={materials:[{id:'m1',name:row.name,base_unit_id:'u'}],units:[{id:'u',name:'حبة'}],materialLinks:[]};
  const doc={type:'purchase',date:'2026-10-23',currency:'SYP',items:[{...row,material_mode:'matched',catalog_id:'m1',unit_id:'u'}]};
- assert.equal(validateImageDocument(doc,cat).ready,false);
- assert.match(validateImageDocument(doc,cat).problems.join(' '),/راجع قراءة/);
+ assert.equal(validateImageDocument(doc,cat).ready,true);
  assert.equal(validateImageDocument({...doc,items:[{...doc.items[0],unit_id:'',ocr_reviewed:true}]},cat).ready,false,'a reviewed quantity still requires a purchase unit');
  assert.equal(validateImageDocument({...doc,items:[{...doc.items[0],ocr_reviewed:true}]},cat).ready,true);
 });
@@ -73,6 +70,6 @@ test('UI keeps OCR text editable and links purchase manual / photos screens',()=
  assert.doesNotMatch(inputHandler[0],/dispatchEvent/,'typing must not trigger a form re-render');
  assert.match(combo,/select\.dispatchEvent\(new Event\('change'/,'committed selection must notify form');
  assert.match(app,/searchable-select-v033\.js\?v=1\.0\.8/);
- assert.match(html,/Web v1\.0\.10/);
+ assert.match(html,/Web v1\.0\.11/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

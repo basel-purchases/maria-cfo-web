@@ -1,5 +1,6 @@
-import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.10';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.11';
+import * as api from '../api.js?v=1.0.11';
+import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.11';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
@@ -203,7 +204,7 @@ export async function renderSettings(root, selectedTab='general') {
           toast(apply?`تم حفظ سعر الصرف وتحديث ${result?.updated_materials??0} سعر مادة مرجعي بالليرة.`:'تم حفظ سعر الدولار، دون تغيير أسعار المواد.','success');
           prompt.close();
           await renderSettings(root,'general');
-        }catch(e){busy=false;prompt.form.querySelectorAll('button').forEach(b=>b.disabled=false);toast(friendlyError(e,'تعذر حفظ سعر الدولار؛ لم تُنفّذ عملية جزئية.'),'error');}
+        }catch(e){busy=false;prompt.form.querySelectorAll('button').forEach(b=>b.disabled=false);toast(materialPricingErrorV111(e),'error');}
       };
       prompt.form.querySelector('[data-fx-yes]').onclick=()=>decide(true);
       prompt.form.querySelector('[data-fx-no]').onclick=()=>decide(false);

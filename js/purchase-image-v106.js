@@ -171,11 +171,9 @@ function markdownTableRows(text,materials,limit,units){
   if(total!==null&&qty!==null&&price!==null&&!mathOK)
    notes.push(`إجمالي البند المقروء (${total}) لا يساوي الكمية × السعر (${Number((qty*price).toFixed(6))}). راجع الصورة.`);
   if(total===null)notes.push('إجمالي البند غير واضح؛ راجع الصورة.');
-  if(inferred)notes.push('الكمية مقترحة حسابيًا من إجمالي البند ÷ سعر الوحدة، ولم تُقرأ صراحة؛ راجعها مع الصورة قبل الحفظ. العدد داخل وصف العبوة ليس كمية الشراء.');
   const digitWarning=invoiceDigitWarningV108(cells.join(' '));
   if(digitWarning)notes.push(digitWarning);
   if(missingWeight)notes.push('لم يُقرأ وزن صافٍ صالح؛ استُخدم العدد مؤقتًا ويجب تحديد وحدة الشراء يدويًا.');
-  if(isPackDescription)notes.push('يوجد حجم عبوة أو عدد قطع داخل الوصف؛ حدد وحدة الشراء بنفسك لتجنب اعتبار العبوة قطعًا منفردة.');
   const reviewRequired=notes.length>0;
   rows.push(makeRow(name,qty,price,rawLine,{
    unit_text:chosen?.unit||'',

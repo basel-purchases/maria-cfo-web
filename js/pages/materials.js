@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.11';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -9,8 +9,9 @@ import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSou
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
 
-import {materialMatchesV106} from '../material-search-v106.js?v=1.0.10';
-import {pricingPreviewV110} from '../material-pricing-v110.js?v=1.0.10';
+import {materialMatchesV106} from '../material-search-v106.js?v=1.0.11';
+import {pricingPreviewV110} from '../material-pricing-v110.js?v=1.0.11';
+import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.11';
 
 const PAGE_SIZE=10;
 
@@ -276,7 +277,7 @@ function addMaterial(root, units, rows,categories=[]) {
         </div>
 
         <div class="field full"><label>سعر المادة بالدولار / الوحدة الأساسية <span class="optional-badge">اختياري</span></label>
-          <input name="price_usd_v110" type="number" min="0.00000001" step="any" placeholder="سعر مرجعي بالدولار (ليس فاتورة شراء)" autocomplete="off">
+          <input name="price_usd_v110" type="number" min="0" step="any" placeholder="سعر مرجعي بالدولار (ليس فاتورة شراء)" autocomplete="off">
           <small class="metric-note">يُحسب سعرها المرجعي بالليرة وفق سعر الصرف الحالي في الإعدادات. لا يتغير تاريخ آخر شراء.</small></div>
         <div class="field full">
           <label>آخر سعر شراء معروف <span class="optional-badge">اختياري</span></label>
@@ -297,8 +298,8 @@ function addMaterial(root, units, rows,categories=[]) {
         const qtyRaw = String(fd.get('opening_quantity') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
         const usdRaw=String(fd.get('price_usd_v110')||'').trim();
-        const priceUSD=usdRaw===''?null:Number(usdRaw);
-        if(usdRaw!==''&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر الدولار للمادة يجب أن يكون موجبًا.','error');return false;}
+        const priceUSD=usdRaw===''||Number(usdRaw)===0?null:Number(usdRaw);
+        if(usdRaw!==''&&priceUSD!==null&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر المادة بالدولار يجب أن يكون موجبًا، أو صفرًا/فارغًا لتركه غير محدد.','error');return false;}
 
         if (!name) {
           toast('اكتب اسم المادة.', 'error');
@@ -410,7 +411,7 @@ function editMaterial(root, units, material,categories=[]) {
           </div>
         </div>
         <div class="field"><label>سعر المادة بالدولار / ${esc(unit)} <span class="optional-badge">اختياري</span></label>
-          <input name="price_usd_v110" type="number" min="0.00000001" step="any" value="${material.price_usd_v110==null?'':esc(material.price_usd_v110)}" placeholder="لم يُحدد السعر بالدولار">
+          <input name="price_usd_v110" type="number" min="0" step="any" value="${material.price_usd_v110==null?'':esc(material.price_usd_v110)}" placeholder="لم يُحدد السعر بالدولار">
           <small class="metric-note">السعر المرجعي بالليرة: ${material.price_syp_v110==null?'غير معروف':money(material.price_syp_v110,'SYP')} · لا يُغيّر آخر فاتورة شراء.</small>
         </div>
         <div class="field">
@@ -430,8 +431,8 @@ function editMaterial(root, units, material,categories=[]) {
         const desiredRaw = String(fd.get('desired_stock') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
         const usdRaw=String(fd.get('price_usd_v110')||'').trim();
-        const priceUSD=usdRaw===''?null:Number(usdRaw);
-        if(usdRaw!==''&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر الدولار للمادة يجب أن يكون موجبًا.','error');return false;}
+        const priceUSD=usdRaw===''||Number(usdRaw)===0?null:Number(usdRaw);
+        if(usdRaw!==''&&priceUSD!==null&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر المادة بالدولار يجب أن يكون موجبًا، أو صفرًا/فارغًا لتركه غير محدد.','error');return false;}
         const targetRaw = String(fd.get('target') || '').trim();
 
         if(!name){
@@ -483,12 +484,12 @@ function priceAllMaterialsUSD(root,rows){
   // material whose SYP reference cost is unknown/zero.
   const dialog=modal({
     title:'تسعير المواد بالدولار',wide:true,submitText:'اعتماد تسعير المواد',
-    subtitle:'سعر كل مادة بالدولار يُحسب من سعرها المعروف بالليرة، ولا تُنشأ أسعار للمواد غير المسعّرة.',
+    subtitle:'الأسعار المجهولة أو الصفرية تبقى بلا سعر بالدولار.',
     body:`<div class="notice">سيُستبدل السعر المرجعي بالدولار للمواد ذات السعر المعروف في هذه العملية بعد تأكيدك، دون تغيير آخر فواتير الشراء أو المخزون أو القيود السابقة.</div>
       <div class="form-grid"><div class="field"><label>كم ليرة سورية يساوي الدولار الآن؟</label>
         <input name="rate" type="number" min="0.000001" step="any" required placeholder="مثال: 15000" autocomplete="off"></div>
         <div class="field"><label>المواد التي يمكن تسعيرها</label><div class="pricing-preview-v110" data-pricing-preview>أدخل سعر الصرف لعرض المعاينة.</div></div></div>
-      <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد التي لا نعرف سعرها الحقيقي تبقى بلا سعر، ولا نستخدم صفرًا بدل السعر المجهول.</p>`,
+      <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد ذات السعر الصفري أو غير المعروف تبقى بلا تسعير، ولا نستخدم صفرًا بدل السعر المجهول.</p>`,
     onSubmit:async fd=>{
       const rate=Number(fd.get('rate'));
       if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر دولار موجبًا وصحيحًا.','error');return false;}
@@ -499,7 +500,7 @@ function priceAllMaterialsUSD(root,rows){
         const result=await api.materialPriceInitializeUsdV110(rate);
         toast(`تم اعتماد تسعير ${result?.priced??stats.priced} مادة بالدولار. المواد غير المسعّرة: ${result?.without_known_syp_price??stats.unpriced}.`,'success');
         await renderMaterials(root);return true;
-      }catch(e){toast(friendlyError(e,'تعذر تسعير المواد؛ لم تُحفظ عملية جزئية.'),'error');return false;}
+      }catch(e){toast(materialPricingErrorV111(e),'error');return false;}
     },
   });
   const input=dialog.form.querySelector('[name="rate"]');
