@@ -1450,3 +1450,19 @@ export async function menuEstimatesForIdsV041(ids=[]){
  if(!ids.length)return [];
  return dataOrThrow(need().from('event_menu_cost_estimates_v039').select('*').in('menu_item_id',ids));
 }
+
+// v1.0.13: seat-based reservations, independent of physical tables.
+export const eventCreateSeatsV113=({name,date,type,guests,currency='SYP',revenueMode='bookings'})=>
+ rpc('event_create_seats_v113',{p_name:name,p_event_date:date,p_event_type:type,p_guests:Number(guests),p_currency_code:currency,p_revenue_mode:revenueMode});
+export const eventSaveSeatsV113=(eventId,guests,ticket,notes)=>
+ rpc('event_save_seats_v113',{p_event_id:eventId,p_guests:Number(guests),p_ticket_price:Number(ticket),p_notes:notes||null});
+export const eventBookSeatsV113=(eventId,booking)=>rpc('event_book_and_collect_seats_v113',{
+ p_event_id:eventId,p_customer_name:booking.name,p_guest_count:Number(booking.guests),p_amount:Number(booking.amount),
+ p_guest_names:booking.names||[],p_phone:booking.phone||null,p_note:booking.note||null,p_seat_note:booking.seatNote||null,
+ p_collected:Boolean(booking.collected),p_cashbox_id:booking.collected?booking.cashboxId:null,
+});
+export const eventSeatGuestsV113=(eventId)=>list('event_seat_guests_v113',{eq:{event_id:eventId},order:'seat_index',ascending:true,limit:10000});
+export const eventCompleteSeatsV113=(eventId,actualGuests,note)=>rpc('event_complete_seats_v113',{
+ p_event_id:eventId,p_actual_guests:Number(actualGuests),p_notes:note||null,
+});
+export const eventServiceBucketV113=eventId=>rpc('event_service_bucket_v113',{p_event_id:eventId});

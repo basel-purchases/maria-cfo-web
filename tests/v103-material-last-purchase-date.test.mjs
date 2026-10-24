@@ -17,25 +17,25 @@ test('last purchase is unknown, not today or zero, when there is no date', () =>
   }
 });
 
-test('materials screen has a matching date column in HTML and all-filtered-rows export', () => {
+test('materials screen retains purchase date in details and all-filtered-rows export', () => {
   const page = read('js/pages/materials.js');
-  assert.match(page, /<th title="[^"]+">تاريخ آخر شراء معروف<\/th>/);
-  assert.match(page, /formatMaterialLastPurchaseDate\(r\.last_purchase_at\)/);
+  assert.match(page, /\['تاريخ آخر شراء معروف',formatMaterialLastPurchaseDate\(material\.last_purchase_at\)\]/);
+  assert.match(page, /showMaterialDetailsV113/);
   assert.match(page, /headers:\[[^\]]*'تاريخ آخر شراء معروف'/);
   assert.match(page, /rows:filtered\.map\(x=>\{/);
   assert.match(page, /formatMaterialLastPurchaseDate\(x\.last_purchase_at\)/);
   assert.doesNotMatch(page, /\.from\(['"]purchase_invoices['"]\)/);
   const css = read('assets/styles.css');
-  assert.match(css, /\.materials-table-scroll \.materials-table\{min-width:1810px;/);
-  assert.match(css, /\.materials-table th:nth-child\(9\)/);
+  assert.match(css, /\.materials-compact-v113 \.materials-table\{min-width:0!important/);
+  assert.match(css, /\.material-detail-grid-v113/);
 });
 
 test('new version invalidates cached materials module and stylesheet while preserving config reference', () => {
   const app = read('js/app.js');
   const index = read('index.html');
-  assert.match(app, /materials\.js\?v=1\.0\.12/);
-  assert.match(index, /styles\.css\?v=1\.0\.12/);
-  assert.match(index, /app\.js\?v=1\.0\.12/);
+  assert.match(app, /materials\.js\?v=1\.0\.13/);
+  assert.match(index, /styles\.css\?v=1\.0\.13/);
+  assert.match(index, /app\.js\?v=1\.0\.13/);
   assert.match(index, /<script src="\.\/config\.js"><\/script>/);
-  assert.equal(read('VERSION').trim(), '1.0.12');
+  assert.equal(read('VERSION').trim(), '1.0.13');
 });

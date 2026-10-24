@@ -112,8 +112,8 @@ test('user-facing v0.34 routes contain salary desk, event map, activity log, rec
  assert.match(payroll,/صندوق الدفع/);
  assert.match(payroll,/الرواتب الجاهزة للدفع/);
  assert.match(payroll,/الرواتب المدفوعة/);
- assert.match(events,/event-seat-map-v034/);
- assert.match(events,/tableInvoice\(/);
+ assert.match(events,/event-seats-only-v113/);
+ assert.match(events,/bookingsHtml\(/);
  assert.match(events,/event-activity-stream-v034/);
  assert.match(events,/registerTableExport\(/);
  assert.match(read('index.html'),/app\.js\?v=1\.0/);

@@ -65,10 +65,10 @@ test('v0.38 database migration protects all payments, keeps paid bookings immuta
  assert.match(sql,/public\.record_cashbox_transaction/);assert.match(sql,/cashbox_transaction_id uuid UNIQUE/);
  assert.doesNotMatch(sql,/INSERT INTO public\.menu_item_recipe_items/);
 });
-test('v0.38 new UI has integrated table selection, both booking prices, external purchases and Arabic booking states',()=>{
+test('current UI has seat-only booking prices, external purchases and Arabic booking states',()=>{
  const js=read('js/pages/events-v034.js'),api=read('js/api.js'),html=read('index.html');
- assert.match(js,/data-picker="start"/);assert.match(js,/data-picker="additional"/);
- assert.match(js,/validateTableDistributionV038/);assert.match(js,/data-alloc-count/);
+ assert.match(js,/seatBookingCheckV113/);assert.match(js,/seatReservationDashboardV113/);
+ assert.doesNotMatch(js,/data-picker="start"|data-picker="additional"/);
  assert.match(js,/name="unitPrice"/);assert.match(js,/name="amount"/);
  assert.match(js,/EVENT_BOOKING_STATUS_AR_V038/);assert.match(js,/data-book-amount/);
  assert.match(js,/eventExternalDishesV038/);assert.match(js,/eventSaveExternalServingV0(?:38|39|40|41)/);assert.match(js,/eventPayExternalDishV038/);

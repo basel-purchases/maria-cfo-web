@@ -31,11 +31,11 @@ test('v035 SQL keeps batch and group changes atomic and owner-only',()=>{
  assert.match(sql,/UNIQUE\(table_id,seat_number\)/);
  assert.match(sql,/GRANT EXECUTE/);
 });
-test('v035 UI creates tables in bulk, named group bookings and segregated tabs',()=>{
+test('v1.0.13 UI reserves seats without exposing legacy physical table assignments',()=>{
  const ui=read('js/pages/events-v034.js');
- assert.match(ui,/eventBulkTablesV035/);
- assert.match(ui,/eventBookAndCollectV040/); // new RPC wraps the original v035 reservation atomically
+ assert.match(ui,/eventCreateSeatsV113/);
+ assert.match(ui,/eventBookSeatsV113/);
  assert.match(ui,/bookingsHtml\(\)/);
- assert.match(ui,/event-booking-suggestion-v035/);
- assert.match(ui,/eventGuestsV035/);
+ assert.match(ui,/eventSeatGuestsV113/);
+ assert.doesNotMatch(ui,/eventBulkTablesV035|data-picker="start"|data-picker="additional"/);
 });

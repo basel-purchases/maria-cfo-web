@@ -82,11 +82,11 @@ test('v0.39: global provisional estimate is protected and never updates canonica
  assert.doesNotMatch(sql,/UPDATE public\.menu_item_recipe_items/);
  assert.doesNotMatch(sql,/UPDATE public\.materials/);
 });
-test('v0.39: UI has subtotal collections, expandable details, conversion quick-add, and estimate override',()=>{
+test('current UI preserves event external conversion, estimates and total costs without table checkout',()=>{
  const ui=read('js/pages/events-v034.js'),api=read('js/api.js'),css=read('assets/styles.css');
- for(const k of ['data-extra-table-pay','<details','eventPayTableExtrasV039','eventAddExternalUnitV039',
-  'data-external-unit-v039','eventSaveExternalServingV039','eventSaveServingWithEstimateV039','event-estimate-field-v039',
-  'planRequirements()','seating()'])assert.ok(ui.includes(k),k);
+ for(const k of ['eventAddExternalUnitV039','eventSaveExternalServingV039','eventSaveServingWithEstimateV039','event-estimate-field-v039',
+  'planRequirements()','seating()','data-extra-pay','data-action="add-extra"'])assert.ok(ui.includes(k),k);
+ assert.doesNotMatch(ui,/data-extra-table-pay/);
  assert.match(css,/event-table-arrow-v039/);
  assert.match(api,/eventAllExternalUnitsV039/);
  assert.match(read('index.html'),/app\.js\?v=1\.0/);
