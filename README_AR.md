@@ -1,3 +1,7 @@
+# الإصدار الحالي: Maria CFO Web v1.0.14
+
+تفاصيل اعتماد سعر الدولار من السوق الموازية في `README_v1.0.14_PARALLEL_USD_MARKET_AR.md`.
+
 **الإصدار الحالي: Maria CFO Web v1.0.13**
 
 اقرأ `README_v1.0.13_SEAT_EVENTS_MATERIALS_AR.md` لتحديث المواد والحفلات بالمقاعد، وشغّل ترحيل SQL المستقل قبل رفع الموقع.
