@@ -68,19 +68,17 @@ test('Gentle handwriting enhancement preserves small dark dots (Arabic zero) and
  assert.deepEqual(Array.from(pixels.slice(pos,pos+3)),[57,63,125],'source image is not mutated');
  assert.throws(()=>enhanceHandwritingPixelsV109([],3,3),/INVALID_HANDWRITING_IMAGE/);
 });
-test('OCR UI uses Engine 3 only and an explicitly billed second pass that preserves corrections',()=>{
- const ui=file('js/pages/images.js');const cloud=file('js/image-cloud-ocr.js');const css=file('assets/styles.css');
- assert.match(ui,/key:'digits'/);
- assert.match(ui,/r\.key!=='digits'/,'digits crop must not create an extra automatic paid request');
- assert.match(ui,/data-audit-digits/);
- assert.match(ui,/طلب إضافي/);
- assert.match(ui,/profile:'handwriting'/);
- assert.match(ui,/ocr_digit_text=result\.text/);
- assert.match(ui,/applyDigitAuditV109\(doc\.items,result\.text\)/);
+test('OCR UI v1.0.10 uses only Engine 3 through a single extract action',()=>{
+ const ui=file('js/pages/images.js');const cloud=file('js/image-cloud-ocr.js');
+ assert.match(ui,/const REGIONS=\[\{key:'items'/);
+ assert.doesNotMatch(ui,/key:'digits'|data-audit-digits|data-preview-digits|data-reparse|data-bulk-ocr/);
+ assert.match(ui,/const withCrop=Boolean\(doc\.regions\?\.items\)/);
+ assert.match(ui,/sections\.full=full\.text/);
+ assert.match(ui,/sections\.items=items\.text/);
+ assert.match(ui,/profile:'standard'/);
+ assert.match(ui,/data-ocr="3"/);
  assert.match(ui,/data-apply-digit="quantity"/);
  assert.match(ui,/data-apply-digit="unit_price"/);
- assert.match(ui,/row\.ocr_reviewed=false/);
- assert.match(cloud,/enhanceHandwritingPixelsV109/);
- assert.match(css,/image-region-button-v106\.region-digits/);
+ assert.match(cloud,/enhanceHandwritingPixelsV109/,'helper retained for old data compatibility, not called by v110 UI');
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

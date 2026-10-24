@@ -1,5 +1,5 @@
 import {invoiceAmountV107} from './invoice-amount-v107.js?v=1.0.7';
-import {materialExactV106} from './material-search-v106.js?v=1.0.7';
+import {materialExactV106} from './material-search-v106.js?v=1.0.10';
 import { parseColumnarOcrItems } from "./image-column-parser.js?v=1.0";
 // Deterministic extraction hints and validation; AI does not invent required values.
 const LETTERS=/[\p{L}]/u;

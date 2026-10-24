@@ -1,13 +1,14 @@
 // Purchase receipt OCR interpretation: suggestions only. Never fabricate quantity/price.
 import {normalizeArabicNumbers,reviewedOcrItemCandidates} from './image-document-rules.js?v=1.0.7';
-import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.7';
-import {invoiceAmountV107,amountNearV107,invoiceDigitWarningV108} from './invoice-amount-v107.js?v=1.0.8';
-import {parseUnlabelledReceiptTableV109} from './ocr-digit-review-v109.js?v=1.0.9';
+import {materialExactV106,materialKeyV106,materialSuggestionsV106} from './material-search-v106.js?v=1.0.10';
+import {invoiceAmountV107,amountNearV107,invoiceDigitWarningV108} from './invoice-amount-v107.js?v=1.0.10';
+import {parseUnlabelledReceiptTableV109} from './ocr-digit-review-v109.js?v=1.0.10';
+import {readHandwrittenAmountV110} from './ocr-numeric-v110.js?v=1.0.10';
 const AR=/[\u0621-\u064a]/;
 const NOISE=/^(?:فاتورة|التاريخ|المطلوب|الهاتف|تلفون|موبايل|رقم|رقم الفاتورة|المجموع|الاجمالي|الإجمالي|الصافي|total|invoice|date|عنوان|السعر|العدد|نوع البضاعة|الكمية|الاجور|الملاحظة|البيان)/i;
 const FOOTER=/(?:^|\s)(?:المجموع|مجموع\s*الكمية|الاجمالي|الإجمالي|الصافي|الرصيد\s*السابق|الصافي\s*للدفع|المبلغ النهائي|المجموع فقط|total|subtotal|balance)(?:\s|:|$)/i;
 const UNIT=/(?:كيلوغرام|كيلوجرام|كيلو|كغ|kg|غرام|جرام|غ|g|ليتر|لتر|ltr|l|مل|ml|كرتون|علبة|باكيت|قطعة|حبة|حبه|ربطة|صندوق|دزينة|دستة|طن|وحدة)/i;
-function number(s){const v=invoiceAmountV107(s);return v!==null&&v>0?v:null;}
+function number(s){const v=readHandwrittenAmountV110(s).value;return v!==null&&v>0?v:null;}
 const near=amountNearV107;
 const numericToken=s=>invoiceAmountV107(s)!==null;
 function cleanText(text){return normalizeArabicNumbers(text).replace(/،/g,',').replace(/\u00a0/g,' ').replace(/\u066c/g,',');}
@@ -160,6 +161,9 @@ function markdownTableRows(text,materials,limit,units){
   const missingWeight=header.weight>=0&&weighted!==false&&qtyWeight===null&&chosen?.source==='count';
   const unitUnresolved=missingWeight||isPackDescription;
   const notes=[];
+  for(const token of [cells[header.price],header.count>=0?cells[header.count]:null,header.weight>=0?cells[header.weight]:null,header.total>=0?cells[header.total]:null]){
+   const r=readHandwrittenAmountV110(token);if(r.corrected)notes.push(r.note);
+  }
   if(!price)notes.push('سعر الوحدة غير واضح؛ راجعه في الصورة.');
   if(qty===null)notes.push('الكمية غير واضحة؛ راجع الصورة.');
   if(qtyCount!==null&&qtyWeight!==null&&qtyCount!==qtyWeight&&!mathOK)

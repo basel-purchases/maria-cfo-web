@@ -1,11 +1,12 @@
 // Maria CFO v1.0.9: safe digit-review helpers for handwritten receipts.
 // OCR guesses are never a substitute for verifying a financial number in the photo.
-import {invoiceAmountV107} from './invoice-amount-v107.js?v=1.0.8';
+import {invoiceAmountV107} from './invoice-amount-v107.js?v=1.0.10';
+import {readHandwrittenAmountV110} from './ocr-numeric-v110.js?v=1.0.10';
 
 const FOOTER=/المجموع|الاجمالي|الإجمالي|الصافي|رصيد|رصيد سابق|دفع|total|subtotal|balance|المطلوب/i;
 const LABEL=/اسم العميل|اسم المورد|اسم المادة|الوصف|رقم الفاتورة|التاريخ|المورد/i;
 const HAS_AR=/[\u0621-\u064A]/;
-const isNumber=(v)=>invoiceAmountV107(v)!==null;
+const isNumber=(v)=>readHandwrittenAmountV110(v).value!==null;
 function parts(line){
  if(!line.includes('|'))return null;
  const result=line.split('|').map(v=>v.trim());
@@ -17,7 +18,9 @@ function stripName(value){return String(value||'').replace(/^[\s:;.,\-]+|[\s:;.,
 function separator(cells){return cells.every(v=>/^:?-{2,}:?$/.test(v)||v==='');}
 function candidate(label,raw,source='الأصل'){
  const text=String(raw??'').trim();
- return isNumber(text)?{label,raw:text,value:invoiceAmountV107(text),source}:null;
+ const parsed=readHandwrittenAmountV110(text);
+ return parsed.value!==null?{label,raw:text,value:parsed.value,source,
+  ...(parsed.corrected?{note:parsed.note,zero_dot_suspected:true}:{} )}:null;
 }
 
 // An OCR.space Engine3 table may lack headings altogether: | amount | name | amount |.
@@ -40,7 +43,7 @@ export function parseUnlabelledReceiptTableV109(text,limit=80){
   rows.push({name,quantity:'',unit_price:'',discount:'0',unit_id:'',catalog_id:'',new_base_unit_id:'',
    raw_line:line,ocr_source:'unlabelled_columns',ocr_numeric_candidates:numeric,
    ocr_review_required:true,ocr_reviewed:false,
-   review_note:'الجدول بلا عناوين موثوقة للأرقام؛ عُرضت القراءات الأصلية. حدّد الكمية وسعر الوحدة من الصورة، ولا تعتمد ترتيب الأعمدة بالتخمين.'});
+   review_note:'الجدول بلا عناوين موثوقة للأرقام؛ عُرضت قراءات أعمدته مع الصفر العربي المحتمل (٠). تحقّق من الكمية والسعر من الصورة؛ لم يُفترض أن رقم السطر كمية.'});
   if(rows.length>=limit)break;
  }
  return wasTable||rows.length?rows:[];

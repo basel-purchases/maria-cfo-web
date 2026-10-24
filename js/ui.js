@@ -24,6 +24,8 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('daily_ambiguous_menu')) return 'هناك أكثر من وجبة بنفس الاسم، ولا يمكن اختيار واحدة تلقائيًا. راجع أسماء المنيو المكررة أولًا.';
   if(msg.includes('daily_line_menu_not_resolved')) return 'تعذر تحديد وجبة أحد بنود الأوردر بأمان؛ لم يحفظ التقرير جزئيًا.';
   if(msg.includes('daily_item_already_matched')) return 'الصنف مرتبط بوجبة موجودة بالفعل. لا يمكن إنشاؤه مرة ثانية.';
+  if(msg.includes('material_price_')||msg.includes('material_identity_create_priced_v110')||msg.includes('material_identity_update_priced_v110')) return 'هذه العملية تحتاج تشغيل ملف SQL الخاص بالإصدار v1.0.10 في Supabase أولًا، ثم تحديث الصفحة.';
+  if(msg.includes('usd_rate_required')) return 'حدد سعر الدولار من الإعدادات قبل حفظ سعر المادة بالدولار.';
   if(msg.includes('material_aliases_v106_migration_required')||msg.includes('material_aliases_v106')) return 'يجب تشغيل ملف SQL الإصدار v1.0.6 في Supabase أولًا، ثم تحديث الموقع.';
   if(msg.includes('material_alias_collides')||msg.includes('material_alias_used_by_another')||msg.includes('material_name_collides_with_alias')) return 'هذا الاسم الثانوي مرتبط بمادة أخرى. راجع أسماء المواد والمرادفات قبل الحفظ.';
   if(msg.includes('material_too_many_aliases')) return 'يمكن وضع حتى 40 اسمًا ثانويًا للمادة.';

@@ -3,7 +3,7 @@
 import {supabase} from './supabase.js?v=1.0';
 
 import {OCR_ENGINES,normalizedCrop} from './image-cloud-rules.js?v=1.0';
-import {enhanceHandwritingPixelsV109} from './ocr-digit-review-v109.js?v=1.0.9';
+import {enhanceHandwritingPixelsV109} from './ocr-digit-review-v109.js?v=1.0.10';
 async function edge(body){
   if(!supabase)throw new Error('SUPABASE_NOT_CONFIGURED');
   const {data,error}=await supabase.functions.invoke('ocr-space',{body});

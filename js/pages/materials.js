@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.7';
+import * as api from '../api.js?v=1.0.10';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -9,7 +9,8 @@ import {importedStockSummary,importedPrice,importedRowHasWarning,showImportedSou
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {formatMaterialLastPurchaseDate} from '../material-purchase-date-v103.js?v=1.0.3';
 
-import {materialMatchesV106} from '../material-search-v106.js?v=1.0.7';
+import {materialMatchesV106} from '../material-search-v106.js?v=1.0.10';
+import {pricingPreviewV110} from '../material-pricing-v110.js?v=1.0.10';
 
 const PAGE_SIZE=10;
 
@@ -91,7 +92,7 @@ export async function renderMaterials(root) {
           <h2>المواد والكميات والأسعار</h2>
           <p>عرّف المادة مرة واحدة، وحدد وحدة المخزون. أضف التحويلات فقط عندما تحتاجها في الشراء أو الوصفات.</p>
         </div>
-        <button class="btn add">إضافة مادة</button>
+        <div class="page-head-actions"><button class="btn secondary price-all-usd-v110" type="button">تسعير المواد بالدولار</button><button class="btn add">إضافة مادة</button></div>
       </div>
       ${rows.length ? `
         <div class="list-toolbar">
@@ -110,6 +111,7 @@ export async function renderMaterials(root) {
           <button class="btn add">إضافة أول مادة</button>
         </div>`}`;
 
+    root.querySelector('.price-all-usd-v110')?.addEventListener('click',()=>priceAllMaterialsUSD(root,rows));
     root.querySelectorAll('.add').forEach((b) => {
       b.onclick = () => addMaterial(root, units, rows,categories);
     });
@@ -133,9 +135,9 @@ export async function renderMaterials(root) {
 
       if(list.querySelector('.materials-table')) registerTableExport(list.querySelector('.materials-table'),()=>({
         title:'المواد - حسب الفلتر',
-        headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','تاريخ آخر شراء معروف','الجرد المستورد','سعر التقرير'],
+        headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','سعر المادة بالدولار','السعر المرجعي بالليرة','تاريخ آخر شراء معروف','الجرد المستورد','سعر التقرير'],
         rows:filtered.map(x=>{const source=importedRowsFor(x,importedIndex),price=purchasePrices.get(String(x.id))??priceOf(x);const sprice=importedPrice(source);
-          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',formatMaterialLastPurchaseDate(x.last_purchase_at),importedStockSummary(source),sprice??''];})
+          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',x.price_usd_v110??'',x.price_syp_v110??'',formatMaterialLastPurchaseDate(x.last_purchase_at),importedStockSummary(source),sprice??''];})
       }));
       list.querySelectorAll('[data-material-edit]').forEach((b) => {
         const row = rows.find((r) => String(r.id) === b.dataset.materialEdit);
@@ -187,6 +189,7 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
             <th>الرصيد الموجود</th>
             <th>الحد الأدنى قبل التنبيه</th>
             <th>آخر سعر شراء معروف</th>
+            <th>سعر المادة بالدولار</th><th>السعر المرجعي المعتمد بالليرة</th>
             <th title="يشمل التواريخ المرجعية المستوردة، حتى إن لم تُسجّل فاتورة شراء داخل البرنامج">تاريخ آخر شراء معروف</th>
             <th>المستودع والكمية في آخر جرد مستورد</th>
             <th>سعر التقرير (مرجعي)</th>
@@ -211,6 +214,8 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
                 <td><strong class="smart-stock-main" title="${esc(shownStock.original)}">${esc(shownStock.text)}</strong>${shownStock.converted?`<small class="smart-stock-sub">الأساس: ${esc(shownStock.original)}<span> · ${esc(shownStock.relationship)}</span></small>`:''}</td>
                 <td>${target == null ? '—' : `<span title="${esc(shownTarget.original)}">${esc(shownTarget.text)}</span>`}</td>
                 <td>${price != null ? `${money(price)} / ${esc(unit || 'وحدة')}` : '—'}</td>
+                <td>${r.price_usd_v110!=null?`${esc(Number(r.price_usd_v110).toLocaleString('en-US',{maximumFractionDigits:6}))} $ / ${esc(unit||'وحدة')}`:'—'}</td>
+                <td>${r.price_syp_v110!=null?`${money(r.price_syp_v110,'SYP')} / ${esc(unit||'وحدة')}`:'—'}</td>
                 <td><span class="material-last-purchase-date" dir="ltr">${formatMaterialLastPurchaseDate(r.last_purchase_at)}</span></td>
                 <td><span class="source-stock-summary">${esc(importedStockSummary(source))}</span>${importedRowHasWarning(source)?'<span class="badge yellow">مراجعة</span>':''}</td>
                 <td>${sourcePrice != null ? money(sourcePrice,'SYP') : '—'}</td>
@@ -270,6 +275,9 @@ function addMaterial(root, units, rows,categories=[]) {
           </div>
         </div>
 
+        <div class="field full"><label>سعر المادة بالدولار / الوحدة الأساسية <span class="optional-badge">اختياري</span></label>
+          <input name="price_usd_v110" type="number" min="0.00000001" step="any" placeholder="سعر مرجعي بالدولار (ليس فاتورة شراء)" autocomplete="off">
+          <small class="metric-note">يُحسب سعرها المرجعي بالليرة وفق سعر الصرف الحالي في الإعدادات. لا يتغير تاريخ آخر شراء.</small></div>
         <div class="field full">
           <label>آخر سعر شراء معروف <span class="optional-badge">اختياري</span></label>
           <div class="input-with-suffix">
@@ -288,6 +296,9 @@ function addMaterial(root, units, rows,categories=[]) {
         const targetRaw = String(fd.get('target') || '').trim();
         const qtyRaw = String(fd.get('opening_quantity') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
+        const usdRaw=String(fd.get('price_usd_v110')||'').trim();
+        const priceUSD=usdRaw===''?null:Number(usdRaw);
+        if(usdRaw!==''&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر الدولار للمادة يجب أن يكون موجبًا.','error');return false;}
 
         if (!name) {
           toast('اكتب اسم المادة.', 'error');
@@ -316,9 +327,9 @@ function addMaterial(root, units, rows,categories=[]) {
         const baseUnitId=String(baseUnit?.id||'');
         if(!baseUnitId) throw new Error('UNIT_REQUIRED');
 
-        const created=await api.materialIdentityCreateV106({
+        const created=await api.materialIdentityCreatePricedV110({
           name,code,baseUnitId,categoryId:fd.get('category')||null,
-          target:targetRaw!==''?Number(targetRaw):null,aliases,
+          target:targetRaw!==''?Number(targetRaw):null,aliases,priceUSD,
         });
 
         if (targetRaw !== '' && targetOf(created) == null) {
@@ -398,6 +409,10 @@ function editMaterial(root, units, material,categories=[]) {
             <span class="input-suffix">${esc(unit)}</span>
           </div>
         </div>
+        <div class="field"><label>سعر المادة بالدولار / ${esc(unit)} <span class="optional-badge">اختياري</span></label>
+          <input name="price_usd_v110" type="number" min="0.00000001" step="any" value="${material.price_usd_v110==null?'':esc(material.price_usd_v110)}" placeholder="لم يُحدد السعر بالدولار">
+          <small class="metric-note">السعر المرجعي بالليرة: ${material.price_syp_v110==null?'غير معروف':money(material.price_syp_v110,'SYP')} · لا يُغيّر آخر فاتورة شراء.</small>
+        </div>
         <div class="field">
           <label>آخر سعر معروف للوحدة <span class="optional-badge">اختياري</span></label>
           <div class="input-with-suffix">
@@ -414,6 +429,9 @@ function editMaterial(root, units, material,categories=[]) {
         const aliases=String(fd.get('aliases')||'').split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
         const desiredRaw = String(fd.get('desired_stock') || '').trim();
         const priceRaw = String(fd.get('reference_price') || '').trim();
+        const usdRaw=String(fd.get('price_usd_v110')||'').trim();
+        const priceUSD=usdRaw===''?null:Number(usdRaw);
+        if(usdRaw!==''&&(!Number.isFinite(priceUSD)||priceUSD<=0)){toast('سعر الدولار للمادة يجب أن يكون موجبًا.','error');return false;}
         const targetRaw = String(fd.get('target') || '').trim();
 
         if(!name){
@@ -422,7 +440,7 @@ function editMaterial(root, units, material,categories=[]) {
         }
         if(!code) code=await api.nextMaterialCode();
 
-        await api.materialIdentityUpdateV106({id:material.id,name,code,categoryId:fd.get('category')||null,aliases});
+        await api.materialIdentityUpdatePricedV110({id:material.id,name,code,categoryId:fd.get('category')||null,aliases,priceUSD});
 
         if (targetRaw !== '') {
           await api.setMaterialAlertMinimum(material.id, Number(targetRaw), material);
@@ -457,6 +475,39 @@ function editMaterial(root, units, material,categories=[]) {
         return false;
       }
     },
+  });
+}
+
+function priceAllMaterialsUSD(root,rows){
+  // Preview the complete currently loaded catalog, never silently price a
+  // material whose SYP reference cost is unknown/zero.
+  const dialog=modal({
+    title:'تسعير المواد بالدولار',wide:true,submitText:'اعتماد تسعير المواد',
+    subtitle:'سعر كل مادة بالدولار يُحسب من سعرها المعروف بالليرة، ولا تُنشأ أسعار للمواد غير المسعّرة.',
+    body:`<div class="notice">سيُستبدل السعر المرجعي بالدولار للمواد ذات السعر المعروف في هذه العملية بعد تأكيدك، دون تغيير آخر فواتير الشراء أو المخزون أو القيود السابقة.</div>
+      <div class="form-grid"><div class="field"><label>كم ليرة سورية يساوي الدولار الآن؟</label>
+        <input name="rate" type="number" min="0.000001" step="any" required placeholder="مثال: 15000" autocomplete="off"></div>
+        <div class="field"><label>المواد التي يمكن تسعيرها</label><div class="pricing-preview-v110" data-pricing-preview>أدخل سعر الصرف لعرض المعاينة.</div></div></div>
+      <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد التي لا نعرف سعرها الحقيقي تبقى بلا سعر، ولا نستخدم صفرًا بدل السعر المجهول.</p>`,
+    onSubmit:async fd=>{
+      const rate=Number(fd.get('rate'));
+      if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر دولار موجبًا وصحيحًا.','error');return false;}
+      const stats=pricingPreviewV110(rows,rate);
+      if(!stats.priced){toast('لا توجد مواد بأسعار ليرة معروفة لتحويلها إلى الدولار.','error');return false;}
+      if(!(await confirmBox(`سيُسعّر ${stats.priced} مادة بالدولار عند 1 USD = ${rate.toLocaleString('en-US')} ل.س، وسيبقى ${stats.unpriced} دون سعر. سيُعاد احتساب ${stats.overridden} سعر دولار موجود من سعر الليرة المرجعي. تأكيد؟`,'نعم، اعتماد التسعير')))return false;
+      try{
+        const result=await api.materialPriceInitializeUsdV110(rate);
+        toast(`تم اعتماد تسعير ${result?.priced??stats.priced} مادة بالدولار. المواد غير المسعّرة: ${result?.without_known_syp_price??stats.unpriced}.`,'success');
+        await renderMaterials(root);return true;
+      }catch(e){toast(friendlyError(e,'تعذر تسعير المواد؛ لم تُحفظ عملية جزئية.'),'error');return false;}
+    },
+  });
+  const input=dialog.form.querySelector('[name="rate"]');
+  input.addEventListener('input',()=>{
+    const rate=Number(input.value),preview=dialog.form.querySelector('[data-pricing-preview]');
+    if(!(rate>0)){preview.textContent='أدخل سعر الدولار.';return;}
+    const counts=pricingPreviewV110(rows,rate);
+    preview.textContent=`${counts.priced} مادة بسعر معروف · ${counts.unpriced} بلا سعر · ${counts.overridden} بسعر دولار موجود سيُعاد احتسابه`;
   });
 }
 

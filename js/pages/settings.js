@@ -1,5 +1,5 @@
-import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.7';
-import * as api from '../api.js?v=1.0.7';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.10';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
@@ -73,10 +73,10 @@ export async function renderSettings(root, selectedTab='general') {
             <div class="k">Food Cost الافتراضي</div><div>${esc(s.default_food_cost_percent ?? '30')}%</div>
             <div class="k">المنطقة الزمنية</div><div>${esc(s.timezone || '—')}</div>
           </div></div>
-          <div class="card"><h3>سعر الصرف</h3><p>تغيير السعر اليوم لا يعيد كتابة العمليات التاريخية.</p>
+          <div class="card"><h3>سعر الصرف</h3><p>عند تغيير السعر يمكنك إبقاء أسعار المواد المرجعية بالليرة كما هي أو تحديثها اعتمادًا على أسعارها بالدولار. المشتريات السابقة لا تتغير.</p>
             <div class="form-grid" style="margin-top:12px">
               <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
-              <div class="field"><label>1 USD = كم ل.س</label><input id="fx-rate" type="number" step="any"></div>
+              <div class="field"><label>1 USD = كم ل.س</label><input id="fx-rate" type="number" min="0.000001" step="any" value="${esc(s.usd_to_base_rate??'')}"></div>
             </div><div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
           </div>
           <div class="card soft"><h3>جلسة الدخول</h3><p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>
@@ -182,14 +182,32 @@ export async function renderSettings(root, selectedTab='general') {
       catch(e){toast(friendlyError(e),'error');}
     };
     root.querySelector('#fx-save').onclick=async()=>{
-      try{
-        const rate=Number(root.querySelector('#fx-rate').value);
-        if(!(rate>0)){toast('أدخل سعر صرف صحيح.','error');return;}
-        try{await api.rpc('set_exchange_rate',{
-          p_currency_code:'USD',p_rate_to_base:rate,p_effective_at:new Date().toISOString(),
-        });}catch(_){await api.rpc('set_exchange_rate',{p_currency_code:'USD',p_rate:rate});}
-        toast('تم حفظ سعر الصرف','success');
-      }catch(e){toast(friendlyError(e),'error');}
+      const rate=Number(root.querySelector('#fx-rate').value);
+      if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر صرف صحيحًا وموجبًا.','error');return;}
+      // Three distinct decisions. Never update materials just because the
+      // exchange rate changed. Both DB operations run atomically in one RPC.
+      const prompt=modal({
+        title:'تحديث سعر الدولار',subtitle:`السعر الجديد: 1 USD = ${rate.toLocaleString('en-US')} ل.س`,
+        hideActions:true,
+        body:`<p>هل تريد تحديث أسعار المواد المرجعية بالليرة بناءً على سعر الدولار الجديد؟</p>
+          <p class="metric-note">«تحديث» يعيد حساب سعر المواد التي لديها سعر بالدولار فقط. «عدم التحديث» يحفظ سعر الصرف الجديد دون تغيير أسعار المواد. آخر أسعار الشراء والفواتير التاريخية لن تتغير في الحالتين.</p>
+          <div class="modal-actions"><button type="button" class="btn" data-fx-yes>نعم، تحديث أسعار المواد</button>
+          <button type="button" class="btn secondary" data-fx-no>عدم التحديث</button><button type="button" class="btn secondary" data-fx-cancel>إلغاء</button></div>`,
+      });
+      let busy=false;
+      const decide=async apply=>{
+        if(busy)return;busy=true;
+        prompt.form.querySelectorAll('button').forEach(b=>b.disabled=true);
+        try{
+          const result=await api.materialPriceApplyExchangeV110(rate,apply);
+          toast(apply?`تم حفظ سعر الصرف وتحديث ${result?.updated_materials??0} سعر مادة مرجعي بالليرة.`:'تم حفظ سعر الدولار، دون تغيير أسعار المواد.','success');
+          prompt.close();
+          await renderSettings(root,'general');
+        }catch(e){busy=false;prompt.form.querySelectorAll('button').forEach(b=>b.disabled=false);toast(friendlyError(e,'تعذر حفظ سعر الدولار؛ لم تُنفّذ عملية جزئية.'),'error');}
+      };
+      prompt.form.querySelector('[data-fx-yes]').onclick=()=>decide(true);
+      prompt.form.querySelector('[data-fx-no]').onclick=()=>decide(false);
+      prompt.form.querySelector('[data-fx-cancel]').onclick=()=>prompt.close();
     };
     root.querySelector('#save-order-settings').onclick=async()=>{
       try{

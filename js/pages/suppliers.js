@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.7';
+import * as api from '../api.js?v=1.0.10';
 import {modal,toast,loader,friendlyError} from '../ui.js?v=1.0';
 import {esc,money} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';

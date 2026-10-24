@@ -66,17 +66,18 @@ test('explicit unresolved OCR materials block invoice posting; manual new or map
  assert.equal(validateImageDocument({...doc,items:[created]},cat).ready,true);
  assert.equal(validateImageDocument({...doc,items:[{...created,new_name:'سكر ناعم'}]},cat).ready,false);
 });
-test('photo route is purchase-only, engine 3 only, scoped crops, hidden raw text and final review dialog',()=>{
+test('photo route remains purchase-only, engine 3 one-click with optional items crop and final review',()=>{
  const src=file('js/pages/images.js'),app=file('js/app.js');
  assert.match(app,/images: 'الصور - إدخال سريع'/);
- assert.match(src,/const REGIONS=\[/);
- assert.match(src,/key:'supplier'/);assert.match(src,/key:'number'/);assert.match(src,/key:'items'/);
+ assert.match(src,/const REGIONS=\[\{key:'items'/);
+ assert.doesNotMatch(src,/key:'supplier'|key:'number'|key:'digits'/);
  assert.match(src,/data-region-mode/);
  assert.match(src,/data-raw-panel hidden/);
- assert.match(src,/data-bulk-ocr="3"/);
  assert.match(src,/data-ocr="3"/);
- assert.doesNotMatch(src,/data-bulk-ocr="1"|data-ocr="1"|api\.createOrder\(|api\.postOrder\(/);
- assert.match(src,/receiptItemsV106\(itemText,catalog\.materials,80,catalog\.units\)\.map\(fillRow\)/);
+ assert.doesNotMatch(src,/data-bulk-ocr|data-audit-digits|data-preview-digits|data-reparse/);
+ assert.match(src,/sections\.full/);assert.match(src,/sections\.items/);
+ assert.match(src,/chooseBestOcrRowsV110/);
+ assert.match(src,/annotateSupplierOcrV110/);
  assert.match(src,/data-review-invoice/);
  assert.match(src,/title:'مراجعة فاتورة الشراء قبل الحفظ'/);
  assert.match(src,/submitText:'حفظ ونشر الفاتورة'/);

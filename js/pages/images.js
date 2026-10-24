@@ -1,21 +1,21 @@
-// Maria CFO Web v1.0.9 — handwritten OCR image enhancement, safe digit reread.
+// Maria CFO Web v1.0.10 — one-click purchase OCR, Arabic zero-cell review, supplier hints.
 // OCR never posts to accounting; user must review a complete invoice in a dialog.
-import * as api from '../api.js?v=1.0.7';
+import * as api from '../api.js?v=1.0.10';
 import {esc,unitDisplay,todayISO,money} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox,modal} from '../ui.js?v=1.0';
 import {newLocalDocument,saveLocalImage,deleteLocalImage,listLocalImages} from '../image-local-store.js?v=1.0.7';
-import {recognizeCloudImage,fetchOcrUsage,prepareImageForCloud} from '../image-cloud-ocr.js?v=1.0.9';
+import {recognizeCloudImage,fetchOcrUsage} from '../image-cloud-ocr.js?v=1.0.10';
 import {usageSummary} from '../image-cloud-rules.js?v=1.0';
 import {validateImageDocument,localStatus,normalizeArabicNumbers} from '../image-document-rules.js?v=1.0.7';
-import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.7';
-import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.9';
-import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.8';
-import {applyDigitAuditV109} from '../ocr-digit-review-v109.js?v=1.0.9';
+import {materialKeyV106,materialExactV106,materialSearchTextV106,materialSuggestionsV106} from '../material-search-v106.js?v=1.0.10';
+import {receiptHeaderV106,receiptItemsV106,receiptMathV106} from '../purchase-image-v106.js?v=1.0.10';
+import {invoiceAmountV107} from '../invoice-amount-v107.js?v=1.0.10';
+import {supplierOcrSuggestionsV110,annotateSupplierOcrV110} from '../supplier-ocr-v110.js?v=1.0.10';
+import {chooseBestOcrRowsV110} from '../ocr-selection-v110.js?v=1.0.10';
 
 const MAX_BYTES=12*1024*1024;
 const TYPES=new Set(['image/png','image/jpeg','image/webp']);
-const REGIONS=[{key:'supplier',name:'اسم المورد',label:'الاسم',symbol:'◉'},{key:'number',name:'رقم الفاتورة',label:'الرقم',symbol:'#'},{key:'items',name:'البنود والإجمالي',label:'البنود والإجمالي',symbol:'▤'},
- {key:'digits',name:'الأرقام',label:'منطقة الأرقام',symbol:'123'}];
+const REGIONS=[{key:'items',name:'بنود الفاتورة',label:'تحديد البنود',symbol:'▤'}];
 const statusColors={'غير معالج':'grey','يحتاج استكمال':'yellow','جاهز للنشر':'green',
  'مسودة داخل البرنامج':'purple','منشور':'green','مراجعة نتيجة العملية':'red'};
 const options=(rows,current='',placeholder='— اختر —')=>
@@ -130,10 +130,10 @@ export async function renderImages(root){
      <button type="button" class="mini-btn" data-mode="unresolved" data-row="${i}">رجوع</button>
    </div>`:`<div class="image-unmatched-v106"><strong>—</strong><small>لم تتم مطابقة المادة بعد؛ صحح الاسم أو اختر مادة.</small>
     <div class="image-match-actions-v106"><button type="button" class="mini-btn" data-mode="new" data-row="${i}">إضافة كجديد</button><button type="button" class="mini-btn" data-mode="existing" data-row="${i}">ربط بمادة موجودة</button></div>
-    ${row.name&&materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).length?`<div class="image-hints-v106">${materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).map(m=>`<button type="button" class="image-suggest-v106" data-suggest="${esc(m.id)}" data-row="${i}">${esc(m.name)}</button>`).join('')}</div>`:''}
+    ${row.name&&(row.supplier_ocr_suggestions?.length||supplierOcrSuggestionsV110(row.name,catalog.materials,history,3).length||materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).length)?`<div class="image-hints-v106">${[...new Set([...(row.supplier_ocr_suggestions||[]),...supplierOcrSuggestionsV110(row.name,catalog.materials,history,3).map(x=>String(x.material.id)),...materialSuggestionsV106(row.name,catalog.materials,supplierIds(),3).map(x=>String(x.id))])].slice(0,4).map(id=>catalog.materials.find(x=>String(x.id)===id)).filter(Boolean).map(m=>`<button type="button" class="image-suggest-v106" data-suggest="${esc(m.id)}" data-row="${i}">${esc(m.name)}</button>`).join('')}</div>`:''}
    </div>`;
-  const digitCandidates=[...(row.ocr_numeric_candidates||[]),...(row.ocr_digit_candidates||[])];
-  const digitChips=digitCandidates.length?`<div class="image-digit-candidates-v109"><small>قراءات أرقام من الصورة — تأكد قبل استخدامها:</small>${digitCandidates.map((c,j)=>`<div class="image-digit-candidate-v109"><span><b dir="ltr">${esc(c.raw)}</b> <em>${esc(c.source||'الأصل')} · ${esc(c.label||'')}</em></span><button type="button" class="mini-btn" data-apply-digit="quantity" data-digit-index="${j}" data-row="${i}">كمية</button><button type="button" class="mini-btn" data-apply-digit="unit_price" data-digit-index="${j}" data-row="${i}">سعر</button></div>`).join('')}</div>`:'';
+  const digitCandidates=[...(row.ocr_numeric_candidates||[])];
+  const digitChips=digitCandidates.length?`<div class="image-digit-candidates-v109"><small>قراءات أرقام من الصورة — تأكد قبل استخدامها:</small>${digitCandidates.map((c,j)=>`<div class="image-digit-candidate-v109"><span><b dir="ltr">${esc(c.raw)}</b> <em>${esc(c.source||'الأصل')} · ${esc(c.label||'')}${c.note?` · ${esc(c.note)}`:''}</em></span><button type="button" class="mini-btn" data-apply-digit="quantity" data-digit-index="${j}" data-row="${i}">كمية</button><button type="button" class="mini-btn" data-apply-digit="unit_price" data-digit-index="${j}" data-row="${i}">سعر</button></div>`).join('')}</div>`:'';
   const unitBox=mode==='new'?`<span class="image-unit-readonly-v106">${esc(unitDisplay(catalog.units.find(u=>String(u.id)===String(row.new_base_unit_id)))||'—')}</span>`:
    manual&&row.catalog_id?`<select data-field="unit_id" aria-label="وحدة المادة ${i+1}">${chosenUnitOptions(row)}</select>`:'—';
   return `<tr data-image-item="${i}">
@@ -167,10 +167,10 @@ export async function renderImages(root){
        </div></div>
        <div class="image-crop-actions image-region-controls-v106">
         ${REGIONS.map(r=>`<button type="button" class="btn secondary image-region-button-v106 region-${r.key} ${cropMode===r.key?'is-selected':''}" data-region-mode="${r.key}" ${locked||processing?'disabled':''}>${r.symbol} ${r.label}${doc.regions?.[r.key]?' ✓':''}</button>`).join('')}
-        <button type="button" class="btn secondary image-digit-preview-btn-v109" data-preview-digits ${processing?'disabled':''} title="معاينة معالجة الأرقام على جهازك دون إرسالها إلى OCR">تكبير الأرقام</button>
-        ${Object.keys(doc.regions||{}).length?`<button type="button" class="btn secondary image-reset-regions-v107" data-reset-regions ${locked||processing?'disabled':''} title="إزالة مربعات التحديد فقط دون مسح الصورة أو البنود"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="13" height="13" rx="2" stroke-dasharray="3 2"/><path d="M10 21h9a2 2 0 002-2v-9"/><path d="M7 12l7-7"/></svg><span>مسح التحديدات</span></button>`:''}
+        
+        ${doc.regions?.items?`<button type="button" class="btn secondary image-reset-regions-v107" data-reset-regions ${locked||processing?'disabled':''} title="إزالة مربعات التحديد فقط دون مسح الصورة أو البنود"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="13" height="13" rx="2" stroke-dasharray="3 2"/><path d="M10 21h9a2 2 0 002-2v-9"/><path d="M7 12l7-7"/></svg><span>مسح التحديدات</span></button>`:''}
        </div>
-       <p class="metric-note">${cropMode?'اسحب مستطيلًا على الصورة لتحديد المنطقة. يمكنك استخدام اللمس أو الماوس.':Object.keys(doc.regions||{}).length?'سيُقرأ كل مربع محدد فقط بلونه. أي بيانات لم تحدد لها منطقة يمكن مراجعتها يدويًا.':'حدد مناطق الاسم والرقم والبنود لتقليل أخطاء القراءة. إذا تركتها كلها بلا تحديد سيحاول الاستخراج من الصورة كاملة.'}</p>
+       <p class="metric-note">${cropMode?'اسحب مستطيلًا حول بنود الفاتورة.':'عند تحديد البنود نقرأ ترويسة الفاتورة للرقم والمورد، ثم بنودها من المنطقة المحددة. قد يُحتسب طلبان من خدمة OCR. بدون تحديد يُستخدم طلب واحد للصورة كاملة.'}</p>
       </div>
       <div class="image-editor-pane"><fieldset ${locked||processing?'disabled':''}>
         <div class="form-grid">
@@ -181,10 +181,9 @@ export async function renderImages(root){
         </div>
         ${historySupplierId?`<div class="image-supplier-history-v106">${historyLoading?'تحميل مواد المورد...':`<strong>مواد سبق شراؤها من هذا المورد: ${history.length}</strong> · تُقدّم في نتائج المطابقة دون تغيير أسعار الفاتورة.`}</div>`:''}
         <div class="image-ocr-actions image-ocr-reparse-actions-v107"><button class="btn" type="button" data-ocr="3">استخراج <span class="ocr-progress-pill" hidden></span></button>
-         ${doc.text?.trim()&&!locked?`<button type="button" class="btn secondary image-digit-audit-btn-v109" data-audit-digits title="قراءة ثانية محسّنة لمحرك 3؛ تُحتسب طلبًا إضافيًا ولا تستبدل القيم تلقائيًا" ${processing?'disabled':''}>تدقيق الأرقام · طلب إضافي</button>`:''}
-         ${doc.text?.trim()?`<button type="button" class="btn secondary image-reparse-v107" data-reparse title="استخدم النص المستخرج المحفوظ دون طلب OCR جديد">تحديث البنود من النص المحفوظ</button>`:''}</div>
+</div>
         <div class="image-raw-toggle-v106"><button class="mini-btn" type="button" data-toggle-raw ${!doc.text?.trim()?'disabled':''}>عرض النص الأصلي المستخرج</button></div>
-        <div class="image-raw-panel-v106" data-raw-panel hidden><label>النص الأصلي</label><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea>${doc.ocr_digit_text?`<label>نص تدقيق الأرقام (قراءة ثانية مستقلة)</label><pre class="image-digit-raw-v109">${esc(doc.ocr_digit_text)}</pre>`:''}</div>
+        <div class="image-raw-panel-v106" data-raw-panel hidden><label>النص الأصلي</label><textarea data-doc="text" rows="7" spellcheck="false" aria-label="النص الأصلي المستخرج">${esc(doc.text||'')}</textarea></div>
        </fieldset></div>
     </div>
     <div class="image-items-full"><fieldset ${locked||processing?'disabled':''}>
@@ -273,13 +272,11 @@ export async function renderImages(root){
   ${usageError?`<div class="notice">تعذر قراءة عدّاد الاستخراج: ${esc(usageError)}</div>`:''}
   <div class="card image-toolbar"><div class="image-toolbar-buttons">
    <label class="btn" for="images-pick">إضافة صور</label><input id="images-pick" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
-   <button type="button" class="btn secondary" data-bulk-ocr="3" ${buttonDisabled()}>استخراج <span class="ocr-progress-pill" hidden></span></button>
    <button type="button" class="btn secondary image-go-purchases-v108" data-go-purchases><span aria-hidden="true">↗</span> فواتير الشراء</button>
   </div><div class="image-usage-cards image-single-usage-v106"><div><strong>Engine 3</strong><span class="ocr-usage-num" data-counter="3">${count(3)}</span></div></div>
-  <div class="metric-note">عند تحديد صور تُستخرج المحددة فقط؛ وإلا فتُعالج الصور التي لم تُحفظ في البرنامج.</div><div id="image-progress" role="status" aria-live="polite"></div></div>
-  <div class="image-workspace"><aside class="card image-gallery"><div class="section-head-inline"><h3>مكتبة الصور (${records.length})</h3><span class="muted-small">${selected.size} محددة</span></div>
+  <div class="metric-note">افتح الفاتورة وحدّد بنودها عند الحاجة، ثم اضغط «استخراج» بجوار حقولها.</div><div id="image-progress" role="status" aria-live="polite"></div></div>
+  <div class="image-workspace"><aside class="card image-gallery"><div class="section-head-inline"><h3>مكتبة الصور (${records.length})</h3></div>
    <div class="image-gallery-strip">${records.map(r=>`<div class="image-queue-item ${r.id===currentId?'is-active':''}" data-open-image="${esc(r.id)}">
-    <label class="image-tick" aria-label="تحديد صورة"><input type="checkbox" data-select-image="${esc(r.id)}" ${selected.has(r.id)?'checked':''}></label>
     <img src="${objectUrl(r.file)}" alt="صورة ${esc(r.file_name)}" loading="lazy">
     <div class="image-queue-info"><strong title="${esc(r.file_name)}">${esc(r.file_name)}</strong><small>فاتورة</small><span class="image-status ${statusColors[statusOf(r)]||'grey'}">${esc(statusOf(r))}</span></div>
    </div>`).join('')||'<div class="empty">لا توجد صور</div>'}</div></aside>
@@ -295,32 +292,41 @@ export async function renderImages(root){
  async function extractOne(doc,index,total){
   if(doc.server_id||['draft','published','uncertain'].includes(doc.status)||legacy(doc))return;
   if((doc.items?.length||doc.text?.trim())&&!(await confirmBox(`سيعاد استخراج «${doc.file_name}»، وقد تُستبدل البنود المقروءة الحالية. احفظ مراجعتك أولًا إذا لزم.`, 'متابعة الاستخراج')))return;
-  const selectedRegions=REGIONS.filter(r=>r.key!=='digits'&&doc.regions?.[r.key]);
-  const extracts=selectedRegions.length?selectedRegions:[{key:'full',name:'الفاتورة كاملة'}];
-  const sections={};let step=0;
-  for(const region of extracts){
-   const result=await recognizeCloudImage(doc.file,{engine:3,crop:doc.regions?.[region.key]||null,
-    profile:region.key==='items'?'handwriting':'standard',onProgress:(msg,pct)=>{
-    updateOcr((index+(step+pct/100)/extracts.length)*100/total,`${doc.file_name} · ${region.name}`);
+  // Never run the failed v1.0.9 digits-only OCR reread. A full image pass
+  // resolves supplier/invoice number; when items are selected, one additional
+  // ORIGINAL-COLOR items crop improves row separation without stripping dots.
+  const withCrop=Boolean(doc.regions?.items);
+  const phases=withCrop?2:1;
+  const sections={};
+  const full=await recognizeCloudImage(doc.file,{engine:3,profile:'standard',onProgress:(msg,pct)=>{
+   updateOcr((index+pct/100/phases)*100/total,`${doc.file_name} · ترويسة الفاتورة والبنود`);
+  }});
+  sections.full=full.text||'';
+  if(full.usage){usage=full.usage;usageDraw();}
+  if(withCrop){
+   const items=await recognizeCloudImage(doc.file,{engine:3,crop:doc.regions.items,profile:'standard',onProgress:(msg,pct)=>{
+    updateOcr((index+(1+pct/100)/phases)*100/total,`${doc.file_name} · البنود المحددة`);
    }});
-   sections[region.key]=result.text||'';
-   if(result.usage){usage=result.usage;usageDraw();}
-   step++;
+   sections.items=items.text||'';
+   if(items.usage){usage=items.usage;usageDraw();}
   }
   doc.ocr_region_text=sections;doc.ocr_digit_text='';
-  doc.text=Object.entries(sections).map(([k,t])=>`${REGIONS.find(r=>r.key===k)?.name||'النص الكامل'}:\n${t}`).join('\n\n');
+  doc.text=`الفاتورة كاملة:\n${sections.full}`+(sections.items?`\n\nبنود الفاتورة:\n${sections.items}`:'');
   doc.ocr_mode='3';doc.ocr_confidence=null;
-  const header=receiptHeaderV106({supplier:sections.supplier,number:sections.number,items:sections.items,full:sections.full},catalog.suppliers);
+  const header=receiptHeaderV106({full:sections.full,items:sections.items||sections.full},catalog.suppliers);
   if(header.supplier&&!doc.supplier)doc.supplier=header.supplier;
   if(header.number&&!doc.number)doc.number=header.number;
   doc.ocr_total=header.invoiceTotal;
-  const itemText=sections.items||sections.full||'';
-  const found=receiptItemsV106(itemText,catalog.materials,80,catalog.units).map(fillRow);
-  doc.items=found;
+  const fullRows=receiptItemsV106(sections.full,catalog.materials,80,catalog.units);
+  const cropRows=sections.items?receiptItemsV106(sections.items,catalog.materials,80,catalog.units):[];
+  const selection=chooseBestOcrRowsV110(fullRows,cropRows);
+  doc.items=selection.rows.map(fillRow);
+  doc.ocr_item_source=selection.source;
   doc.status='review';doc.error=null;
-  await saveLocalImage(doc);
   await loadSupplierHistory(doc);
-  return found.length;
+  doc.items=annotateSupplierOcrV110(doc.items,catalog.materials,history);
+  await saveLocalImage(doc);
+  return doc.items.length;
  }
  async function extractMany(docs){
   if(processing)return;
@@ -478,13 +484,6 @@ export async function renderImages(root){
    try{await saveCurrent();}catch(err){toast('تعذر حفظ تعديلات الصورة الحالية.','error');return;}
    currentId=el.dataset.openImage;cropMode='';history=[];historySupplierId='';refresh();await loadSupplierHistory(current());refresh();
   }));
-  root.querySelectorAll('[data-select-image]').forEach(el=>el.addEventListener('change',e=>{
-   e.stopPropagation();if(el.checked)selected.add(el.dataset.selectImage);else selected.delete(el.dataset.selectImage);refresh();
-  }));
-  root.querySelector('[data-bulk-ocr]')?.addEventListener('click',async()=>{
-   try{await saveCurrent();await extractMany((selected.size?records.filter(d=>selected.has(d.id)):records));}
-   catch(e){toast(friendlyError(e),'error');}
-  });
   root.querySelector('[data-go-purchases]')?.addEventListener('click',async()=>{
    try{await saveCurrent();location.hash='#/purchases';}
    catch(e){toast('تعذر حفظ تعديلات الصورة الحالية؛ لم نغادر الصفحة حتى لا تضيع.', 'error');}
@@ -503,52 +502,21 @@ export async function renderImages(root){
    const panel=root.querySelector('[data-raw-panel]');panel.hidden=!panel.hidden;
    e.target.textContent=panel.hidden?'عرض النص الأصلي المستخرج':'إخفاء النص الأصلي المستخرج';
   });
-  root.querySelector('[data-preview-digits]')?.addEventListener('click',async()=>{
-   try{
-    const doc=current();if(!doc)return;
-    const image=await prepareImageForCloud(doc.file,{crop:doc.regions?.digits||doc.regions?.items||null,profile:'handwriting'});
-    modal({title:'تكبير الأرقام المكتوبة',wide:true,hideActions:true,
-     body:`<div class="image-digit-preview-v109"><p class="metric-note">المعاينة المعالجة على جهازك فقط؛ لم يتم تشغيل OCR أو احتساب طلب. راجع النقطة (٠)، والخمسة (٥)، وأشكال الاثنين والثلاثة بخط اليد.</p><img class="image-digit-preview-img-v109" src="${image}" alt="تكبير موضع الأرقام بعد توضيح الحبر" /></div>`});
-   }catch(e){toast('تعذر عرض التكبير: '+(e.message||e),'error');}
-  });
-  root.querySelector('[data-audit-digits]')?.addEventListener('click',async()=>{
-
-   if(processing)return;
-   try{
-    await saveCurrent();const doc=current();if(!doc||!doc.text?.trim())return;
-    if(!(await confirmBox('سيُرسل قصّ الأرقام المحدد (أو البنود عند عدم تحديده) إلى المحرك 3 في طلب إضافي يُحتسب ضمن العداد. لن تتغير كميات الفاتورة أو أسعارها آليًا؛ ستظهر نتائج للمقارنة والمراجعة فقط. هل تتابع؟','تدقيق الأرقام')))return;
-    processing=true;refresh();progress('تحسين صورة الأرقام وقراءتها بالمحرك 3...');
-    const result=await recognizeCloudImage(doc.file,{engine:3,
-     crop:doc.regions?.digits||doc.regions?.items||null,profile:'handwriting',
-     onProgress:(label,pct)=>progress(`تدقيق الأرقام — ${pct}%`)});
-    if(result.usage){usage=result.usage;usageDraw();}
-    doc.ocr_digit_text=result.text;
-    const audit=applyDigitAuditV109(doc.items,result.text);
-    doc.items=audit.rows;
-    doc.ocr_digit_audit_aligned=audit.matched;
-    doc.status='review';await saveLocalImage(doc);
-    refresh();
-    toast(audit.matched?'ظهرت قراءات الأرقام الثانية بجانب البنود. راجع الاختلافات، ولم يُغيَّر أي مبلغ تلقائيًا.':`استُخرج نص ثانٍ، لكن عدد أسطره (${audit.rowCount}) مختلف عن البنود (${doc.items.length})؛ افتح النص الخام للمقارنة، دون ربط أرقام بصفوف خاطئة.`,audit.matched?'success':'error');
-   }catch(e){toast(friendlyError(e,e.message||'تعذر تدقيق الأرقام.'),'error');}
-   finally{processing=false;refresh();loadUsage();}
-  });
-  root.querySelector('[data-reparse]')?.addEventListener('click',async()=>{
-
-   syncEditor();const doc=current();
-   if(doc.items?.length&&!(await confirmBox('سيعاد تحليل نص OCR المحفوظ دون تشغيل الخدمة مجددًا، وستُستبدل البنود الحالية بما فيها تعديلاتك اليدوية. هل تتابع؟','إعادة التحليل')))return;
-   const text=String(doc.text||'').replace(/^(?:الاسم|الرقم|البنود والإجمالي|النص الكامل):/gm,'');
-   doc.items=receiptItemsV106(text,catalog.materials,80,catalog.units).map(fillRow);
-   doc.ocr_digit_text='';doc.ocr_digit_audit_aligned=false;
-   const head=receiptHeaderV106({full:text},catalog.suppliers);if(!doc.supplier)doc.supplier=head.supplier;if(!doc.number)doc.number=head.number;
-   doc.ocr_total=head.invoiceTotal;doc.status='review';await saveLocalImage(doc);await loadSupplierHistory(doc);refresh();
-  });
   root.querySelectorAll('[data-apply-digit]').forEach(btn=>btn.addEventListener('click',async()=>{
    if(processing)return;syncEditor();const doc=current(),row=doc?.items?.[Number(btn.dataset.row)];if(!row)return;
-   const candidates=[...(row.ocr_numeric_candidates||[]),...(row.ocr_digit_candidates||[])];
+   const candidates=[...(row.ocr_numeric_candidates||[])];
    const candidate=candidates[Number(btn.dataset.digitIndex)];
    const field=btn.dataset.applyDigit;
-   if(!candidate||!['quantity','unit_price'].includes(field)||invoiceAmountV107(candidate.raw)===null)return;
-   row[field]=String(invoiceAmountV107(candidate.raw));
+   // A candidate may be a reviewed dot-zero interpretation: its *raw* OCR
+   // token (e.g. '١٩.') is deliberately invalid as a generic decimal.
+   // Apply its parsed numeric value only on an explicit user click, while
+   // keeping the row under review. Never auto-post inferred amounts.
+   const parsedValue=Number(candidate?.value);
+   if(!candidate||!['quantity','unit_price'].includes(field)||!Number.isFinite(parsedValue)||parsedValue<=0)return;
+   row[field]=String(parsedValue);
+   if(candidate.zero_dot_suspected){
+    row.review_note=[row.review_note,'رقم اختير يدويًا من اقتراح صفر عربي محتمل؛ تحقق منه في الصورة الأصلية.'].filter(Boolean).join(' ');
+   }
    row.ocr_review_required=true;row.ocr_reviewed=false;
    await saveLocalImage(doc);refresh();
   }));

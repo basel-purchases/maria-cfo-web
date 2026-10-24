@@ -1,5 +1,5 @@
-import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.7';
-import * as api from '../api.js?v=1.0.7';
+import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.10';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';

@@ -120,6 +120,21 @@ export const materialIdentityUpdateV106=({id,name,code,categoryId=null,aliases=[
   rpc('material_identity_update_v106',{
     p_material_id:id,p_name:name,p_code:code,p_category_id:categoryId,p_aliases:aliases,
   });
+// v1.0.10: material USD anchors are separate from historical purchase snapshots.
+export const materialIdentityCreatePricedV110=({name,code,baseUnitId,categoryId=null,target=null,aliases=[],priceUSD=null})=>
+ rpc('material_identity_create_priced_v110',{
+  p_name:name,p_code:code,p_base_unit_id:baseUnitId,p_category_id:categoryId,
+  p_target:target,p_aliases:aliases,p_price_usd:priceUSD,
+ }).then(id=>one('materials',id));
+export const materialIdentityUpdatePricedV110=({id,name,code,categoryId=null,aliases=[],priceUSD=null})=>
+ rpc('material_identity_update_priced_v110',{
+  p_material_id:id,p_name:name,p_code:code,p_category_id:categoryId,
+  p_aliases:aliases,p_price_usd:priceUSD,
+ });
+export const materialPriceInitializeUsdV110=rate=>rpc('material_price_initialize_usd_v110',{p_rate:rate});
+export const materialPriceApplyExchangeV110=(rate,updateMaterials)=>
+ rpc('material_price_set_exchange_rate_v110',{p_rate:rate,p_update_material_prices:Boolean(updateMaterials)});
+
 export async function materials(){
   let rows;
   try{rows=await list('materials',{order:'created_at',ascending:true,limit:1000});}

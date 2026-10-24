@@ -72,17 +72,15 @@ test('A flagged OCR mismatch cannot be silently posted; explicit review permits 
 });
 test('UI supports Arabic numeric keyboard entry, preserves original OCR sources and improves region clear',()=>{
  const page=read('js/pages/images.js'),style=read('assets/styles.css'),html=read('index.html');
- assert.match(page,/receiptItemsV106\(itemText,catalog\.materials,80,catalog\.units\)/);
+ assert.match(page,/receiptItemsV106\(sections\.full,catalog\.materials,80,catalog\.units\)/);
  assert.match(page,/data-field="quantity"[^>]*inputmode="decimal"|inputmode="decimal"[^>]*data-field="quantity"/);
  assert.match(page,/data-field="ocr_reviewed"/);
  assert.match(page,/image-reset-regions-v107/);
  assert.match(style,/image-reset-regions-v107:focus-visible/);
  assert.match(page,/current\(\)\.regions=\{\};cropMode=''/);
  assert.match(page,/data-raw-panel hidden/);
- assert.match(page,/تحديث البنود من النص المحفوظ/);
- assert.match(page,/data-reparse/);
- assert.match(page,/دون تشغيل الخدمة مجددًا/);
+ assert.doesNotMatch(page,/data-reparse|data-audit-digits|تكبير الأرقام/);
  assert.doesNotMatch(page,/data-bulk-ocr="1"|data-ocr="1"/);
- assert.match(html,/Web v1\.0\.9/);
+ assert.match(html,/Web v1\.0\.10/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

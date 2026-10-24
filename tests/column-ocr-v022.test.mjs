@@ -53,7 +53,8 @@ test('OCR generates editable review rows without triggering financial calls auto
   const segment=ui.split('async function extractOne(')[1].split('async function extractMany(')[0];
   assert.match(segment,/doc\.items\s*=/);
   assert.doesNotMatch(segment,/api\.postPurchase|api\.createPurchase|api\.addPurchaseItem/);
-  assert.match(ui,/data-reparse/);
+  assert.match(ui,/chooseBestOcrRowsV110/);
+  assert.doesNotMatch(ui,/data-audit-digits|data-reparse/);
   assert.match(ui,/review_note/);
   assert.match(ui,/await confirmBox/);
 });

@@ -1,4 +1,4 @@
-import * as api from '../api.js?v=1.0.7';
+import * as api from '../api.js?v=1.0.10';
 import { loader, friendlyError } from '../ui.js?v=1.0';
 import { money, esc, todayISO } from '../utils.js?v=1.0';
 import { financialCard, financialRowTable, qualityMessages, barTrend, finalProfitValue, simpleInfo } from '../finance-ui.js?v=1.0';
