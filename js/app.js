@@ -29,7 +29,8 @@ import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
-import {parseParallelUsdV114,fetchParallelUsdV114,marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
+import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
+import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketDisplayUnitV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.15';
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
 
 const app = document.querySelector('#app');
@@ -54,7 +55,7 @@ const nav = [
 ];
 
 function login() {
-  if(marketStateV114.timer){clearInterval(marketStateV114.timer);marketStateV114.timer=null;}
+  if(marketStateV115.timer){clearInterval(marketStateV115.timer);marketStateV115.timer=null;}
   app.innerHTML = `
     <div class="login-page">
       <div class="login-card">
@@ -115,7 +116,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.14</div>
+        <div class="sidebar-foot">Web v1.0.15</div>
       </aside>
 
       <main class="main">
@@ -128,13 +129,12 @@ function shell() {
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
               <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
             </button>
-            <div class="market-usd-group-v114" aria-label="سعر الدولار بالسوق الموازية">
-              <div class="market-usd-chip-v114" id="market-usd-chip" role="status" aria-live="polite" title="سعر الدولار في السوق الموازية من LiraScope، وليس السعر الرسمي">
-                <span class="market-usd-caption-v114">دولار السوق · مبيع</span>
-                <strong id="market-usd-value">جارٍ التحديث...</strong>
-                <small id="market-usd-label">ل.س قديمة</small>
+            <div class="market-usd-group-v115" aria-label="سعر الدولار في السوق الموازية">
+              <div class="market-usd-chip-v115" id="market-usd-chip" role="group" title="سعر الدولار اليوم">
+                <strong id="market-usd-value" role="status" aria-live="polite">—</strong>
+                <button class="market-usd-side-v115" id="market-usd-side" type="button" aria-label="التبديل بين سعر الشراء والمبيع" title="التبديل بين شراء ومبيع">⇄</button>
               </div>
-              <button class="market-usd-approve-v114" id="market-usd-approve" type="button" aria-label="اعتماد سعر الدولار المعروض" title="اعتماد سعر السوق في الإعدادات" disabled>✓</button>
+              <button class="market-usd-approve-v115" id="market-usd-approve" type="button" aria-label="اعتماد سعر الدولار المعروض" title="اعتماد سعر الدولار" disabled>✓</button>
             </div>
             <button class="back-btn" id="back-btn" type="button" aria-label="رجوع">
               <span aria-hidden="true">←</span>
@@ -152,7 +152,7 @@ function shell() {
 
   installTableExportV027();
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
-  installMarketUsdV114();
+  installMarketUsdV115();
 
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
@@ -166,119 +166,111 @@ function shell() {
 }
 
 
-// v1.0.14 — market display is read-only until the owner explicitly approves a fresh quote.
-const MARKET_CACHE_KEY_V114='maria_cfo_parallel_usd_v114';
-const marketStateV114={quote:null,lastSuccessAt:0,lastAttemptAt:0,inFlight:null,verified:false,error:null,timer:null};
-const formatOldSypV114=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
-function marketDateV114(value){
+// v1.0.15: one quiet number, two rate sides, and a server-side quote bridge.
+const MARKET_CACHE_KEY_V115='maria_cfo_parallel_usd_v114'; // compatible with saved v1.0.14 quotes
+const marketStateV115={quote:null,lastSuccessAt:0,lastAttemptAt:0,inFlight:null,verified:false,error:null,timer:null,
+  side:readMarketSideV115(),unit:readMarketDisplayUnitV115()};
+function marketDateV115(value){
   try{return new Intl.DateTimeFormat('ar-SY',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Damascus'}).format(new Date(value));}
   catch(_){return String(value||'—');}
 }
-function marketCacheReadV114(){
-  try{return marketCachedQuoteV114(JSON.parse(localStorage.getItem(MARKET_CACHE_KEY_V114)||'null'));}
+function marketCacheReadV115(){
+  try{return marketCachedQuoteV114(JSON.parse(localStorage.getItem(MARKET_CACHE_KEY_V115)||'null'));}
   catch(_){return null;}
 }
-function marketCacheSaveV114(quote){
-  try{localStorage.setItem(MARKET_CACHE_KEY_V114,JSON.stringify({quote,savedAt:new Date().toISOString()}));}catch(_){}
+function marketCacheSaveV115(quote){
+  try{localStorage.setItem(MARKET_CACHE_KEY_V115,JSON.stringify({quote,savedAt:new Date().toISOString()}));}catch(_){}
 }
-function showMarketUsdV114(){
+function showMarketUsdV115(){
   const chip=app.querySelector('#market-usd-chip');
   const price=app.querySelector('#market-usd-value');
-  const label=app.querySelector('#market-usd-label');
   const approve=app.querySelector('#market-usd-approve');
-  if(!chip||!price||!label||!approve)return;
-  const q=marketStateV114.quote;
+  const toggle=app.querySelector('#market-usd-side');
+  if(!chip||!price||!approve||!toggle)return;
+  const state=marketStateV115;
+  const q=state.quote,side=state.side,unit=state.unit;
   const usable=marketQuoteFreshV114(q);
-  chip.classList.toggle('market-usd-stale-v114',!!q&&!usable);
-  chip.classList.toggle('market-usd-offline-v114',!!marketStateV114.error);
-  if(q){
-    price.textContent=`${formatOldSypV114(q.sellOld)} ل.س`;
-    label.textContent=usable?(marketStateV114.error?'آخر قراءة · غير متصل':marketStateV114.verified?'موازية · قديمة':'قراءة محفوظة'):'قراءة قديمة';
-    chip.title=`LiraScope — السوق الموازية (سعر المبيع)\nآخر تحديث: ${marketDateV114(q.updatedAt)}\nشراء: ${formatOldSypV114(q.buyOld)} ل.س قديمة\nمبيع: ${formatOldSypV114(q.sellOld)} ل.س قديمة\n${marketStateV114.error?'تعذّر تحديث المصدر؛ لم تُغيَّر الأسعار المعتمدة.':'السعر المعروض لم يُعتمد تلقائيًا.'}`;
-  }else{
-    price.textContent=marketStateV114.error?'السوق غير متاح':'جارٍ التحديث...';
-    label.textContent='سوق موازية · ل.س قديمة';
-    chip.title='لم يتوفر سعر سوق موازية موثوق. أسعار المواد المعتمدة لم تتغير.';
-  }
-  // If cached, the action refreshes the rate online BEFORE opening the approval dialog.
-  approve.disabled=!usable||!!marketStateV114.inFlight;
+  const label=side==='buy'?'شراء':'مبيع';
+  const number=marketValueV115(q,side,unit);
+  price.textContent=number;
+  const isStale=!!q&&(!usable||!!state.error);
+  chip.classList.toggle('market-usd-stale-v115',isStale);
+  chip.classList.toggle('market-usd-loading-v115',!!state.inFlight);
+  const unitText=unit==='old'?'ليرة قديمة':'ليرة جديدة';
+  const status=state.error?marketProxyErrorTextV115(state.error):
+      !q?'جارٍ جلب سعر السوق...':!usable?'هذه قراءة قديمة، وليست السعر الحالي.':
+      !state.verified?'هذه قراءة محفوظة حتى يتم تحديث الاتصال.':'سعر السوق لم يُعتمد تلقائيًا.';
+  const tip=q?`سعر الدولار اليوم — السوق الموازية (${label})\n${number} ${unitText}\nشراء: ${marketValueV115(q,'buy',unit)} · مبيع: ${marketValueV115(q,'sell',unit)}\nآخر تحديث: ${marketDateV115(q.updatedAt)}\n${status}`:
+      `سعر الدولار اليوم — السوق الموازية\n${status}`;
+  chip.title=tip;
+  price.setAttribute('aria-label',`سعر الدولار ${label}: ${number} ${unitText}`);
+  toggle.title=`عرض سعر ${side==='sell'?'الشراء':'المبيع'}`;
+  toggle.setAttribute('aria-label',toggle.title);
+  approve.disabled=!usable||!!state.inFlight;
+  approve.title=`اعتماد سعر ${label} الظاهر`;
 }
-async function fetchMarketUsdOnlineV114(){
-  try{return await fetchParallelUsdV114();}
-  catch(primary){
-    // CORS/browser restrictions: optionally proxy through the authenticated Supabase Edge Function.
-    // No rate is taken from the CBS, er-api, or other official/reference feeds.
-    if(String(primary?.message||'').includes('MARKET_PRICE_INVALID')||
-       String(primary?.message||'').includes('MARKET_DENOMINATION_UNEXPECTED')||
-       String(primary?.message||'').includes('MARKET_RATE_LIMIT')||
-       String(primary?.message||'').includes('MARKET_TIMESTAMP_INVALID'))throw primary;
-    if(!supabase)throw primary;
-    try{
-      const {data,error}=await supabase.functions.invoke('market-usd',{body:{action:'latest'}});
-      if(error)throw error;
-      return parseParallelUsdV114(data);
-    }catch(_){throw primary;}
-  }
+async function fetchMarketUsdOnlineV115(){
+  // No direct browser request to LiraScope: its response can be HTTP 200 but blocked by CORS.
+  // Deploy the included Supabase Edge Function "market-usd" before using live quotes.
+  return fetchParallelUsdViaSupabaseV115(supabase);
 }
-async function refreshMarketUsdV114({force=false}={}){
-  if(marketStateV114.inFlight)return marketStateV114.inFlight;
+async function refreshMarketUsdV115({force=false}={}){
+  if(marketStateV115.inFlight)return marketStateV115.inFlight;
   const now=Date.now();
-  if(!force&&marketStateV114.quote&&
-     marketQuoteFreshV114(marketStateV114.quote,now)&&
-     marketStateV114.lastSuccessAt>0&&now-marketStateV114.lastSuccessAt<MARKET_CACHE_MS_V114)
-    return marketStateV114.quote;
-  if(!force&&marketStateV114.lastAttemptAt&&now-marketStateV114.lastAttemptAt<30*60*1000)
-    return marketStateV114.quote;
-  marketStateV114.lastAttemptAt=now;
-  marketStateV114.inFlight=fetchMarketUsdOnlineV114();
-  showMarketUsdV114();
+  if(!force&&marketStateV115.verified&&marketStateV115.quote&&marketQuoteFreshV114(marketStateV115.quote,now)&&
+     marketStateV115.lastSuccessAt>0&&now-marketStateV115.lastSuccessAt<MARKET_CACHE_MS_V114)
+    return marketStateV115.quote;
+  if(!force&&marketStateV115.lastAttemptAt&&now-marketStateV115.lastAttemptAt<5*60*1000)
+    return marketStateV115.quote;
+  marketStateV115.lastAttemptAt=now;
+  marketStateV115.inFlight=fetchMarketUsdOnlineV115();
+  showMarketUsdV115();
   try{
-    const quote=await marketStateV114.inFlight;
-    marketStateV114.quote=quote;
-    marketStateV114.lastSuccessAt=Date.now();
-    marketStateV114.verified=true;
-    marketStateV114.error=null;
-    marketCacheSaveV114(quote);
+    const quote=await marketStateV115.inFlight;
+    marketStateV115.quote=quote;
+    marketStateV115.lastSuccessAt=Date.now();
+    marketStateV115.verified=true;
+    marketStateV115.error=null;
+    marketCacheSaveV115(quote);
     return quote;
   }catch(error){
-    marketStateV114.error=error?.message||'MARKET_UNAVAILABLE';
-    marketStateV114.verified=false;
+    marketStateV115.error=error?.message||'MARKET_PROXY_UNAVAILABLE';
+    marketStateV115.verified=false;
     return null;
   }finally{
-    marketStateV114.inFlight=null;
-    showMarketUsdV114();
+    marketStateV115.inFlight=null;
+    showMarketUsdV115();
   }
 }
-async function approveMarketUsdV114(){
+async function approveMarketUsdV115(){
   const btn=app.querySelector('#market-usd-approve');
   if(!btn||btn.disabled)return;
   btn.disabled=true;
-  // Always fetch anew on user intent: never approve a cached/offline/old quote.
-  const q=await refreshMarketUsdV114({force:true});
-  if(!marketQuoteFreshV114(q)){
-    toast('تعذّر التحقق من سعر السوق الموازية الآن. لم يتغير سعر الصرف أو أي سعر مادة.','error');
-    showMarketUsdV114();return;
+  const q=await refreshMarketUsdV115({force:true});
+  if(!marketQuoteFreshV114(q)||marketStateV115.error){
+    toast(marketStateV115.error?marketProxyErrorTextV115(marketStateV115.error):
+      'لا توجد قراءة حديثة معتمدة من المصدر. لم تتغير الأسعار.','error');
+    showMarketUsdV115();return;
   }
-  let previouslyApproved=null;
+  const side=marketStateV115.side;
+  const rate=side==='buy'?q.buyOld:q.sellOld;
+  let previous=null;
   try{
     const rows=await api.list('app_settings',{limit:1});
-    previouslyApproved=Number(rows?.[0]?.usd_to_base_rate||0);
+    previous=Number(rows?.[0]?.usd_to_base_rate||0);
   }catch(error){
-    toast(friendlyError(error,'تعذر قراءة سعر الصرف الحالي. لم ننفّذ أي تغيير.'),'error');
-    showMarketUsdV114();return;
+    toast(friendlyError(error,'تعذر قراءة سعر الصرف الحالي؛ لم تتغير الأسعار.'),'error');
+    showMarketUsdV115();return;
   }
-  const rate=q.sellOld;
-  let selectedDecision=null;
-  let saved=false;
+  let selectedDecision=null,saved=false;
   const m=modal({
-    title:'اعتماد سعر الدولار — السوق الموازية',
-    subtitle:`LiraScope · سعر المبيع · آخر تحديث ${marketDateV114(q.updatedAt)}`,
+    title:'اعتماد سعر الدولار',
+    subtitle:`سوق موازية · ${side==='buy'?'شراء':'مبيع'} · ${marketDateV115(q.updatedAt)}`,
     hideActions:true,
     body:`<div class="market-approval-summary-v114">
-      <div><small>سعر السوق المقترح (ليرة سورية قديمة)</small><strong>1 USD = ${esc(formatOldSypV114(rate))} ل.س</strong></div>
-      <div><small>السعر المعتمد حاليًا</small><strong>${previouslyApproved>0?`${esc(formatOldSypV114(previouslyApproved))} ل.س`:'غير محدد'}</strong></div>
+      <div><small>السعر المقترح (ليرة قديمة)</small><strong>${esc(marketValueV115(q,side,'old'))}</strong></div>
+      <div><small>السعر المعتمد حاليًا</small><strong>${previous>0?esc(previous.toLocaleString('en-US')):'—'}</strong></div>
     </div>
-    <div class="market-approval-note-v114">السعر المقترح من <b>السوق الموازية</b> وليس المصرف المركزي. تحوّل الخدمة الليرة الجديدة إلى القديمة ×100 قبل الاعتماد. حفظ السعر وحده لا يغيّر أسعار المواد أو المشتريات السابقة.</div>
     <p class="market-approval-error-v114" data-market-approval-error hidden role="alert"></p>
     <div class="modal-actions market-approval-actions-v114">
       <button type="button" class="btn" data-market-fx-update>حفظ وتحديث أسعار المواد</button>
@@ -291,9 +283,8 @@ async function approveMarketUsdV114(){
       const errorEl=m.form.querySelector('[data-market-approval-error]');
       errorEl.hidden=true;
       if(!marketQuoteFreshV114(q)){
-        errorEl.textContent='انتهت صلاحية قراءة السوق. أغلق النافذة وحدّث السعر.';
-        errorEl.hidden=false;
-        return false;
+        errorEl.textContent='انتهت صلاحية القراءة. حدّث السعر.';
+        errorEl.hidden=false;return false;
       }
       const buttons=m.form.querySelectorAll('button');
       buttons.forEach(b=>b.disabled=true);
@@ -302,15 +293,12 @@ async function approveMarketUsdV114(){
         if(!result||Math.abs(Number(result.rate)-rate)>0.011||Boolean(result.applied)!==update)
           throw new Error('PRICING_RESULT_NOT_CONFIRMED');
         saved=true;
-        toast(update?`تم اعتماد سعر السوق وتحديث ${result.updated_materials??0} سعر مادة مرجعي.`:'تم اعتماد سعر السوق دون تعديل أسعار المواد.','success');
+        toast(update?`تم حفظ السعر وتحديث ${result.updated_materials??0} سعر مادة مرجعي.`:'تم حفظ السعر دون تغيير المواد.','success');
         return true;
       }catch(error){
         errorEl.textContent=materialPricingErrorV111(error);
-        errorEl.hidden=false;
-        return false;
-      }finally{
-        buttons.forEach(b=>b.disabled=false);
-      }
+        errorEl.hidden=false;return false;
+      }finally{buttons.forEach(b=>b.disabled=false);}
     },
     onClose:async()=>{
       if(saved&&(location.hash||'').startsWith('#/settings'))await route();
@@ -320,22 +308,34 @@ async function approveMarketUsdV114(){
   m.form.querySelector('[data-market-fx-update]').onclick=()=>decide(true);
   m.form.querySelector('[data-market-fx-only]').onclick=()=>decide(false);
   m.form.querySelector('[data-market-fx-cancel]').onclick=()=>m.close();
-  showMarketUsdV114();
+  showMarketUsdV115();
 }
-function installMarketUsdV114(){
-  if(marketStateV114.timer)clearInterval(marketStateV114.timer);
-  marketStateV114.quote=null;
-  marketStateV114.error=null;
-  marketStateV114.verified=false;
-  marketStateV114.lastSuccessAt=0;
-  const cached=marketCacheReadV114();
-  if(cached){marketStateV114.quote=cached.quote;marketStateV114.lastSuccessAt=cached.savedAt;}
-  showMarketUsdV114();
+window.addEventListener('maria-market-display-unit-v115',event=>{
+  marketStateV115.unit=event.detail?.unit==='new'?'new':'old';
+  showMarketUsdV115();
+});
+function installMarketUsdV115(){
+  if(marketStateV115.timer)clearInterval(marketStateV115.timer);
+  marketStateV115.quote=null;
+  marketStateV115.error=null;
+  marketStateV115.verified=false;
+  marketStateV115.lastSuccessAt=0;
+  marketStateV115.lastAttemptAt=0;
+  marketStateV115.side=readMarketSideV115();
+  marketStateV115.unit=readMarketDisplayUnitV115();
+  const cached=marketCacheReadV115();
+  if(cached){marketStateV115.quote=cached.quote;marketStateV115.lastSuccessAt=cached.savedAt;}
+  showMarketUsdV115();
   const approve=app.querySelector('#market-usd-approve');
-  if(approve)approve.onclick=approveMarketUsdV114;
-  void refreshMarketUsdV114();
-  marketStateV114.timer=setInterval(()=>{
-    if(document.visibilityState==='visible')void refreshMarketUsdV114();
+  if(approve)approve.onclick=approveMarketUsdV115;
+  const toggle=app.querySelector('#market-usd-side');
+  if(toggle)toggle.onclick=()=>{
+    marketStateV115.side=setMarketSideV115(marketStateV115.side==='sell'?'buy':'sell');
+    showMarketUsdV115();
+  };
+  void refreshMarketUsdV115();
+  marketStateV115.timer=setInterval(()=>{
+    if(document.visibilityState==='visible')void refreshMarketUsdV115();
   },15*60*1000);
 }
 

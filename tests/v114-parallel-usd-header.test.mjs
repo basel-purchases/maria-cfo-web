@@ -54,13 +54,13 @@ test('loads stored quotes for display but refresh on approval; no unverified app
  // Display-only cache may be used; approval performs a fresh authenticated fetch.
  assert.ok(marketCachedQuoteV114({quote:q,savedAt:new Date().toISOString()}));
  const app=read('js/app.js');
- assert.match(app,/const q=await refreshMarketUsdV114\(\{force:true\}\)/);
+ assert.match(app,/const q=await refreshMarketUsdV115\(\{force:true\}\)/);
  assert.match(app,/if\(!marketQuoteFreshV114\(q\)\)/);
  assert.match(app,/await api\.materialPriceApplyExchangeV110\(rate,update\)/);
  assert.match(app,/data-market-fx-update/);
  assert.match(app,/data-market-fx-only/);
  assert.match(app,/data-market-fx-cancel/);
- assert.match(app,/readOnly|disabled>✓/);
+ assert.match(app,/disabled>✓/);
 });
 
 test('uses a single GET with a timeout and returns well-formed normalized quote',async()=>{
@@ -82,12 +82,12 @@ test('header is adjacent to bell, has explicit approval button and no automatic 
  const a=app.indexOf('id="ai-notify-btn"'),b=app.indexOf('id="market-usd-chip"');
  assert.ok(a>0&&b>a&&b-a<1400);
  assert.match(app,/id="market-usd-approve"/);
- assert.match(app,/marketCacheSaveV114/);
- assert.match(css,/\.market-usd-group-v114/);
+ assert.match(app,/marketCacheSaveV115/);
+ assert.match(css,/\.market-usd-group-v115/);
  assert.match(css,/@media\(max-width:430px\)/);
- assert.equal(read('VERSION').trim(),'1.0.14');
- assert.match(index,/Web v1\.0\.14/);
- assert.match(app,/Web v1\.0\.14/);
+ assert.equal(read('VERSION').trim(),'1.0.15');
+ assert.match(index,/Web v1\.0\.15/);
+ assert.match(app,/Web v1\.0\.15/);
  assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 
@@ -95,7 +95,7 @@ test('optional Edge Function proxies one fixed LiraScope path after owner authen
  const edge=read('supabase/functions/market-usd/index.ts');
  assert.match(edge,/public|lirascope\.syria-cloud\.sy/);
  assert.match(edge,/is_app_owner/);
- assert.match(edge,/data\.marketRates/);
+ assert.match(edge,/provider\.marketRates/);
  assert.doesNotMatch(edge,/[.\[]cbsRates|[.\[]effectiveRates/);
  assert.match(edge,/PROVIDER_UNAVAILABLE/);
 });

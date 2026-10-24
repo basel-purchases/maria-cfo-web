@@ -1908,40 +1908,37 @@ select option{background:#fff;color:var(--text);padding:8px}
 }
 @media(max-width:540px){.material-detail-grid-v113{grid-template-columns:1fr}.materials-compact-v113 .materials-table tr{gap:6px;padding:8px}}
 
-/* Maria CFO v1.0.14 — the market rate stays in the header; accounting changes require approval. */
-.market-usd-group-v114{display:flex;align-items:stretch;gap:5px;min-width:0;direction:rtl}
-.market-usd-chip-v114{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;min-height:44px;min-width:139px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:4px 11px;font-size:11px;line-height:1.3}
-.market-usd-caption-v114{color:var(--muted);font-size:10px;white-space:nowrap}
-.market-usd-chip-v114 strong{font-size:14px;font-weight:800;direction:ltr;white-space:nowrap;color:var(--plum-dark)}
-.market-usd-chip-v114 small{font-size:10px;color:var(--sage)}
-.market-usd-chip-v114.market-usd-stale-v114{background:var(--amber-soft);border-color:#ead6ac}
-.market-usd-chip-v114.market-usd-stale-v114 small{color:#8a6122}
-.market-usd-chip-v114.market-usd-offline-v114 small{color:var(--danger)}
-.market-usd-approve-v114{height:44px;min-width:42px;border-radius:12px;border:1px solid #c6d6c7;background:var(--sage-soft);color:#3a6442;font-size:21px;font-weight:800;padding:0 10px;line-height:1}
-.market-usd-approve-v114:not(:disabled):hover{background:#d5e6d8;box-shadow:0 0 0 3px rgba(127,154,130,.12)}
-.market-usd-approve-v114:disabled{opacity:.4;cursor:not-allowed}
+/* Maria CFO v1.0.15 — numeric-only market USD chip. */
+.market-usd-group-v115{display:inline-flex;align-items:center;gap:6px;min-width:0;direction:rtl;flex-shrink:0}
+.market-usd-chip-v115{height:42px;display:inline-flex;align-items:center;gap:0;direction:ltr;border:1px solid var(--line);border-radius:13px;background:var(--surface);overflow:hidden;min-width:105px;max-width:154px}
+.market-usd-chip-v115 strong{flex:1;min-width:63px;text-align:center;direction:ltr;font-size:14px;line-height:1.2;font-weight:800;color:var(--plum-dark);white-space:nowrap;font-variant-numeric:tabular-nums;padding:0 5px}
+.market-usd-side-v115{display:inline-flex;align-items:center;justify-content:center;flex:none;width:30px;height:100%;border:0;border-inline-start:1px solid var(--line);background:var(--surface-2);color:var(--plum);font-size:15px;cursor:pointer;padding:0}
+.market-usd-side-v115:hover{background:var(--rose-soft)}
+.market-usd-chip-v115.market-usd-stale-v115{border-color:#decbb0;background:#fffaf1}
+.market-usd-chip-v115.market-usd-loading-v115{opacity:.72}
+.market-usd-approve-v115{display:inline-flex;align-items:center;justify-content:center;width:38px;height:42px;padding:0;border-radius:12px;border:1px solid #c6d6c7;background:var(--sage-soft);color:#3a6442;font-size:20px;font-weight:800;line-height:1}
+.market-usd-approve-v115:not(:disabled):hover{background:#d5e6d8}
+.market-usd-approve-v115:disabled{opacity:.42;cursor:not-allowed}
 .market-approval-summary-v114{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .market-approval-summary-v114>div{display:grid;gap:6px;border:1px solid var(--line);border-radius:14px;padding:15px 14px;background:var(--surface-2)}
 .market-approval-summary-v114 small{font-size:11px;color:var(--muted)}
 .market-approval-summary-v114 strong{font-size:18px;direction:ltr;text-align:right;color:var(--plum-dark)}
-.market-approval-note-v114{background:var(--amber-soft);border-radius:13px;color:#735723;line-height:1.8;font-size:12px;margin-top:13px;padding:12px 14px}
 .market-approval-error-v114{padding:10px 13px;margin:12px 0 0;border-radius:12px;background:var(--danger-soft);color:var(--danger);font-size:12px}
 .market-approval-actions-v114{flex-wrap:wrap}
 @media(max-width:760px){
  .topbar{gap:6px;padding-inline:12px}
  .topbar .title{font-size:12px;max-width:115px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .topbar-actions{gap:5px;min-width:0}
- .market-usd-chip-v114{min-width:100px;padding:4px 6px}
- .market-usd-chip-v114 strong{font-size:11px}
- .market-usd-caption-v114,.market-usd-chip-v114 small{font-size:9px}
- .market-usd-approve-v114{min-width:34px;height:39px;padding:0 7px}
+ .market-usd-chip-v115{min-width:91px;height:38px}
+ .market-usd-chip-v115 strong{min-width:56px;font-size:12px}
+ .market-usd-side-v115{width:27px}
+ .market-usd-approve-v115{width:32px;height:38px}
  .ai-notify-btn{width:36px;height:39px}
  .back-btn{padding:8px;font-size:11px}
 }
 @media(max-width:430px){
  .topbar .title{max-width:75px}
- .market-usd-chip-v114{min-width:90px}
- .market-usd-chip-v114 strong{font-size:10px}
- .market-usd-caption-v114{display:none}
+ .market-usd-chip-v115{min-width:86px}
+ .market-usd-chip-v115 strong{font-size:11px}
  .market-approval-summary-v114{grid-template-columns:1fr}
 }

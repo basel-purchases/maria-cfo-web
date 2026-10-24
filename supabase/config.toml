@@ -1,0 +1,5 @@
+# Maria CFO v1.0.15: the function validates the caller's user JWT and owner role itself.
+# Disable the legacy platform-level JWT gate for newer publishable key projects.
+# Other functions keep their previous/default configuration.
+[functions.market-usd]
+verify_jwt = false

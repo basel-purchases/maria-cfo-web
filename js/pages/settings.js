@@ -1,3 +1,4 @@
+import {readMarketDisplayUnitV115,setMarketDisplayUnitV115} from '../market-usd-v115.js?v=1.0.15';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
 import * as api from '../api.js?v=1.0.12';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
@@ -78,6 +79,12 @@ export async function renderSettings(root, selectedTab='general') {
             <div class="form-grid" style="margin-top:12px">
               <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
               <div class="field"><label>1 USD = كم ل.س</label><input id="fx-rate" type="number" min="0.000001" step="any" value="${esc(s.usd_to_base_rate??'')}"></div>
+              <div class="field"><label>عرض دولار السوق في الشريط</label>
+                <select id="usd-market-unit-v115" title="يغيّر طريقة العرض فقط، دون تغيير السعر المعتمد">
+                  <option value="old" ${readMarketDisplayUnitV115()==='old'?'selected':''}>ليرة قديمة (14,000)</option>
+                  <option value="new" ${readMarketDisplayUnitV115()==='new'?'selected':''}>ليرة جديدة (140)</option>
+                </select>
+              </div>
             </div><div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
           </div>
           <div class="card soft"><h3>جلسة الدخول</h3><p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>
@@ -182,6 +189,7 @@ export async function renderSettings(root, selectedTab='general') {
       try{await api.setPayrollCashbox(id);toast('تم حفظ صندوق الرواتب.','success');}
       catch(e){toast(friendlyError(e),'error');}
     };
+    root.querySelector('#usd-market-unit-v115').onchange=e=>setMarketDisplayUnitV115(e.target.value);
     root.querySelector('#fx-save').onclick=async()=>{
       const rate=Number(root.querySelector('#fx-rate').value);
       if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر صرف صحيحًا وموجبًا.','error');return;}

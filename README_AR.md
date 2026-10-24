@@ -1,4 +1,8 @@
-# الإصدار الحالي: Maria CFO Web v1.0.14
+# الإصدار الحالي: Maria CFO Web v1.0.15
+
+لإصلاح سعر الدولار انشر وظيفة Supabase `market-usd` ثم ارفع الموقع كاملًا. اقرأ `README_v1.0.15_USD_PROXY_COMPACT_AR.md` أولًا. لا SQL جديدًا ولا تغييرًا لملف `config.js`.
+
+# دليل الإصدار السابق: Maria CFO Web v1.0.14
 
 تفاصيل اعتماد سعر الدولار من السوق الموازية في `README_v1.0.14_PARALLEL_USD_MARKET_AR.md`.
 
