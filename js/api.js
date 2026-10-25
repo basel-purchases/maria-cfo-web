@@ -1144,13 +1144,13 @@ export async function payrollPaymentHistory(){
   return list('payroll_payments',{order:'occurred_at',limit:300});
 }
 export async function createMonthlyPayroll(year,month){
-  return rpc('create_monthly_payroll_v014',{p_year:Number(year),p_month:Number(month)});
+  return rpc('create_monthly_payroll_v117',{p_year:Number(year),p_month:Number(month)});
 }
 export async function recalculateMonthlyPayroll(runId){
-  return rpc('recalculate_monthly_payroll_v014',{p_payroll_run_id:runId});
+  return rpc('recalculate_monthly_payroll_v117',{p_payroll_run_id:runId});
 }
 export async function approveMonthlyPayroll(runId){
-  return rpc('approve_payroll_run',{p_payroll_run_id:runId});
+  return rpc('approve_monthly_payroll_v117',{p_payroll_run_id:runId});
 }
 export async function statisticsTimeSeries(start,end,granularity='day'){
   return rpc('get_statistics_time_series',{

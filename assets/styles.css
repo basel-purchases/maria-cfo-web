@@ -1942,3 +1942,36 @@ select option{background:#fff;color:var(--text);padding:8px}
  .market-usd-chip-v115 strong{font-size:11px}
  .market-approval-summary-v114{grid-template-columns:1fr}
 }
+
+/* v1.0.16 - persistent cashbox balances centered in the application header. */
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);column-gap:14px;align-items:center}
+.topbar-leading{grid-column:1;grid-row:1;justify-self:start;min-width:0}
+.topbar .topbar-actions{grid-column:3;grid-row:1;justify-self:end;margin-right:0;min-width:0}
+.cashbox-strip-v116{grid-column:2;grid-row:1;justify-self:center;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;width:370px;max-width:100%;min-width:0}
+.cashbox-quick-v116{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:48px;padding:6px 7px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:center;transition:background .16s,border-color .16s,box-shadow .16s}
+.cashbox-quick-v116:hover{background:var(--rose-soft);border-color:var(--rose)}
+.cashbox-quick-v116:focus-visible{outline:2px solid var(--plum);outline-offset:2px}
+.cashbox-quick-name-v116{display:block;width:100%;font-size:10px;font-weight:700;color:var(--muted);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cashbox-quick-balance-v116{display:block;max-width:100%;font-size:14px;line-height:1.25;font-weight:800;color:var(--plum-dark);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cashbox-quick-v116.cashbox-quick-stale-v116{border-color:#d8bc8c;background:#fffaf0}
+@media(max-width:1250px){
+ .topbar{grid-template-columns:minmax(0,1fr) auto;row-gap:8px;padding-block:9px}
+ .cashbox-strip-v116{grid-column:1/-1;grid-row:2;justify-self:stretch;width:100%}
+ .topbar .topbar-actions{grid-column:2;grid-row:1}
+ .cashbox-quick-v116{min-height:40px;padding:5px 6px}
+}
+@media(max-width:430px){
+ .topbar{column-gap:4px}
+ .topbar-leading{gap:5px}
+ .cashbox-strip-v116{gap:5px}
+ .cashbox-quick-name-v116{font-size:9px}
+ .cashbox-quick-balance-v116{font-size:12px}
+ .cashbox-quick-v116{min-height:39px;padding:4px 3px}
+}
+
+/* v1.0.17 — compact, currency-separated monthly salary summaries. */
+.payroll-monthly-metrics-v117{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.payroll-monthly-metrics-v117 .card{min-width:0;padding:15px}
+.payroll-monthly-metrics-v117 .metric-note{overflow-wrap:anywhere}
+@media(max-width:1050px){.payroll-monthly-metrics-v117{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:570px){.payroll-monthly-metrics-v117{grid-template-columns:minmax(0,1fr)}}

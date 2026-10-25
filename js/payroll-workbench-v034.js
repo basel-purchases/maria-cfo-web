@@ -17,7 +17,7 @@ export function normalizedPayrollRowV034(row){
  const advances=Number(row.advance_deduction_original||0);
  const net=Number(row.net_due_original||0),paid=Number(row.paid_original||0),remaining=Number(row.remaining_original??(net-paid));
  return {...row,base,overtime,bonuses,shortage,deductions,advances,net,paid,remaining:Math.max(0,remaining),
-  payable:['approved','closed'].includes(row.run_status)&&remaining>0.0001&&Number(row.missing_attendance_days||0)===0,
+  payable:['approved','closed'].includes(row.run_status)&&remaining>0.0001&&(row.pay_type==='monthly'||Number(row.missing_attendance_days||0)===0),
   isDraft:row.run_status==='draft'};
 }
 export function filterPayrollReadyV034(rows,query=''){

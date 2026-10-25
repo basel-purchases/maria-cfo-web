@@ -1,3 +1,11 @@
+## الإصدار الحالي: v1.0.17
+
+راجع `README_v1.0.17_MONTHLY_PAYROLL_AR.md` للتثبيت والأثر المحاسبي. يجب تشغيل SQL v1.0.17 قبل رفع الموقع، مع الحفاظ على `config.js` المستضاف.
+
+## Web v1.0.16
+
+Three cashboxes are now visible in the center of the application header with balances; each is a direct link to the cashboxes page. The three values use the same database balance calculation as the cashboxes page and update periodically. See `README_v1.0.16_CASHBOX_TOPBAR_AR.md`. No SQL migration is required; keep the existing `config.js` when uploading the full site.
+
 # الإصدار الحالي: Maria CFO Web v1.0.15
 
 لإصلاح سعر الدولار انشر وظيفة Supabase `market-usd` ثم ارفع الموقع كاملًا. اقرأ `README_v1.0.15_USD_PROXY_COMPACT_AR.md` أولًا. لا SQL جديدًا ولا تغييرًا لملف `config.js`.

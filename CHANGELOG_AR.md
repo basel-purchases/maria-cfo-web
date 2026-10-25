@@ -1,3 +1,20 @@
+## Web v1.0.17 — رواتب شهرية بحضور افتراضي
+- لم يعد إنشاء/اعتماد مسير الموظفين الشهريين يتطلب تسجيل دوام كل يوم. الأيام غير المسجلة تُعد حضورًا افتراضيًا ولا تُنشأ عنها سجلات حضور زائفة.
+- يبقى أي غياب أو نقص ساعات أو خصم أو مكافأة مُسجّل فعليًا خاضعًا لقواعده السابقة.
+- تحديث مسودات المسيرات الشهرية القائمة دون تغيير الراتب أو الدفع أو سجل النقد أثناء تثبيت الترحيل.
+- اعتماد الرواتب من دالة شهرية محمية جديدة تطبق قاعدة الحضور ثم تستدعي اعتماد النظام الأصلي مع حمايات السلف والدفع.
+- إزالة قسم الأجور اليومية من مركز الدفع دون حذف دواله أو بياناته التاريخية، وإزالة التلميح الخاص بالصندوق العام.
+- إظهار مجموع مكافآت المسير ومجموع السلف المخصومة حسب العملة؛ الاعتماد لا ينشئ دفعًا نقديًا.
+- تحديث بيانات الإصدار وتحميل ملفات JavaScript الجديدة مع الإبقاء على `config.js` خارج ZIP.
+
+### v1.0.16 - 2026-10-24
+
+- Add three always-visible cashbox balances to the top navigation, centered between the page title and notifications. Clicking any of them opens the cashboxes page.
+- Use the same expected balances, cashbox names and display ordering as the existing cashboxes page; do not calculate or invent separate balances.
+- Refresh on opening, once per minute, on browser return, and immediately after changes on the cashboxes page. Warn visually if the last reading is stale.
+- Keep all three balances visible on small screens in a second header row, without horizontal scrolling.
+- No new SQL or financial write path; full project ZIP excludes config.js. See README_v1.0.16_CASHBOX_TOPBAR_AR.md.
+
 ### v1.0.15 — 2026-10-24
 
 - إصلاح مسار أسعار السوق: إيقاف الطلب المباشر إلى LiraScope الممنوع بسبب CORS؛ جعل وظيفة Supabase Edge Function المسار الوحيد مع معالجة غيابها ورفض الأسعار الرسمية.

@@ -80,6 +80,6 @@ test('UI supports Arabic numeric keyboard entry, preserves original OCR sources 
  assert.match(page,/data-raw-panel hidden/);
  assert.doesNotMatch(page,/data-reparse|data-audit-digits|تكبير الأرقام/);
  assert.doesNotMatch(page,/data-bulk-ocr="1"|data-ocr="1"/);
- assert.match(html,/Web v1\.0\.15/);
+ assert.match(html,/Web v1\.0\.17/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

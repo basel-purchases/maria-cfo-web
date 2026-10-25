@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.13';
+import * as api from './api.js?v=1.0.17';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
@@ -14,11 +14,11 @@ import {
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=1.0.7';
+} from './pages/daily.js?v=1.0.16';
 import { renderEmployees, renderAttendance } from './pages/employees.js?v=1.0';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.13';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.5';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.17';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
@@ -32,6 +32,7 @@ import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8'
 import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
 import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketDisplayUnitV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.15';
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
+import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.16';
 
 const app = document.querySelector('#app');
 installSearchableSelectsV033();
@@ -56,6 +57,8 @@ const nav = [
 
 function login() {
   if(marketStateV115.timer){clearInterval(marketStateV115.timer);marketStateV115.timer=null;}
+  if(cashboxQuickStateV116.timer){clearInterval(cashboxQuickStateV116.timer);cashboxQuickStateV116.timer=null;}
+  cashboxQuickStateV116.entries=[];cashboxQuickStateV116.lastSuccessAt=0;
   app.innerHTML = `
     <div class="login-page">
       <div class="login-card">
@@ -116,7 +119,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.15</div>
+        <div class="sidebar-foot">Web v1.0.17</div>
       </aside>
 
       <main class="main">
@@ -125,6 +128,13 @@ function shell() {
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
             <div class="title" id="top-title">Maria CFO</div>
           </div>
+          <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
+            ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
+              <a class="cashbox-quick-v116" href="#/cashboxes" data-cashbox-slot="${i}" title="\u0641\u062a\u062d \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
+                <span class="cashbox-quick-name-v116">${name}</span>
+                <strong class="cashbox-quick-balance-v116" dir="ltr">\u2014</strong>
+              </a>`).join('')}
+          </nav>
           <div class="topbar-actions">
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
               <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
@@ -153,6 +163,7 @@ function shell() {
   installTableExportV027();
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
   installMarketUsdV115();
+  installCashboxQuickV116();
 
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
@@ -165,6 +176,78 @@ function shell() {
   route();
 }
 
+
+// v1.0.16: persistent quick balances, sourced from the same overview as the cashboxes page.
+const CASHBOX_REFRESH_MS_V116=60000;
+const cashboxQuickStateV116={entries:[],lastSuccessAt:0,error:null,inFlight:null,timer:null,version:0};
+let cashboxQuickListenersV116=false;
+function drawCashboxQuickV116(){
+  const host=app.querySelector('#topbar-cashboxes');
+  if(!host)return;
+  const state=cashboxQuickStateV116;
+  const defaults=['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'];
+  host.querySelectorAll('[data-cashbox-slot]').forEach((link,index)=>{
+    const entry=state.entries[index];
+    const name=entry?.name||defaults[index];
+    const amount=cashboxNumberV116(entry?.balance);
+    link.querySelector('.cashbox-quick-name-v116').textContent=name;
+    link.querySelector('.cashbox-quick-balance-v116').textContent=amount;
+    const status=state.error?'\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0631\u0635\u064a\u062f\u061b \u0622\u062e\u0631 \u0642\u0631\u0627\u0621\u0629 \u0645\u062a\u0627\u062d\u0629':
+      state.lastSuccessAt?'\u0627\u0644\u0631\u0635\u064a\u062f \u0627\u0644\u0645\u062a\u0648\u0642\u0639 \u0627\u0644\u0622\u0646':'\u062c\u0627\u0631\u064d \u062c\u0644\u0628 \u0627\u0644\u0631\u0635\u064a\u062f';
+    const updated=state.lastSuccessAt?` - \u0622\u062e\u0631 \u062a\u062d\u062f\u064a\u062b ${new Date(state.lastSuccessAt).toLocaleTimeString('ar-SY',{hour:'2-digit',minute:'2-digit'})}`:'';
+    link.title=`${name}: ${status}${updated} - ${amount} \u0644.\u0633 - \u0627\u0636\u063a\u0637 \u0644\u0641\u062a\u062d \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642`;
+    link.setAttribute('aria-label',link.title);
+    link.classList.toggle('cashbox-quick-stale-v116',Boolean(state.error));
+  });
+}
+async function refreshCashboxQuickV116({force=false}={}){
+  const state=cashboxQuickStateV116;
+  if(!currentSession||!app.querySelector('#topbar-cashboxes'))return;
+  if(state.inFlight)return state.inFlight;
+  if(!force&&state.lastSuccessAt&&Date.now()-state.lastSuccessAt<15000)return;
+  const startedVersion=state.version;
+  state.inFlight=(async()=>{
+    try{
+      const overview=await api.cashboxOverview();
+      if(state.version!==startedVersion||!currentSession)return;
+      if(!Array.isArray(overview)||!overview.some(entry=>entry?.cashbox?.id))throw new Error('CASHBOX_OVERVIEW_EMPTY');
+      state.entries=cashboxQuickEntriesV116(overview);
+      state.lastSuccessAt=Date.now();
+      state.error=null;
+    }catch(error){
+      if(state.version!==startedVersion||!currentSession)return;
+      state.error=error;
+      console.warn('Cashbox header refresh failed',error);
+    }finally{drawCashboxQuickV116();}
+  })();
+  try{await state.inFlight;}finally{state.inFlight=null;}
+}
+function installCashboxQuickV116(){
+  const state=cashboxQuickStateV116;
+  if(state.timer)clearInterval(state.timer);
+  drawCashboxQuickV116();
+  if(!cashboxQuickListenersV116){
+    // The cashboxes page supplies its already-fetched overview after every balance change.
+    document.addEventListener('maria:cashboxes-updated',event=>{
+      if(!currentSession||!Array.isArray(event.detail))return;
+      state.version++;
+      state.entries=cashboxQuickEntriesV116(event.detail);
+      state.lastSuccessAt=Date.now();
+      state.error=null;
+      drawCashboxQuickV116();
+    });
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible')void refreshCashboxQuickV116();
+    });
+    window.addEventListener('focus',()=>void refreshCashboxQuickV116());
+    window.addEventListener('hashchange',()=>void refreshCashboxQuickV116());
+    cashboxQuickListenersV116=true;
+  }
+  void refreshCashboxQuickV116({force:true});
+  state.timer=setInterval(()=>{
+    if(document.visibilityState==='visible')void refreshCashboxQuickV116({force:true});
+  },CASHBOX_REFRESH_MS_V116);
+}
 
 // v1.0.15: one quiet number, two rate sides, and a server-side quote bridge.
 const MARKET_CACHE_KEY_V115='maria_cfo_parallel_usd_v114'; // compatible with saved v1.0.14 quotes

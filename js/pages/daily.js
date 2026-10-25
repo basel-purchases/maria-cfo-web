@@ -1,4 +1,5 @@
 import * as api from '../api.js?v=1.0.10';
+import { expectedCashboxBalanceV116 } from '../cashbox-summary-v116.js?v=1.0.16';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=1.0';
 import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=1.0';
@@ -84,26 +85,14 @@ export async function renderInventory(root){
   }catch(e){root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;}
 }
 
-function firstNumeric(obj,keys){
-  for(const key of keys){
-    const v=obj?.[key];
-    if(v!==undefined && v!==null && v!=='' && Number.isFinite(Number(v))) return Number(v);
-  }
-  return null;
-}
-
-function expectedCashboxBalance(summary){
-  return firstNumeric(summary,[
-    'expected_balance_base','expected_base','expected_closing_base','expected_closing_balance_base',
-    'current_balance_base','balance_base','net_base','expected_balance','balance','_computed_balance_base'
-  ]);
-}
 
 export async function renderCashboxes(root){
   root.innerHTML=loader();
   try{
     const overview=await api.cashboxOverview(todayISO());
     const boxes=overview.map(x=>x.cashbox).filter(Boolean);
+    // Send the same server result to the persistent header after each reload or adjustment.
+    document.dispatchEvent(new CustomEvent('maria:cashboxes-updated', { detail: overview }));
     root.innerHTML=`
       <div class="page-head">
         <div>
@@ -120,7 +109,7 @@ export async function renderCashboxes(root){
           const b=entry.cashbox||{};
           const session=entry.session||null;
           const summary=entry.summary||{};
-          const bal=expectedCashboxBalance(summary);
+          const bal=expectedCashboxBalanceV116(summary);
           return `
             <div class="card cashbox-card" data-box="${esc(b.id)}">
               <div class="cashbox-card-top">
@@ -144,7 +133,7 @@ export async function renderCashboxes(root){
           <table class="table">
             <thead><tr><th>الصندوق</th><th>اليوم</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead>
             <tbody>${overview.map(entry=>{
-              const b=entry.cashbox||{}; const se=entry.session||{}; const bal=expectedCashboxBalance(entry.summary||{});
+              const b=entry.cashbox||{}; const se=entry.session||{}; const bal=expectedCashboxBalanceV116(entry.summary||{});
               return `<tr><td><strong>${esc(b.name||'صندوق')}</strong></td><td>${dateOnly(se.business_date||todayISO())}</td><td>${statusBadge(se.status||'open')}</td><td>${bal===null?'—':money(bal,'SYP')}</td></tr>`;
             }).join('')}</tbody>
           </table>
