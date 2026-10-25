@@ -85,9 +85,9 @@ test('header is adjacent to bell, has explicit approval button and no automatic 
  assert.match(app,/marketCacheSaveV115/);
  assert.match(css,/\.market-usd-group-v115/);
  assert.match(css,/@media\(max-width:430px\)/);
- assert.equal(read('VERSION').trim(),'1.0.17');
- assert.match(index,/Web v1\.0\.17/);
- assert.match(app,/Web v1\.0\.17/);
+ assert.equal(read('VERSION').trim(),'1.0.18');
+ assert.match(index,/Web v1\.0\.18/);
+ assert.match(app,/Web v1\.0\.18/);
  assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 

@@ -67,7 +67,7 @@ test('Pricing approval has one modal, and inline persistent error on failures',(
  assert.match(pricing,/materialPricingErrorV111\(e\)/);
  assert.match(pricing,/await api\.materialPriceInitializeUsdV110\(rate\)/);
  assert.doesNotMatch(pricing,/confirmBox\(/);
- assert.match(read('index.html'),/Web v1\.0\.17/);
+ assert.match(read('index.html'),/Web v1\.0\.18/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });
 

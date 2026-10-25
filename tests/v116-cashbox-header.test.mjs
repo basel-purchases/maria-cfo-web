@@ -61,8 +61,8 @@ test('mobile shows all three balances without horizontal scroll; full zip exclud
   assert.match(css,/\.cashbox-strip-v116\{grid-column:1\/-1;grid-row:2/);
   assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:430px\)/);
-  assert.equal(read('VERSION').trim(),'1.0.17');
-  assert.match(read('index.html'),/v=1\.0\.17/);
-  assert.match(read('js/app.js'),/Web v1\.0\.17/);
+  assert.equal(read('VERSION').trim(),'1.0.18');
+  assert.match(read('index.html'),/v=1\.0\.18/);
+  assert.match(read('js/app.js'),/Web v1\.0\.18/);
   assert.equal(existsSync(resolve(base,'config.js')),false);
 });

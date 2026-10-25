@@ -70,6 +70,6 @@ test('UI keeps OCR text editable and links purchase manual / photos screens',()=
  assert.doesNotMatch(inputHandler[0],/dispatchEvent/,'typing must not trigger a form re-render');
  assert.match(combo,/select\.dispatchEvent\(new Event\('change'/,'committed selection must notify form');
  assert.match(app,/searchable-select-v033\.js\?v=1\.0\.8/);
- assert.match(html,/Web v1\.0\.17/);
+ assert.match(html,/Web v1\.0\.18/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });

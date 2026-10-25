@@ -83,11 +83,11 @@ export async function renderPayrollV034(root){
   if(totals)totals.innerHTML=`<div class="card"><div class="metric-label">إجمالي صافي الرواتب في مسيرات الشهر</div><div class="metric-note">${amountGroup(normalizedMonth,'net')}</div><small>تشمل المسيرات الظاهرة في قاعدة البيانات، ولا تشمل راتبًا لم يُنشأ له مسير.</small></div>
     <div class="card"><div class="metric-label">إجمالي ما دُفع في الشهر</div><div class="metric-note">${amountGroup(state.paid,'amount_original')}</div><small>حركات الدفع الحقيقية فقط، موزعة حسب العملة.</small></div>
     <div class="card"><div class="metric-label">إجمالي الرواتب المتبقية في مسيرات الشهر</div><div class="metric-note">${amountGroup(normalizedMonth,'remaining')}</div><small>بما فيها المسودات؛ الاعتماد لا يعني الصرف.</small></div>`;
-  panel.innerHTML=state.tab==='ready'?readyHtml():paidHtml();
+  panel.innerHTML=state.tab==='ready'?readyHtml(monthlyMonth):paidHtml();
   state.tab==='ready'?bindReady():bindPaid();
  }
  const draftMonths=()=>state.runs.filter(r=>r.status==='draft');
- function readyHtml(){
+ function readyHtml(monthlyMonth){
   const month=monthStartV034(state.year,state.month);
   const salaryRows=filterPayrollReadyV034(state.ready,state.query);
   const shown=salaryRows.filter(r=>state.status==='all'||

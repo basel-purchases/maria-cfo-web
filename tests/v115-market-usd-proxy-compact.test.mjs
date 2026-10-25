@@ -72,8 +72,8 @@ test('the shell uses one server-side path and a numeric-only chip with side/appr
   assert.match(app,/fetchParallelUsdViaSupabaseV115\(supabase\)/);
   assert.doesNotMatch(app,/await fetchParallelUsdV114\(/);
   assert.match(app,/MARKET_CACHE_KEY_V115/);
-  assert.match(app,/Web v1\.0\.17/);
-  assert.equal(read('VERSION').trim(),'1.0.17');
+  assert.match(app,/Web v1\.0\.18/);
+  assert.equal(read('VERSION').trim(),'1.0.18');
   assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 
@@ -87,7 +87,7 @@ test('settings offer old or new pound presentation without changing financial re
   assert.match(css,/\.market-usd-chip-v115/);
   assert.match(css,/\.market-usd-side-v115/);
   assert.match(css,/@media\(max-width:430px\)/);
-  assert.match(read('index.html'),/v=1\.0\.17/);
+  assert.match(read('index.html'),/v=1\.0\.18/);
 });
 
 test('Edge Function checks logged-in owner, uses a fixed provider URL, responds with CORS and only market prices',()=>{
