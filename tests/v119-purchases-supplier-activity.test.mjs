@@ -115,6 +115,6 @@ test('v1.0.19 no accidental dialog backdrop close; supplier quick invoice and de
   assert.match(purchase,/openSupplierCatalogDialog/);
   assert.match(purchase,/edit-invoice-v119/);
   assert.match(purchase,/purchase-total-row-v119/);
-  assert.equal(source('VERSION').trim(),'1.0.21');
+  assert.equal(source('VERSION').trim(),'1.0.22');
   assert.equal(existsSync(path.join(base,'config.js')),false);
 });

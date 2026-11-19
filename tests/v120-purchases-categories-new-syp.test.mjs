@@ -133,10 +133,10 @@ test('v120 material classification can be created, edited, persisted and used in
  const material=source('js/pages/materials.js');
  const api=source('js/api.js');
  assert.match(material,/category_id_v023/);
- assert.match(material,/<select name="category"/);
- assert.match(material,/materialCategoryChoicesV121/);
- assert.match(material,/createCatalogCategoryV023\('material',name\)/);
- assert.match(material,/resolveMaterialCategoryChoiceV121\(fd\.get\('category'\)/);
+ assert.match(material,/materialCategoryFieldV122/);
+ assert.match(material,/attachMaterialCategoryPickerV122/);
+ assert.match(api,/manageMaterialCategoryV122/);
+ assert.match(material,/categoryPicker\.resolve\(\)/);
  assert.match(api,/materialIdentityUpdatePricedV110/);
  assert.match(material,/displayKnownMaterialPriceV120\(price\)/);
  assert.match(material,/referencePriceEdited/);
@@ -153,9 +153,9 @@ test('v120 settings show only new SYP, launch checks USD material revalue and ve
  assert.match(app,/materialPriceSyncCurrentFxV120\(\)/);
  assert.match(app,/marketNewSypPerUsdV120\(q,side\)/);
  for(const mod of ['pages/materials.js','pages/settings.js','pages/purchases.js','pages/suppliers.js']){
-  assert.ok(app.includes("./"+mod+'?v=1.0.21'),mod);
+  assert.ok(app.includes("./"+mod+'?v=1.0.22'),mod);
  }
- assert.match(index,/Web v1\.0\.21/);
- assert.equal(source('VERSION').trim(),'1.0.21');
+ assert.match(index,/Web v1\.0\.22/);
+ assert.equal(source('VERSION').trim(),'1.0.22');
  assert.equal(existsSync(path.join(root,'config.js')),false);
 });

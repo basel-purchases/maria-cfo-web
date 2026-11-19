@@ -31,7 +31,9 @@ export function supplierSuggestionsV119(suppliers=[],query='',limit=8){
     .slice(0,limit).map(x=>x.supplier);
 }
 export function supplierPurchaseSummaryV119(activity={}){
-  const invoices=activity.invoices||[],items=activity.items||[],allocations=activity.allocations||[],payments=activity.payments||[];
+  // Archived cancelled invoices remain in the audit log, but leave ordinary
+  // supplier lists and counts. Live financial totals are unchanged.
+  const invoices=(activity.invoices||[]).filter(i=>!i.archived_at_v122),items=activity.items||[],allocations=activity.allocations||[],payments=activity.payments||[];
   const live=invoices.filter(i=>i.status==='posted'&&!i.is_voided&&!i.is_ameen_legacy_v029);
   const liveIds=new Set(live.map(i=>String(i.id)));
   const currencies={};

@@ -1,13 +1,14 @@
 import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.21';
-import {createSupplierInvoiceDraftV121} from '../purchase-supplier-shortcut-v121.js?v=1.0.21';
-import {validatePurchaseRevisionLinesV120} from '../purchase-bulk-editor-v120.js?v=1.0.21';
+import * as api from '../api.js?v=1.0.22';
+import {createSupplierInvoiceDraftV121} from '../purchase-supplier-shortcut-v121.js?v=1.0.22';
+import {validatePurchaseRevisionLinesV120} from '../purchase-bulk-editor-v120.js?v=1.0.22';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.21';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.22';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
-import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.21';
-import {supplierFieldV119,attachSupplierSuggestV119} from '../supplier-suggest-v119.js?v=1.0.21';
+import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.22';
+import {supplierFieldV119,attachSupplierSuggestV119} from '../supplier-suggest-v119.js?v=1.0.22';
+import {filterPurchaseInvoicesV122,isVoidedPurchaseV122} from '../purchase-list-filter-v122.js?v=1.0.22';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.code==='AMEEN_LEGACY_UNKNOWN_SOURCE_V029' || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
@@ -22,65 +23,116 @@ function supplierNameFor(invoice,supplierMap){
   return isDirectSupplier(supplier) ? '—' : (supplier?.name||'—');
 }
 
-export async function renderPurchases(root){
-  root.innerHTML=loader();
-  try{
-    const [rows,suppliers]=await Promise.all([api.purchases(),api.suppliers()]);
-    const supplierMap=Object.fromEntries(suppliers.map(s=>[String(s.id),s]));
-    root.innerHTML=`
+export async function renderPurchases(root, initialStatus='all') {
+  root.innerHTML = loader();
+  try {
+    const [rows, suppliers] = await Promise.all([api.purchases(), api.suppliers()]);
+    const supplierMap = Object.fromEntries(suppliers.map(s => [String(s.id), s]));
+    const state = {status: initialStatus, supplier: '', query: ''};
+    const shownName = invoice => supplierNameFor(invoice, supplierMap);
+    root.innerHTML = `
       <div class="page-head">
-        <div>
-          <h2>فواتير الشراء</h2>
-          <p>سجّل ما دخل المخزون. المورد اختياري، وإذا كان موجودًا سيظهر هنا لتسهيل المتابعة.</p>
-        </div>
+        <div><h2>فواتير الشراء</h2><p>تصفّح فواتير الموردين، أو اعرض المسودات والمنشورة والملغاة بشكل مستقل.</p></div>
         <div class="page-head-actions"><button class="btn new">فاتورة جديدة</button><a class="btn secondary purchase-to-images-v108" href="#/images">الإدخال بالصور</a></div>
       </div>
-      ${rows.length?`
-        <div class="table-wrap table-fit">
-          <table class="table purchase-list-table">
-            <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>الحالة</th><th>الإجمالي</th><th>إجراء</th></tr></thead>
-            <tbody>${rows.map(r=>`
-              <tr class="clickable" data-id="${esc(r.id)}">
-                <td>${dateOnly(r.invoice_date||r.occurred_at)}</td>
-                <td>${esc(supplierNameFor(r,supplierMap))}</td>
-                <td>${esc(r.invoice_number||'—')}</td>
-                <td>${r.is_ameen_legacy_v029?'<span class="badge">شراء تاريخي مرجعي</span>':invoiceStatus(r)}</td>
-                <td>${money(r.is_voided ? (r.voided_original_total||0) : (r.total_original||0),r.currency_code||'SYP')}</td>
-                <td class="row-actions">
-                  <button type="button" class="mini-action open-invoice" data-open="${esc(r.id)}">فتح</button>
-                  ${supplierMap[String(r.supplier_id||'')]&&!isDirectSupplier(supplierMap[String(r.supplier_id||'')])&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action purchase-new-for-supplier-v121" data-new-from-invoice="${esc(r.id)}">+ إضافة فاتورة</button>`:''}
-                  ${r.status==='draft'?`<button type="button" class="mini-action danger delete-draft" data-delete="${esc(r.id)}">حذف</button>`:''}
-                  ${r.status==='posted'&&!r.is_voided&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action danger void-posted" data-void="${esc(r.id)}">إلغاء</button>`:''}
-                </td>
-              </tr>`).join('')}</tbody>
-          </table>
-        </div>`:
-        `<div class="card empty"><strong>لا توجد فواتير بعد</strong><div>ابدأ بفاتورة جديدة. المورد اختياري.</div><br><button class="btn new">فاتورة جديدة</button></div>`}`;
-    root.querySelectorAll('.new').forEach(b=>b.onclick=()=>newPurchase({suppliers}));
-    root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=e=>{
-      if(e.target.closest('button')) return;
-      location.hash='#/purchase/'+tr.dataset.id;
-    });
-    root.querySelectorAll('[data-open]').forEach(b=>b.onclick=e=>{e.stopPropagation();location.hash='#/purchase/'+b.dataset.open;});
-    root.querySelectorAll('[data-new-from-invoice]').forEach(b=>b.onclick=e=>{
+      <div class="list-toolbar purchase-filters-v122" role="search" aria-label="فلترة فواتير الشراء">
+        <div class="field"><label for="purchase-status-v122">حالة الفاتورة</label>
+          <select id="purchase-status-v122">
+            <option value="all">كل الفواتير</option>
+            <option value="draft">المسودات فقط</option>
+            <option value="posted">المنشورة فقط</option>
+            <option value="voided">الملغاة فقط</option>
+            <option value="archived">المحذوفة من القائمة (قابلة للاستعادة)</option>
+          </select></div>
+        <div class="field"><label for="purchase-supplier-v122">المورد</label>
+          <select id="purchase-supplier-v122"><option value="">كل الموردين</option>
+          ${suppliers.filter(s=>!isDirectSupplier(s)).map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}
+          </select></div>
+        <div class="field purchase-search-v122"><label for="purchase-query-v122">بحث</label>
+          <input type="search" id="purchase-query-v122" placeholder="اسم المورد أو رقم الفاتورة" autocomplete="off"></div>
+        <div class="list-count" id="purchase-count-v122"></div>
+      </div>
+      <div class="table-wrap table-fit">
+        <table class="table purchase-list-table">
+          <thead><tr><th>التاريخ</th><th>المورد</th><th>رقم الفاتورة</th><th>الحالة</th><th>الإجمالي</th><th>إجراء</th></tr></thead>
+          <tbody id="purchase-body-v122"></tbody>
+        </table>
+      </div>
+      <div class="card empty purchase-empty-v122" hidden><strong>لا توجد فواتير مطابقة</strong><div>غيّر حالة الفاتورة أو المورد أو عبارة البحث.</div></div>
+      <p class="metric-note">«حذف» فاتورة ملغاة يزيلها من العرض فقط، مع إبقاء حركات المخزون وسجل التصحيحات المحاسبي. يمكن استعادتها من فلتر «المحذوفة».</p>`;
+    root.querySelector('.new').onclick=()=>newPurchase({suppliers});
+    const tbody = root.querySelector('#purchase-body-v122');
+    const statusInput = root.querySelector('#purchase-status-v122');
+    const supplierInput = root.querySelector('#purchase-supplier-v122');
+    const queryInput = root.querySelector('#purchase-query-v122');
+    const count = root.querySelector('#purchase-count-v122');
+    statusInput.value = ['all','draft','posted','voided','archived'].includes(initialStatus) ? initialStatus : 'all';
+    state.status = statusInput.value;
+    const draw = () => {
+      const filtered = filterPurchaseInvoicesV122(rows, supplierMap, state);
+      count.textContent = `${filtered.length} فاتورة`;
+      root.querySelector('.purchase-empty-v122').hidden = filtered.length > 0;
+      root.querySelector('.purchase-list-table').hidden = filtered.length === 0;
+      tbody.innerHTML = filtered.map(r => {
+        const isCancelled = isVoidedPurchaseV122(r);
+        const archived = Boolean(r.archived_at_v122);
+        const supplier = supplierMap[String(r.supplier_id||'')];
+        return `<tr class="clickable" data-id="${esc(r.id)}">
+          <td>${dateOnly(r.invoice_date||r.occurred_at)}</td>
+          <td>${esc(shownName(r))}</td>
+          <td>${esc(r.invoice_number||'—')}</td>
+          <td>${r.is_ameen_legacy_v029&&!isCancelled?'<span class="badge">شراء تاريخي مرجعي</span>':invoiceStatus(r)}${archived?'<small class="purchase-archived-marker-v122">محذوفة من العرض</small>':''}</td>
+          <td>${money(isCancelled?(r.voided_original_total||0):(r.total_original||0),r.currency_code||'SYP')}</td>
+          <td class="row-actions">
+            <button class="mini-action" data-open="${esc(r.id)}" type="button">فتح</button>
+            ${supplier&&!isDirectSupplier(supplier)&&!r.is_ameen_legacy_v029?`<button class="mini-action purchase-new-for-supplier-v121" data-new-from-invoice="${esc(r.id)}" type="button">+ إضافة فاتورة</button>`:''}
+            ${r.status==='draft'?`<button class="mini-action danger" data-delete="${esc(r.id)}" type="button">حذف</button>`:''}
+            ${r.status==='posted'&&!isCancelled&&!r.is_ameen_legacy_v029?`<button class="mini-action danger" data-void="${esc(r.id)}" type="button">إلغاء</button>`:''}
+            ${isCancelled&&!archived?`<button class="mini-action danger" data-archive="${esc(r.id)}" type="button">حذف</button>`:''}
+            ${isCancelled&&archived?`<button class="mini-action" data-restore="${esc(r.id)}" type="button">استعادة</button>`:''}
+          </td></tr>`;
+      }).join('');
+    };
+    statusInput.onchange=()=>{state.status=statusInput.value;draw();};
+    supplierInput.onchange=()=>{state.supplier=supplierInput.value;draw();};
+    queryInput.oninput=()=>{state.query=queryInput.value;draw();};
+    tbody.onclick=async e=>{
+      const button=e.target.closest('button');
+      const tr=e.target.closest('tr[data-id]');
+      if(!button){if(tr)location.hash='#/purchase/'+tr.dataset.id;return;}
       e.stopPropagation();
-      const from=rows.find(row=>String(row.id)===String(b.dataset.newFromInvoice));
-      const supplier=supplierMap[String(from?.supplier_id||'')];
-      if(supplier&&!isDirectSupplier(supplier)) void startSupplierInvoiceV121({supplier,currency:from.currency_code});
-    });
-    root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async e=>{
-      e.stopPropagation();
-      if(!(await confirmBox('حذف المسودة سيزيلها نهائيًا لأنها لم تُنشر ولم تؤثر على المخزون.','حذف المسودة'))) return;
+      const open=button.dataset.open;
+      if(open){location.hash='#/purchase/'+open;return;}
+      const old=button.dataset.newFromInvoice;
+      if(old){
+        const from=rows.find(row=>String(row.id)===old);
+        const supplier=supplierMap[String(from?.supplier_id||'')];
+        if(supplier&&!isDirectSupplier(supplier))void startSupplierInvoiceV121({supplier,currency:from.currency_code});
+        return;
+      }
+      if(button.dataset.delete){
+        if(!(await confirmBox('حذف المسودة سيزيلها نهائيًا لأنها لم تُنشر ولم تؤثر على المخزون.','حذف المسودة')))return;
+        button.disabled=true;
+        try{await api.deletePurchaseDraft(button.dataset.delete);toast('تم حذف المسودة','success');await renderPurchases(root,state.status);}
+        catch(error){toast(friendlyError(error,'تعذر حذف المسودة.'),'error');}
+        finally{if(button.isConnected)button.disabled=false;}
+        return;
+      }
+      if(button.dataset.void){openVoidInvoiceDialog(root,button.dataset.void);return;}
+      const id=button.dataset.archive||button.dataset.restore;
+      if(!id)return;
+      const restore=Boolean(button.dataset.restore);
+      if(!restore&&!(await confirmBox('حذف الفاتورة الملغاة من القوائم؟ ستبقى مستنداتها وحركات المخزون والتصحيحات محفوظة محاسبيًا، ويمكن استعادتها من فلتر «المحذوفة».','حذف من العرض')))return;
+      button.disabled=true;
       try{
-        await api.deletePurchaseDraft(b.dataset.delete);
-        toast('تم حذف المسودة','success');
-        await renderPurchases(root);
-      }catch(err){toast(friendlyError(err,'تعذر حذف المسودة.'),'error');}
-    });
-    root.querySelectorAll('[data-void]').forEach(b=>b.onclick=e=>{e.stopPropagation();openVoidInvoiceDialog(root,b.dataset.void);});
-  }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
-  }
+        await api.archiveVoidedPurchaseV122(id,restore);
+        toast(restore?'أُعيدت الفاتورة الملغاة إلى القائمة.':'حُذفت الفاتورة الملغاة من العرض، وبقي سجلها المالي محفوظًا.','success');
+        await renderPurchases(root,state.status);
+      }catch(error){toast(friendlyError(error,'تعذّر تحديث حالة إظهار الفاتورة.'),'error');}
+      finally{if(button.isConnected)button.disabled=false;}
+    };
+    draw();
+  }catch(error){root.innerHTML=`<div class="notice">${friendlyError(error,'تعذّر تحميل فواتير الشراء.')}</div>`;}
 }
 
 // Dedicated shortcut: one click creates a brand-new draft for this supplier,
@@ -194,6 +246,7 @@ export async function renderPurchaseDetail(root,id){
           ${editable?'<button class="btn secondary edit-invoice-v119">تعديل بيانات الفاتورة</button>':''}
           ${supplier&&!direct&&!invoice.is_ameen_legacy_v029?'<button class="btn new-supplier-invoice-v121" type="button">+ إضافة فاتورة لهذا المورد</button>':''}
           ${draft?'<button class="btn secondary delete-draft-detail">حذف المسودة</button>':''}
+          ${isVoidedPurchaseV122(invoice)?(invoice.archived_at_v122?'<button class="btn secondary restore-voided-detail-v122">استعادة الفاتورة</button>':'<button class="btn secondary archive-voided-detail-v122">حذف الفاتورة الملغاة</button>'):''}
           ${posted&&!invoice.is_ameen_legacy_v029?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
         </div>
       </div>
@@ -311,6 +364,15 @@ export async function renderPurchaseDetail(root,id){
       catch(e){toast(friendlyError(e,'تعذر حذف المسودة.'),'error');}
     });
     root.querySelector('.void-posted-detail')?.addEventListener('click',()=>openVoidInvoiceDialog(root,id,true));
+    root.querySelector('.archive-voided-detail-v122')?.addEventListener('click',async()=>{
+      if(!(await confirmBox('سيتم حذف الفاتورة الملغاة من قوائم العرض فقط؛ يبقى الأثر المالي وتاريخ المخزون محفوظين ويمكن الاستعادة.','حذف من العرض')))return;
+      try{await api.archiveVoidedPurchaseV122(id,false);toast('حُذفت الفاتورة من العرض دون حذف سجلها المالي.','success');location.hash='#/purchases';}
+      catch(error){toast(friendlyError(error,'تعذّر حذف الفاتورة من القوائم.'),'error');}
+    });
+    root.querySelector('.restore-voided-detail-v122')?.addEventListener('click',async()=>{
+      try{await api.archiveVoidedPurchaseV122(id,true);toast('تمت استعادة الفاتورة الملغاة إلى القائمة.','success');await renderPurchaseDetail(root,id);}
+      catch(error){toast(friendlyError(error,'تعذّر استعادة الفاتورة.'),'error');}
+    });
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e,'تعذر فتح الفاتورة.')}</div>`;
   }

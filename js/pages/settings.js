@@ -1,8 +1,8 @@
-import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.21';
+import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
-import * as api from '../api.js?v=1.0.21';
+import * as api from '../api.js?v=1.0.22';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.21';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.22';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
 import {
@@ -64,7 +64,8 @@ export async function renderSettings(root, selectedTab='general') {
         <button type="button" class="settings-tab" data-settings-tab="expenses">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a</button>
         <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
         <button type="button" class="settings-tab" data-settings-tab="staff">\u0627\u0644\u062f\u0648\u0627\u0645 \u0648\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a</button>
-        <button type="button" class="settings-tab" data-settings-tab="catalogs">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u062f\u062e\u0644\u0627\u062a</button>
+        <button type="button" class="settings-tab" data-settings-tab="material-categories">تصنيفات المواد</button>
+        <button type="button" class="settings-tab" data-settings-tab="catalogs">تصنيفات الأساسيات والمنيو</button>
       </div>
 
       <div data-settings-pane="general">
@@ -138,9 +139,28 @@ export async function renderSettings(root, selectedTab='general') {
         </section>
       </div>
 
+      <div data-settings-pane="material-categories" hidden>
+        <section class="card material-categories-card-v122">
+          <div class="settings-card-head"><div><h3>تصنيفات المواد</h3>
+            <p>دليل مستقل للمواد مثل «مشروبات ساخنة»، «مشروبات باردة»، «خضروات»، و«مواد تنظيف». هذه التصنيفات تظهر عند إضافة المادة أو تعديلها وفي فلتر المواد.</p></div>
+            <button type="button" class="btn" id="add-material-category-v122">+ إضافة تصنيف</button>
+          </div>
+          <div class="list-toolbar" style="margin-top:12px">
+            <div class="search-box"><span aria-hidden="true">⌕</span>
+              <input type="search" id="material-category-search-v122" placeholder="ابحث في تصنيفات المواد" autocomplete="off"></div>
+            <div class="list-count" id="material-category-count-v122"></div>
+          </div>
+          <div class="table-wrap table-fit"><table class="table material-category-management-v122">
+            <thead><tr><th>اسم التصنيف</th><th>عدد المواد</th><th>الإجراء</th></tr></thead>
+            <tbody id="material-category-rows-v122"></tbody>
+          </table></div>
+          <p class="metric-note">يمكن إعادة تسمية التصنيف دون تغيير المواد المرتبطة به. حمايةً للربط، لا يمكن حذف تصنيف ما دامت مواد تستخدمه؛ انقلها أولًا إلى تصنيف آخر.</p>
+        </section>
+      </div>
+
       <div data-settings-pane="catalogs" hidden>
-        <section class="card"><h3>\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0648\u0627\u062f \u0648\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a \u0648\u0627\u0644\u0648\u062c\u0628\u0627\u062a</h3>
-          ${[['material',materialCategories,'\u0627\u0644\u0645\u0648\u0627\u062f'],['asset',assetCategories,'\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a'],['menu',menuCategories,'\u0627\u0644\u0645\u064a\u0646\u064a\u0648']].map(([kind,rows,title])=>`<div class="category-section"><div class="finance-section-head"><h4>${title}</h4><button type="button" class="mini-btn add-category-v023" data-kind="${kind}">\u0625\u0636\u0627\u0641\u0629</button></div>
+        <section class="card"><h3>تصنيفات الأساسيات والوجبات</h3><p>لتصنيفات المواد دليل مستقل في تبويب «تصنيفات المواد» أعلاه.</p>
+          ${[['asset',assetCategories,'\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a'],['menu',menuCategories,'\u0627\u0644\u0645\u064a\u0646\u064a\u0648']].map(([kind,rows,title])=>`<div class="category-section"><div class="finance-section-head"><h4>${title}</h4><button type="button" class="mini-btn add-category-v023" data-kind="${kind}">\u0625\u0636\u0627\u0641\u0629</button></div>
             <div class="table-wrap"><table class="table"><tbody>${rows.map(r=>`<tr><td>${esc(r.name)}</td><td><button class="mini-btn edit-category-v023" data-kind="${kind}" data-id="${esc(r.id)}">\u062a\u0639\u062f\u064a\u0644</button> <button class="mini-btn danger-lite delete-category-v023" data-kind="${kind}" data-id="${esc(r.id)}">\u062d\u0630\u0641</button></td></tr>`).join('')||'<tr><td>\u0644\u0627 \u062a\u0648\u062c\u062f \u062a\u0635\u0646\u064a\u0641\u0627\u062a</td></tr>'}</tbody></table></div></div>`).join('')}
           <p class="metric-note">\u0644\u0627 \u064a\u064f\u0633\u0645\u062d \u0628\u062d\u0630\u0641 \u062a\u0635\u0646\u064a\u0641 \u062a\u0631\u062a\u0628\u0637 \u0628\u0647 \u0633\u062c\u0644\u0627\u062a \u0633\u0627\u0628\u0642\u0629 \u0628\u062f\u0648\u0646 \u0645\u0631\u0627\u062c\u0639\u0629.</p>
         </section>
@@ -176,7 +196,7 @@ export async function renderSettings(root, selectedTab='general') {
       panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
     };
     tabs.forEach(tab=>{tab.onclick=()=>setTab(tab.dataset.settingsTab);});
-    setTab(['general','payroll','units','orders','expenses','staff','catalogs'].includes(selectedTab)?selectedTab:'general');
+    setTab(['general','payroll','units','orders','expenses','staff','material-categories','catalogs'].includes(selectedTab)?selectedTab:'general');
 
     root.querySelector('#save-payroll-cashbox').onclick=async()=>{
       const id=root.querySelector('#payroll-cashbox').value;
@@ -238,6 +258,63 @@ export async function renderSettings(root, selectedTab='general') {
        await api.saveStaffPolicy(hours,ot,leaves);toast('\u062a\u0645 \u062d\u0641\u0638 \u0625\u0639\u062f\u0627\u062f\u0627\u062a \u0627\u0644\u062f\u0648\u0627\u0645','success');
       }catch(e){toast(friendlyError(e),'error');}
     };
+    // A standalone material-category catalog; independent of assets/menu.
+    const materialCategoryCounts=new Map();
+    materials.forEach(material=>{
+      const id=String(material.category_id_v023||'');
+      if(id)materialCategoryCounts.set(id,(materialCategoryCounts.get(id)||0)+1);
+    });
+    const categorySearch=root.querySelector('#material-category-search-v122');
+    const categoryRows=root.querySelector('#material-category-rows-v122');
+    const categoryCount=root.querySelector('#material-category-count-v122');
+    const drawMaterialCategories=()=>{
+      const term=String(categorySearch.value||'').trim().toLocaleLowerCase('ar');
+      const matching=materialCategories.filter(c=>String(c.name).toLocaleLowerCase('ar').includes(term));
+      categoryCount.textContent=`${matching.length} تصنيف`;
+      categoryRows.innerHTML=matching.length?matching.map(c=>{
+        const usage=materialCategoryCounts.get(String(c.id))||0;
+        return `<tr><td><strong>${esc(c.name)}</strong></td><td>${usage}</td><td class="row-actions">
+          <button type="button" class="mini-btn" data-material-category-edit-v122="${esc(c.id)}">تعديل الاسم</button>
+          <button type="button" class="mini-btn danger-lite" data-material-category-delete-v122="${esc(c.id)}"
+            ${usage?'disabled title="انقل المواد المرتبطة قبل حذف التصنيف"':''}>حذف</button>
+        </td></tr>`;
+      }).join(''):'<tr><td colspan="3">لا توجد تصنيفات مطابقة. أضف أول تصنيف من الزر بالأعلى.</td></tr>';
+    };
+    const editMaterialCategory=(row=null)=>modal({
+      title:row?'تعديل اسم تصنيف المواد':'إضافة تصنيف للمواد',
+      subtitle:row?'التعديل يُحدّث الاسم في جميع المواد المرتبطة به دون تغيير هويته.':'اكتب اسمًا مثل مشروبات باردة؛ لا حاجة لإنشائه في تصنيفات الأساسيات.',
+      body:`<div class="field"><label>اسم تصنيف المواد</label><input name="name" value="${esc(row?.name||'')}" maxlength="120" required autocomplete="off" list="material-settings-suggestions-v122"></div>
+        <datalist id="material-settings-suggestions-v122">${materialCategories.map(c=>`<option value="${esc(c.name)}"></option>`).join('')}</datalist>`,
+      submitText:row?'حفظ الاسم':'إضافة التصنيف',
+      onSubmit:async fd=>{
+        const name=String(fd.get('name')||'').trim().replace(/\s+/g,' ');
+        if(!name){toast('اكتب اسم التصنيف.','error');return false;}
+        try{
+          await api.manageMaterialCategoryV122(row?'rename':'add',row?.id||null,name);
+          toast(row?'تم تعديل اسم التصنيف.':'تمت إضافة تصنيف المواد.','success');
+          await renderSettings(root,'material-categories');return true;
+        }catch(error){toast(friendlyError(error,'تعذّر حفظ تصنيف المواد.'),'error');return false;}
+      },
+    });
+    categorySearch.addEventListener('input',drawMaterialCategories);
+    root.querySelector('#add-material-category-v122').onclick=()=>editMaterialCategory();
+    categoryRows.onclick=async event=>{
+      const editButton=event.target.closest('[data-material-category-edit-v122]');
+      const deleteButton=event.target.closest('[data-material-category-delete-v122]');
+      const id=editButton?.dataset.materialCategoryEditV122||deleteButton?.dataset.materialCategoryDeleteV122;
+      const row=materialCategories.find(c=>String(c.id)===String(id));
+      if(!row)return;
+      if(editButton){editMaterialCategory(row);return;}
+      if(!deleteButton||deleteButton.disabled)return;
+      if(!(await confirmBox(`حذف تصنيف «${row.name}»؟ لا يمكن الحذف إذا كانت مواد مرتبطة به.`,'حذف التصنيف')))return;
+      deleteButton.disabled=true;
+      try{
+        await api.manageMaterialCategoryV122('delete',row.id,null);
+        toast('تم حذف التصنيف غير المستخدم.','success');await renderSettings(root,'material-categories');
+      }catch(error){toast(friendlyError(error,'تعذّر حذف التصنيف. قد تكون مواد مرتبطة به.'),'error');}
+      finally{if(deleteButton.isConnected)deleteButton.disabled=false;}
+    };
+    drawMaterialCategories();
     const categoryKinds={material:materialCategories,asset:assetCategories,menu:menuCategories};
     const editCategory=(kind,row=null)=>modal({title:row?'\u062a\u0639\u062f\u064a\u0644 \u062a\u0635\u0646\u064a\u0641':'\u0625\u0636\u0627\u0641\u0629 \u062a\u0635\u0646\u064a\u0641',
       body:`<div class="field"><label>\u0627\u0644\u0627\u0633\u0645</label><input name="name" maxlength="120" value="${esc(row?.name||'')}" required></div>`,

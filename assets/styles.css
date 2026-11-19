@@ -2016,3 +2016,25 @@ select option{background:#fff;color:var(--text);padding:8px}
 .purchase-bulk-summary-v120 strong{font-size:19px}
 @media(max-width:930px){.purchase-bulk-row-v120{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.purchase-bulk-row-v120{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.purchase-bulk-row-actions-v120{flex-direction:row;align-items:center}.select-action-row:has(.material-new-category-v120){grid-template-columns:minmax(0,1fr)}.supplier-actions-v119{min-width:0}}
+
+/* v1.0.22 - isolated material category picker & purchase list filters */
+.material-category-entry-v122{display:flex;align-items:stretch;gap:9px;flex-wrap:wrap}
+.material-category-entry-v122 input{flex:1 1 215px;min-width:0}
+.material-category-entry-v122 button{flex:0 0 auto;white-space:nowrap}
+.material-category-suggestions-v122{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.material-category-choice-v122{max-width:100%;overflow-wrap:anywhere;white-space:normal}
+.material-category-picker-v122{align-self:stretch}
+.material-category-picker-v122 .material-category-hint-v122{display:block;margin-top:7px}
+.material-categories-card-v122 .table td:last-child{min-width:180px}
+.purchase-filters-v122{background:var(--surface-2,#f8f5f6);border:1px solid var(--line,#ded5dc);padding:12px;border-radius:14px;align-items:end}
+.purchase-filters-v122 .field{flex:1 1 150px;min-width:135px}
+.purchase-filters-v122 .purchase-search-v122{flex:2 1 235px}
+.purchase-filters-v122 label{display:block;font-size:12px;margin-bottom:5px}
+.purchase-filters-v122 select,.purchase-filters-v122 input{width:100%;min-width:0}
+.purchase-filters-v122 .list-count{align-self:center;white-space:nowrap}
+.purchase-archived-marker-v122{display:block;color:var(--muted);margin-top:4px;font-size:11px}
+.purchase-list-table[hidden],.purchase-empty-v122[hidden]{display:none!important}
+@media(max-width:680px){
+ .purchase-filters-v122 .field,.purchase-filters-v122 .purchase-search-v122{flex:1 1 100%}
+ .material-category-entry-v122 input,.material-category-entry-v122 button{flex:1 1 100%}
+}

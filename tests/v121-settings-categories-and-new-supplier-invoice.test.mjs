@@ -139,17 +139,17 @@ test('v121 no misleading edit lines button: invoice list and detail create new s
   assert.match(purchase,/class="mini-action edit-item"/); // Existing invoice line edits remain
   assert.match(suppliers,/startSupplierInvoiceV121\(\{supplier:entry\}\)/);
   assert.match(suppliers,/startSupplierInvoiceV121\(\{supplier\}\)/);
-  assert.match(materials,/api\.assetCategoriesV023\(\)/);
-  assert.match(materials,/resolveMaterialCategoryChoiceV121\(fd\.get\('category'\)/);
-  assert.doesNotMatch(materials,/\+ تصنيف جديد|material-new-category-v120/);
+  assert.doesNotMatch(materials,/api\.assetCategoriesV023\(\)/);
+  assert.match(materials,/attachMaterialCategoryPickerV122/);
+  assert.match(materials,/materialCategoryFieldV122/);
 });
 
 test('v121 version is fully updated and ZIP source does not contain user config',()=>{
-  assert.equal(src('VERSION').trim(),'1.0.21');
-  assert.match(src('index.html'),/Web v1\.0\.21/);
-  assert.match(src('js/app.js'),/Web v1\.0\.21/);
+  assert.equal(src('VERSION').trim(),'1.0.22');
+  assert.match(src('index.html'),/Web v1\.0\.22/);
+  assert.match(src('js/app.js'),/Web v1\.0\.22/);
   for(const name of ['materials','purchases','suppliers']){
-    assert.match(src('js/app.js'),new RegExp(`pages/${name}\\.js\\?v=1\\.0\\.21`));
+    assert.match(src('js/app.js'),new RegExp(`pages/${name}\\.js\\?v=1\\.0\\.22`));
   }
   assert.equal(existsSync(path.join(root,'config.js')),false);
   // Previously shipped SQL had missing semicolon before another CREATE FUNCTION.

@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=1.0.21';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.21';
+import * as api from '../api.js?v=1.0.22';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.22';
 import {esc,money,dateOnly,unitLabel} from '../utils.js?v=1.0';
-import {startSupplierInvoiceV121} from './purchases.js?v=1.0.21';
-import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.21';
+import {startSupplierInvoiceV121} from './purchases.js?v=1.0.22';
+import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.22';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=1.0';
 
@@ -232,7 +232,7 @@ export async function renderSupplierDetail(root,id){
   ]);
   if(!supplier)throw Error('SUPPLIER_NOT_FOUND');
   const summary=supplierPurchaseSummaryV119(activity);
-  const invoices=activity.invoices||[];
+  const invoices=(activity.invoices||[]).filter(inv=>!inv.archived_at_v122);
   const items=activity.items||[];
   const payments=activity.payments||[];
   const allocations=activity.allocations||[];

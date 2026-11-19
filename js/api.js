@@ -950,6 +950,8 @@ export async function updatePurchaseItem({itemId,purchaseUnitId,quantity,unitPri
 export const deletePurchaseItem=itemId=>rpc('delete_purchase_invoice_item_v010',{p_item_id:itemId});
 export const deletePurchaseDraft=id=>rpc('delete_purchase_invoice_draft_v010',{p_invoice_id:id});
 export const voidPurchase=(id,reason=null)=>rpc('void_purchase_invoice_v010',{p_invoice_id:id,p_reason:reason});
+// v1.0.22: only archives CANCELLED invoice listings; financial history stays intact.
+export const archiveVoidedPurchaseV122=(id,restore=false)=>rpc('archive_voided_purchase_invoice_v122',{p_invoice_id:id,p_restore:Boolean(restore)});
 
 export async function enqueueDocumentOcr({jobType='purchase_ocr',imageBase64,mimeType='image/jpeg',fileName='',relatedEntityId=null,context={}}){
   let lastErr;
@@ -1193,6 +1195,8 @@ export const salaryPaymentPage=(start,end,offset=0,limit=25)=>rpc('get_salary_pa
   p_start_date:start,p_end_date:end,p_offset:offset,p_limit:limit,
 });
 export const materialCategoriesV023=()=>list('material_categories_v023',{order:'name',ascending:true,limit:500});
+// v1.0.22: safe, owner-authorized category CRUD; deleting an assigned category is blocked.
+export const manageMaterialCategoryV122=(action,id=null,name=null)=>rpc('manage_material_category_v122',{p_action:action,p_category_id:id,p_name:name});
 export const assetCategoriesV023=()=>list('asset_categories_v023',{order:'name',ascending:true,limit:500});
 export const menuCategoriesV023=()=>list('menu_categories',{order:'name',ascending:true,limit:500});
 export const restaurantAssetsV023=()=>list('restaurant_assets_v023',{order:'name',ascending:true,limit:1000});

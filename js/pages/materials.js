@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=1.0.21';
-import {materialCategoryChoicesV121,resolveMaterialCategoryChoiceV121} from '../material-category-choices-v121.js?v=1.0.21';
-import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.21';
-import {roundUpKnownMaterialPriceV120,displayKnownMaterialPriceV120,editedKnownMaterialPriceV120} from '../material-price-rounding-v120.js?v=1.0.21';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.21';
+import * as api from '../api.js?v=1.0.22';
+import {materialCategoryFieldV122,attachMaterialCategoryPickerV122} from '../material-category-picker-v122.js?v=1.0.22';
+import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
+import {roundUpKnownMaterialPriceV120,displayKnownMaterialPriceV120,editedKnownMaterialPriceV120} from '../material-price-rounding-v120.js?v=1.0.22';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.22';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
@@ -77,12 +77,12 @@ function filterRows(rows,query){
 export async function renderMaterials(root) {
   root.innerHTML = loader();
   try {
-    let [rows, units, materialCategories, assetCategories, imported, purchasePrices] = await Promise.all([
-      api.materials(), api.units(), api.materialCategoriesV023(), api.assetCategoriesV023(),
+    let [rows, units, materialCategories, imported, purchasePrices] = await Promise.all([
+      api.materials(), api.units(), api.materialCategoriesV023(),
       api.allAmeenInventoryV025().catch(e=>{console.warn('Al-Ameen stock reference not available',e);return []; }),
       api.latestMaterialPurchasePrices().catch(()=>new Map()),
     ]);
-    const categories=materialCategoryChoicesV121(materialCategories,assetCategories);
+    const categories=materialCategories;
     const importedIndex=sourceIndex(imported,'material');
     rows = await api.ensureMaterialCodes(rows);
     await Promise.all(rows.map(r=>api.ensureStandardMaterialUnits(r,units).catch(()=>null)));
@@ -98,7 +98,7 @@ export async function renderMaterials(root) {
           <h2>المواد والكميات والأسعار</h2>
           <p>عرّف المادة مرة واحدة، وحدد وحدة المخزون. أضف التحويلات فقط عندما تحتاجها في الشراء أو الوصفات.</p>
         </div>
-        <div class="page-head-actions"><button class="btn secondary price-all-usd-v110" type="button">تسعير المواد بالدولار</button><button class="btn add">إضافة مادة</button></div>
+        <div class="page-head-actions"><a class="btn secondary" href="#/settings/material-categories">إدارة تصنيفات المواد</a><button class="btn secondary price-all-usd-v110" type="button">تسعير المواد بالدولار</button><button class="btn add">إضافة مادة</button></div>
       </div>
       ${rows.length ? `
         <div class="list-toolbar">
@@ -261,7 +261,7 @@ function addMaterial(root, units, rows,categories=[]) {
           <input name="material_code" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
         </div>
 
-        <div class="field full"><label>التصنيف من الإعدادات</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>${!categories.length?'<small class="metric-note">لا توجد تصنيفات في إعدادات المدخلات.</small>':''}</div>
+        ${materialCategoryFieldV122(categories)}
         <div class="field full">
           <label>وحدة المخزون الأساسية</label>
           <input name="base_unit_text" list="${listId}" placeholder="ابحث أو اكتب وحدة جديدة" required autocomplete="off">
@@ -335,10 +335,7 @@ function addMaterial(root, units, rows,categories=[]) {
         if(!baseUnitId) throw new Error('UNIT_REQUIRED');
 
         const created=await api.materialIdentityCreatePricedV110({
-          name,code,baseUnitId,categoryId:await resolveMaterialCategoryChoiceV121(fd.get('category'),categories,{
-            loadMaterialCategories:api.materialCategoriesV023,
-            createMaterialCategory:name=>api.createCatalogCategoryV023('material',name),
-          }),
+          name,code,baseUnitId,categoryId:await categoryPicker.resolve(),
           target:targetRaw!==''?Number(targetRaw):null,aliases,priceUSD,
         });
 
@@ -366,6 +363,7 @@ function addMaterial(root, units, rows,categories=[]) {
     },
   });
 
+  const categoryPicker=attachMaterialCategoryPickerV122(m.form,categories);
   const unitInput=m.form.querySelector('[name="base_unit_text"]');
   const priceSuffix=m.form.querySelector('[data-price-unit]');
   const baseSuffixes=[...m.form.querySelectorAll('[data-base-unit-label]')];
@@ -401,7 +399,7 @@ function editMaterial(root, units, material,categories=[]) {
           <label>الكود</label>
           <input name="code" value="${esc(currentCode)}" autocomplete="off">
         </div>
-        <div class="field"><label>التصنيف من الإعدادات</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(material.category_id_v023)?'selected':''}>${esc(c.name)}</option>`).join('')}</select>${!categories.length?'<small class="metric-note">لا توجد تصنيفات في إعدادات المدخلات.</small>':''}</div>
+        ${materialCategoryFieldV122(categories,categories.find(c=>String(c.id)===String(material.category_id_v023))?.name||'')}
         <div class="field">
           <label>وحدة المخزون</label>
           <input value="${esc(unit)}" disabled>
@@ -451,10 +449,7 @@ function editMaterial(root, units, material,categories=[]) {
         }
         if(!code) code=await api.nextMaterialCode();
 
-        const categoryId=await resolveMaterialCategoryChoiceV121(fd.get('category'),categories,{
-          loadMaterialCategories:api.materialCategoriesV023,
-          createMaterialCategory:name=>api.createCatalogCategoryV023('material',name),
-        });
+        const categoryId=await categoryPicker.resolve();
         await api.materialIdentityUpdatePricedV110({id:material.id,name,code,categoryId,aliases,priceUSD});
 
         if (targetRaw !== '') {
@@ -493,6 +488,7 @@ function editMaterial(root, units, material,categories=[]) {
       }
     },
   });
+  const categoryPicker=attachMaterialCategoryPickerV122(editor.form,categories);
   editor.form.querySelector('[name="reference_price"]')?.addEventListener('input',()=>{referencePriceEdited=true;});
 }
 

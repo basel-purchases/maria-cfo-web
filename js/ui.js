@@ -28,6 +28,11 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('purchase_revision_stale_invoice')) return 'تغيّرت الفاتورة بعد فتحها في هذه الصفحة. أعد تحميل الفاتورة ثم أدخل تصحيحك على آخر نسخة.';
   if(msg.includes('purchase_void_movements_mismatch')) return 'حركات مخزون الفاتورة لا تطابق بنودها. أُلغي التصحيح بالكامل حفاظًا على سلامة المخزون؛ راجع الحركات أولًا.';
   if(msg.includes('supplier_has_history_cannot_delete')) return 'لا يمكن حذف هذا المورد، لأن له فواتير أو دفعات أو مواد أو كشفًا محفوظًا؛ يمكنك تعديل بياناته بدل حذفه.';
+  if(msg.includes('material_category_in_use')) return 'هذا التصنيف مرتبط بمواد بالفعل. انقل المواد إلى تصنيف آخر قبل حذفه.';
+  if(msg.includes('material_category_exists')) return 'يوجد تصنيف مواد آخر بالاسم نفسه. اختره من الاقتراحات.';
+  if(msg.includes('material_category_name_invalid')) return 'اسم تصنيف المواد مطلوب، ويجب ألا يتجاوز 120 حرفًا.';
+  if(msg.includes('purchase_archive_requires_voided')) return 'يسمح بحذف الفواتير الملغاة فقط من قائمة العرض، لا الفواتير المنشورة أو المسودات.';
+  if(msg.includes('archive_voided_purchase_invoice_v122')||msg.includes('manage_material_category_v122')) return 'يلزم تنفيذ ملف SQL v1.0.22 في Supabase ثم تحديث الصفحة.';
   if(msg.includes('fx_new_syp_rate_review_required')) return 'سعر الدولار المحفوظ يحتاج مراجعة: يجب أن يكون بالليرة السورية الجديدة، لا القديمة.';
   if(msg.includes('invalid_new_syp_exchange_rate')||msg.includes('invalid_new_syp_rate')) return 'أدخل سعر الدولار بالليرة السورية الجديدة مثل 149.5، وليس 14950.';
   if(msg.includes('revise_purchase_invoice_v120')||msg.includes('material_price_sync_current_fx_v120')||msg.includes('material_price_set_new_exchange_v120')||msg.includes('supplier_delete_if_unused_v120')) return 'نفّذ ملف SQL v1.0.20 من قاعدة Supabase ثم أعد فتح الموقع.';
