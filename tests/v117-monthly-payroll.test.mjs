@@ -24,7 +24,7 @@ test('monthly salary RPCs are protected new wrappers and old daily payment path 
  assert.match(api,/rpc\('create_monthly_payroll_v117'/);
  assert.match(api,/rpc\('recalculate_monthly_payroll_v117'/);
  assert.match(api,/rpc\('approve_monthly_payroll_v117'/);
- assert.match(api,/rpc\('pay_daily_wage_v034'/);
+ assert.match(api,/rpc\('pay_daily_wage_v123'/);
  assert.match(api,/rpc\('pay_approved_salary_v034'/);
  for(const f of ['create_monthly_payroll_v117','recalculate_monthly_payroll_v117','approve_monthly_payroll_v117','monthly_attendance_default_v117']) {
   assert.match(sql,new RegExp('CREATE OR REPLACE FUNCTION public\\.'+f));

@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=1.0.10';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
+import * as api from '../api.js?v=1.0.23';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.23';
 import {currencyLabel, esc, money, dateOnly, todayISO } from '../utils.js?v=1.0';
 import { employeeName } from '../payroll-ui.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {generalCashboxV123} from '../employee-ledger-v123.js?v=1.0.23';
 
 const SIZE=15;
 export async function renderAdvances(root){
@@ -49,34 +50,45 @@ export async function renderAdvances(root){
     };
     root.querySelector('#advance-staff').onchange=e=>{state.employee=e.target.value;state.page=1;draw();};
     root.querySelector('#advance-status').onchange=e=>{state.status=e.target.value;state.page=1;draw();};
-    root.querySelector('.add-advance').onclick=()=>modal({
-      title:'\u0625\u0636\u0627\u0641\u0629 \u0633\u0644\u0641\u0629',
-      body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u0645\u0648\u0638\u0641</label><select name="employee" required>${staff.filter(e=>e.status==='active').map(e=>`<option value="${esc(e.id)}">${esc(e.name)} (${esc(currencyLabel(e.wage_currency_code||'SYP'))})</option>`).join('')}</select></div>
-      <div class="field"><label>\u0627\u0644\u0635\u0646\u062f\u0648\u0642</label><select name="cashbox" required>${boxes.filter(x=>x.is_active!==false).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
-      <div class="field"><label>\u0627\u0644\u0645\u0628\u0644\u063a</label><input name="amount" type="number" min="0.0001" step="any" required></div>
-      <div class="field"><label>\u0627\u0644\u062e\u0635\u0645</label><select name="repayment"><option value="installments">\u0623\u0642\u0633\u0627\u0637</option><option value="full_next_payroll">\u0627\u0644\u0631\u0627\u062a\u0628 \u0627\u0644\u0642\u0627\u062f\u0645</option><option value="manual">\u064a\u062f\u0648\u064a</option></select></div>
-      <div class="field"><label>\u0645\u0628\u0644\u063a \u0627\u0644\u0642\u0633\u0637</label><input name="installment" type="number" min="0.0001" step="any" required></div>
-      <div class="field"><label>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</label><input name="date" type="date" value="${todayISO()}" required></div>
-      <div class="field full"><label>\u0645\u0644\u0627\u062d\u0638\u0629</label><input name="note"></div></div>`,
-      onSubmit:async fd=>{try{
-        const amount=Number(fd.get('amount')), mode=fd.get('repayment'),part=Number(fd.get('installment'));
-        if(!(amount>0)||mode==='installments'&&(!(part>0)||part>amount))throw Error('INVALID_ADVANCE_AMOUNT');
-        await api.recordEmployeeAdvance({employeeId:fd.get('employee'),cashboxId:fd.get('cashbox'),amount,repaymentMode:mode,installment:mode==='installments'?part:null,date:fd.get('date'),note:fd.get('note')});
-        toast('\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0633\u0644\u0641\u0629','success');await renderAdvances(root);return true;
-      }catch(e){toast(friendlyError(e),'error');return false;}}
-    });
+    root.querySelector('.add-advance').onclick=()=>openEmployeeAdvanceModalV123({staff,boxes,onSaved:()=>renderAdvances(root)});
     draw();
-    // Installment amount is mandatory ONLY when the selected repayment policy is installments.
-    // Avoid blocking a full-next-payroll or manually settled advance with an irrelevant required field.
-    const previousAdd=root.querySelector('.add-advance').onclick;
-    root.querySelector('.add-advance').onclick=()=>{
-      previousAdd();
-      const dialog=document.querySelector('.modal-backdrop');
-      if(!dialog)return;
-      const mode=dialog.querySelector('select[name=repayment]'),value=dialog.querySelector('input[name=installment]');
-      if(!mode||!value)return;
-      const sync=()=>{value.required=mode.value==='installments';value.disabled=mode.value!=='installments';};
-      mode.addEventListener('change',sync);sync();
-    };
   }catch(e){root.innerHTML=`<div class="notice">${esc(friendlyError(e))}</div>`;}
+}
+
+// Shared by the advances section and the selected employee's profile.
+export function openEmployeeAdvanceModalV123({staff=[],boxes=[],employeeId='',onSaved=()=>{}}={}){
+  const active=staff.filter(e=>e.status==='active'&&e.archived_v123!==true);
+  const available=boxes.filter(b=>b.is_active!==false);
+  if(!active.length||!available.length){toast('\u064a\u062c\u0628 \u0648\u062c\u0648\u062f \u0645\u0648\u0638\u0641 \u0648\u0635\u0646\u062f\u0648\u0642 \u0646\u0634\u0637.','error');return null;}
+  const general=generalCashboxV123(available);
+  const m=modal({title:'\u0625\u0636\u0627\u0641\u0629 \u0633\u0644\u0641\u0629',
+    subtitle:'\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0627\u0641\u062a\u0631\u0627\u0636\u064a \u0647\u0648 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645. \u062a\u0633\u062c\u0644 \u0627\u0644\u0633\u0644\u0641\u0629 \u062d\u0631\u0643\u0629 \u0646\u0642\u062f\u064a\u0629 \u0641\u0648\u0631\u064a\u0629.',
+    body:`<div class="form-grid">
+      <div class="field"><label>\u0627\u0644\u0645\u0648\u0638\u0641</label><select name="employee" required>${active.map(e=>`<option value="${esc(e.id)}">${esc(e.name)} (${esc(currencyLabel(e.wage_currency_code||'SYP'))})</option>`).join('')}</select></div>
+      <div class="field"><label>\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u062f\u0641\u0639</label><select name="cashbox" required>${available.map(b=>`<option value="${esc(b.id)}">${esc(b.name)}${b.is_general?' · \u0627\u0644\u0639\u0627\u0645':''}</option>`).join('')}</select></div>
+      <div class="field"><label>\u0645\u0628\u0644\u063a \u0627\u0644\u0633\u0644\u0641\u0629</label><input name="amount" type="number" min="0.0001" step="any" required></div>
+      <div class="field"><label>\u0627\u0644\u062a\u0633\u062f\u064a\u062f</label><select name="repayment"><option value="full_next_payroll">\u062e\u0635\u0645\u0647\u0627 \u0645\u0646 \u0627\u0644\u0631\u0627\u062a\u0628 \u0627\u0644\u0642\u0627\u062f\u0645</option><option value="installments">\u0623\u0642\u0633\u0627\u0637</option><option value="manual">\u064a\u062f\u0648\u064a</option></select></div>
+      <div class="field"><label>\u0645\u0628\u0644\u063a \u0627\u0644\u0642\u0633\u0637</label><input name="installment" type="number" min="0.0001" step="any"></div>
+      <div class="field"><label>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0633\u0644\u0641\u0629</label><input name="date" type="date" value="${todayISO()}" required></div>
+      <div class="field full"><label>\u0645\u0644\u0627\u062d\u0638\u0629</label><textarea name="note" rows="2" maxlength="300"></textarea></div></div>
+      ${general?'':'<div class="notice rose">\u0644\u0627 \u064a\u0648\u062c\u062f \u0635\u0646\u062f\u0648\u0642 \u0639\u0627\u0645 \u0646\u0634\u0637. \u0627\u062e\u062a\u0631 \u0635\u0646\u062f\u0648\u0642\u0627\u064b \u064a\u062f\u0648\u064a\u0627\u064b.</div>'}`,
+    submitText:'\u062d\u0641\u0638 \u0627\u0644\u0633\u0644\u0641\u0629',
+    onSubmit:async fd=>{
+      try{
+        const amount=Number(fd.get('amount')),mode=fd.get('repayment'),part=Number(fd.get('installment'));
+        if(!Number.isFinite(amount)||amount<=0||mode==='installments'&&(!Number.isFinite(part)||part<=0||part>amount))
+          throw Error('INVALID_ADVANCE_AMOUNT');
+        await api.recordEmployeeAdvance({employeeId:fd.get('employee'),cashboxId:fd.get('cashbox'),amount,
+          repaymentMode:mode,installment:mode==='installments'?part:null,date:fd.get('date'),note:fd.get('note')});
+        toast('\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0633\u0644\u0641\u0629 \u0648\u062e\u0635\u0645\u0647\u0627 \u0645\u0646 \u0627\u0644\u0635\u0646\u062f\u0648\u0642.','success');
+        await onSaved();return true;
+      }catch(e){toast(friendlyError(e),'error');return false;}
+    }
+  });
+  if(employeeId&&active.some(e=>String(e.id)===String(employeeId)))m.form.elements.namedItem('employee').value=String(employeeId);
+  if(general)m.form.elements.namedItem('cashbox').value=String(general.id);
+  const mode=m.form.elements.namedItem('repayment');const installment=m.form.elements.namedItem('installment');
+  const sync=()=>{installment.required=mode.value==='installments';installment.disabled=!installment.required;};
+  mode.addEventListener('change',sync);sync();
+  return m;
 }

@@ -1,9 +1,9 @@
 import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.22';
+import * as api from '../api.js?v=1.0.23';
 import {createSupplierInvoiceDraftV121} from '../purchase-supplier-shortcut-v121.js?v=1.0.22';
 import {validatePurchaseRevisionLinesV120} from '../purchase-bulk-editor-v120.js?v=1.0.22';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.22';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.23';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
 import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.22';
@@ -349,13 +349,17 @@ export async function renderPurchaseDetail(root,id){
       catch(e){toast(friendlyError(e,'تعذر حذف البند.'),'error');}
     });
 
-    root.querySelector('.post')?.addEventListener('click',async()=>{
-      if(!(await confirmBox('نشر الفاتورة سيحدّث المخزون ويجعلها عملية مالية تاريخية.','نشر'))) return;
+    root.querySelector('.post')?.addEventListener('click',async event=>{
+      if(!(await confirmBox('\u0646\u0634\u0631 \u0627\u0644\u0641\u0627\u062a\u0648\u0631\u0629 \u0633\u064a\u0636\u064a\u0641 \u0627\u0644\u0645\u0648\u0627\u062f \u0644\u0644\u0645\u062e\u0632\u0648\u0646 \u0648\u064a\u062e\u0635\u0645 \u0625\u062c\u0645\u0627\u0644\u064a\u0647\u0627 \u0641\u0648\u0631\u064b\u0627 \u0645\u0646 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645. \u0644\u0627 \u062a\u0643\u0631\u0631 \u0627\u0644\u0646\u0634\u0631.','\u0646\u0634\u0631 \u0648\u062f\u0641\u0639')))return;
+      const btn=event.currentTarget;
+      if(btn.disabled)return;
+      btn.disabled=true;
       try{
         await api.postPurchase(id);
-        toast('تم نشر الفاتورة وتحديث المخزون','success');
+        toast('\u062a\u0645 \u0627\u0644\u0646\u0634\u0631 \u0648\u062d\u0641\u0638 \u062f\u0641\u0639 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645 \u0648\u0627\u0644\u0645\u062e\u0632\u0648\u0646 \u0636\u0645\u0646 \u0645\u0639\u0627\u0645\u0644\u0629 \u0648\u0627\u062d\u062f\u0629.','success');
         await renderPurchaseDetail(root,id);
       }catch(e){toast(friendlyError(e),'error');}
+      finally{if(btn.isConnected)btn.disabled=false;}
     });
 
     root.querySelector('.delete-draft-detail')?.addEventListener('click',async()=>{

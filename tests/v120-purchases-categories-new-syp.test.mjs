@@ -153,9 +153,9 @@ test('v120 settings show only new SYP, launch checks USD material revalue and ve
  assert.match(app,/materialPriceSyncCurrentFxV120\(\)/);
  assert.match(app,/marketNewSypPerUsdV120\(q,side\)/);
  for(const mod of ['pages/materials.js','pages/settings.js','pages/purchases.js','pages/suppliers.js']){
-  assert.ok(app.includes("./"+mod+'?v=1.0.22'),mod);
+  assert.ok(app.includes("./"+mod+'?v='+(['pages/materials.js','pages/settings.js','pages/suppliers.js'].includes(mod)?'1.0.22':'1.0.23')),mod);
  }
- assert.match(index,/Web v1\.0\.22/);
- assert.equal(source('VERSION').trim(),'1.0.22');
+ assert.match(index,/Web v1\.0\.23/);
+ assert.equal(source('VERSION').trim(),'1.0.23');
  assert.equal(existsSync(path.join(root,'config.js')),false);
 });

@@ -72,6 +72,7 @@ function buildScreen(apiOverrides={}){
     }],
     employees:async()=>[{id:'e1',name:'أحمد',status:'active',pay_type:'monthly'}],
     cashboxes:async()=>[{id:'general',name:'الصندوق العام',is_active:true,is_general:true}],
+    prepareScheduledWorkdaysV123:async()=>0,dailyWageDues:async()=>[],
     list:async()=>[{id:'r1',status:'draft',note:'MARIA_MONTHLY_V014:2026-10',period_start:'2026-10-01',period_end:'2026-10-31'}],
     ...apiOverrides,
   };

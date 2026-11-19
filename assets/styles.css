@@ -2038,3 +2038,24 @@ select option{background:#fff;color:var(--text);padding:8px}
  .purchase-filters-v122 .field,.purchase-filters-v122 .purchase-search-v122{flex:1 1 100%}
  .material-category-entry-v122 input,.material-category-entry-v122 button{flex:1 1 100%}
 }
+
+
+/* v1.0.23: one employee profile for financial events and leave exceptions */
+.staff-v123-positive{color:#176c49!important;font-weight:750}
+.staff-v123-negative{color:#b62d48!important;font-weight:750}
+.staff-v123-impact{display:flex;flex-wrap:wrap;gap:5px 9px;align-items:center;min-width:150px}
+.staff-v123-impact strong{font-size:12px;white-space:nowrap}
+.staff-v123-profile-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}
+.staff-v123-profile-stats .staff-insight{min-width:0;border:1px solid var(--line,#e6dfe5);background:var(--surface-2,#fcfafb);padding:12px;border-radius:12px}
+.staff-v123-profile-stats .staff-insight span{display:block;font-size:11px;color:var(--muted,#786575);margin-bottom:6px}
+.staff-v123-profile-stats .staff-insight strong{display:block;font-size:13px;overflow-wrap:anywhere}
+.staff-v123-detail-table{font-size:12px;min-width:630px}
+.staff-v123-detail-table th,.staff-v123-detail-table td{padding:9px 8px;vertical-align:middle}
+.staff-v123-detail-table .mini-btn{white-space:nowrap}
+.staff-v123-actions{display:flex;flex-wrap:wrap;gap:7px;padding:10px 0}
+.staff-v123-actions .btn{flex:0 1 auto;white-space:normal;text-align:center}
+.staff-v123-daily-wages{margin-top:14px}
+.staff-v123-daily-wages .table-wrap{max-height:410px;overflow:auto}
+.staff-v123-daily-wages .staff-v123-pay-day{white-space:nowrap}
+@media(max-width:850px){.staff-v123-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.staff-v123-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-v123-actions .btn{flex:1 1 130px}.staff-v123-impact{min-width:0;flex-direction:column;align-items:start;gap:2px}}

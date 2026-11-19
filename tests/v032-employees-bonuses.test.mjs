@@ -56,11 +56,11 @@ test('employee rows open accessible dialogs and show payroll, leaves, and advanc
  assert.match(page,/role="button" aria-label="فتح تفاصيل/);
  assert.match(page,/\.employee-clickable/);
  assert.match(page,/buildEmployeeProfileV032/);
- assert.match(page,/updateEmployeeV032\(/);
+ assert.match(page,/updateEmployeeFinalV123\(/);
  assert.match(page,/loadEmployeeInsights/);
- assert.match(page,/api\.paidLeaveUsed/);
+ assert.match(page,/api\.employeeLeaveEventsV123/);
  assert.match(page,/api\.employeeAdvances/);
- assert.match(page,/api\.employeeBonusesV032/);
+ assert.match(page,/openEmployeeBonusModal/);
 });
 test('bonus management is wired through the existing payroll adjustment engine',()=>{
  const sql=src('database/Maria-CFO-Web-v0.32-Employees-Bonuses.sql');

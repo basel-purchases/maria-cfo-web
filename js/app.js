@@ -1,12 +1,12 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.22';
+import * as api from './api.js?v=1.0.23';
 import { esc } from './utils.js?v=1.0';
-import { toast, friendlyError, modal } from './ui.js?v=1.0.22';
+import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
-import { renderHub } from './pages/hubs.js?v=1.0';
+import { renderHub } from './pages/hubs.js?v=1.0.23';
 import { renderMaterials } from './pages/materials.js?v=1.0.22';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.22';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.22';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
   renderInventory,
@@ -15,16 +15,16 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=1.0.16';
-import { renderEmployees, renderAttendance } from './pages/employees.js?v=1.0';
+import { renderEmployees } from './pages/employees.js?v=1.0.23';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.13';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.18';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.23';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
 import { renderSettings } from './pages/settings.js?v=1.0.22';
 import { renderAssets } from './pages/assets.js?v=1.0';
-import { renderAdvances } from './pages/advances.js?v=1.0';
+import { renderAdvances } from './pages/advances.js?v=1.0.23';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
@@ -120,7 +120,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.22</div>
+        <div class="sidebar-foot">Web v1.0.23</div>
       </aside>
 
       <main class="main">
@@ -610,7 +610,7 @@ async function route() {
     orders: 'الأوردرات والمبيعات',
     order: 'تفاصيل الأوردر',
     'employees-list': 'الموظفون',
-    attendance: 'الدوام',
+    attendance: 'employees',
     payroll: 'الرواتب',
     'events-list': 'بناء الحفلة وتجهيزها',
     'event-reservations': 'حجوزات الحفلات',
@@ -650,7 +650,7 @@ async function route() {
       case 'orders': return renderOrders(root);
       case 'order': return renderOrderDetail(root, id);
       case 'employees-list': return renderEmployees(root);
-      case 'attendance': return renderAttendance(root);
+      case 'attendance': location.hash='#/employees-list'; return renderEmployees(root);
       case 'payroll': return renderPayrollV034(root);
       case 'events-list': return renderEventsV034(root);
       case 'event-reservations': return renderEventsV034(root,'booking');

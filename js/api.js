@@ -843,6 +843,7 @@ export async function createEmployee(input){
     department: input.department || null, residence_v031: input.residence || null,
     mobile_phone_v031: input.phone || null, status: input.status || 'active',
     hire_date: input.hireDate || null, termination_date: input.terminationDate || null,
+    termination_paid_days_v123:input.terminationPayableDays ?? null,
     notes: input.notes || null,
   });
 }
@@ -853,6 +854,14 @@ export const updateEmployeeV032=(id, input)=>rpc('update_employee_profile_v032',
   p_wage:input.wage, p_currency:input.currency, p_status:input.status,
   p_hire_date:input.hireDate, p_termination_date:input.terminationDate,
   p_notes:input.notes || null,
+});
+export const updateEmployeeFinalV123=(id,input)=>rpc('save_employee_final_profile_v123',{
+  p_employee_id:id,p_name:input.name,p_job_title:input.jobTitle||null,
+  p_department:input.department||null,p_residence:input.residence||null,
+  p_mobile_phone:input.phone||null,p_pay_type:input.payType,
+  p_wage:input.wage,p_currency:input.currency,p_status:input.status,
+  p_hire_date:input.hireDate,p_termination_date:input.terminationDate,
+  p_notes:input.notes||null,p_paid_days:input.terminationPayableDays
 });
 export const employeeBonusesV032=()=>list('employee_payroll_adjustments', {
   eq:{adjustment_type:'bonus'}, order:'created_at', limit:2000,
@@ -930,7 +939,7 @@ export async function addPurchaseItem({invoiceId,materialId,purchaseUnitId,quant
   });
 }
 
-export const postPurchase=id=>rpc('post_purchase_invoice',{p_invoice_id:id});
+export const postPurchase=id=>rpc('post_purchase_invoice_paid_v123',{p_invoice_id:id});
 
 export async function supplierPurchaseCatalog(supplierId){
   if(!supplierId) return [];
@@ -1261,7 +1270,7 @@ export const payrollPaidV034=month=>rpc('payroll_paid_v034',{p_month:month});
 export const payApprovedSalaryV034=(itemId,amount,boxId,note='')=>rpc('pay_approved_salary_v034',{
   p_payroll_item_id:itemId,p_amount:Number(amount),p_cashbox_id:boxId,p_note:note||null,
 });
-export const payDailyWageV034=(employeeId,workDate,boxId)=>rpc('pay_daily_wage_v034',{
+export const payDailyWageV034=(employeeId,workDate,boxId)=>rpc('pay_daily_wage_v123',{
   p_employee_id:employeeId,p_work_date:workDate,p_cashbox_id:boxId,
 });
 export const eventV034=id=>one('events',id);
@@ -1495,3 +1504,39 @@ export const materialPriceSetNewExchangeV120=rate=>rpc('material_price_set_new_e
 export const purchaseRevisionsV119=id=>list('purchase_invoice_revisions_v119',{
   eq:{previous_invoice_id:id},limit:10,
 });
+
+// v1.0.23: protected employee profile actions, and automated ordinary workdays.
+export const employeeAdjustmentsV123=async()=>{
+  const result=[];
+  for(let offset=0;offset<20000;offset+=500){
+    const chunk=await dataOrThrow(need().from('employee_payroll_adjustments')
+      .select('*').order('effective_date',{ascending:false}).range(offset,offset+499));
+    result.push(...chunk);if(chunk.length<500)break;
+  }
+  return result;
+};
+export const employeeLeaveEventsV123=async()=>{
+  const result=[];
+  for(let offset=0;offset<20000;offset+=500){
+    const chunk=await dataOrThrow(need().from('employee_attendance')
+      .select('id,employee_id,work_date,status,note')
+      .in('status',['paid_leave','unpaid_leave','absent'])
+      .order('work_date',{ascending:false}).range(offset,offset+499));
+    result.push(...chunk);if(chunk.length<500)break;
+  }
+  return result;
+};
+export const recordEmployeeAdjustmentV123=({employeeId,kind,amount,date,reason,note})=>
+  rpc('record_employee_adjustment_v123',{p_employee_id:employeeId,p_kind:kind,
+    p_amount:Number(amount),p_effective_date:date,p_reason:reason,p_note:note||null});
+export const voidEmployeeAdjustmentV123=(id,reason)=>
+  rpc('void_employee_adjustment_v123',{p_adjustment_id:id,p_reason:reason});
+export const recordEmployeeLeaveV123=({employeeId,date,kind,note})=>
+  rpc('record_employee_leave_v123',{p_employee_id:employeeId,p_work_date:date,
+    p_kind:kind,p_note:note||null});
+export const cancelEmployeeLeaveV123=(employeeId,date)=>
+  rpc('cancel_employee_leave_v123',{p_employee_id:employeeId,p_work_date:date});
+export const removeEmployeeV123=employeeId=>
+  rpc('remove_employee_v123',{p_employee_id:employeeId});
+export const prepareScheduledWorkdaysV123=(start,end)=>
+  rpc('prepare_scheduled_workdays_v123',{p_start:start,p_end:end});

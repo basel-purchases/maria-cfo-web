@@ -42,8 +42,9 @@ test('staff settings and paid leave status store real payroll policy',()=>{
   assert.match(sql,/default_required_daily_hours=p_daily_hours/);
   assert.match(sql,/default_overtime_multiplier=p_overtime_multiplier/);
   assert.match(sql,/status='paid_leave'/);
-  assert.match(wageSource,/name="leave_flag"/);
-  assert.match(wageSource,/"pay-daily"|class="btn pay-daily"/);
+  assert.match(wageSource,/recordEmployeeLeaveV123/);
+  assert.doesNotMatch(wageSource,/name="leave_flag"/);
+  assert.match(read('js/pages/payroll-v034.js'),/staff-v123-pay-day/);
 });
 test('fixed payout stays atomic and never writes directly to salary ledger from browser',()=>{
   assert.match(sql,/CREATE OR REPLACE FUNCTION public.pay_fixed_employee_v023/);
@@ -55,12 +56,12 @@ test('fixed payout stays atomic and never writes directly to salary ledger from 
 test('fixed wage advances also recorded and displayed',()=>{
   assert.match(sql,/employee_fixed_advance_deductions_v023/);
   assert.match(advanceSource,/api\.fixedAdvanceDeductionsV023/);
-  assert.match(advanceSource,/name=installment/);
+  assert.match(advanceSource,/name="installment"/);
 });
 test('salary history is paginated at server with day month and year',()=>{
   assert.match(sql,/CREATE OR REPLACE FUNCTION public.get_salary_payment_page_v023/);
   assert.match(sql,/LIMIT p_limit OFFSET p_offset/);
-  assert.match(wageSource,/salaryPaymentPage\(bounds.start,bounds.end,page\*25,25\)/);
+  assert.match(read('js/pages/payroll-v034.js'),/payrollPaidV034/);
 });
 test('catalog and basic assets pages use distinct categories and owner RLS',()=>{
   assert.match(sql,/CREATE TABLE IF NOT EXISTS public.restaurant_assets_v023/);

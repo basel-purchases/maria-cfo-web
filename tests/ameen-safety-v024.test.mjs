@@ -65,6 +65,6 @@ test('ZIP application uses local vendored JSZip and retains old routes',()=>{
  assert.match(read('js/app.js'),/renderQuickImports/);
  assert.match(read('js/app.js'),/renderDashboard/);
  assert.match(read('js/app.js'),/renderImages/);
- assert.match(read('js/app.js'),/renderAttendance/);
+ assert.match(read('js/app.js'),/case 'attendance': location\.hash='#\/employees-list';/);
  assert.match(read('js/app.js'),/Web v1\.0/);
 });

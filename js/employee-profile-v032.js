@@ -1,3 +1,5 @@
+import {finalMonthTermsV123} from './final-month-pay-v123.js?v=1.0.23';
+
 // Employee profile validation shared by add/edit dialogs. DB RPC enforces the same rules.
 const TYPES = new Set(['monthly', 'daily', 'hourly', 'fixed']);
 const CURRENCIES = new Set(['SYP', 'USD']);
@@ -20,6 +22,7 @@ export function buildEmployeeProfileV032(fd) {
   const status = str(fd, 'status') || 'active';
   const hireDate = str(fd, 'hire_date');
   const terminationDate = str(fd, 'termination_date');
+  const paidDaysText = str(fd, 'termination_paid_days');
   const wageText = str(fd, 'wage');
   const wage = Number(wageText);
   if (!name || name.length > 250) throw Error('اكتب اسم الموظف (حتى 250 حرفًا).');
@@ -34,6 +37,8 @@ export function buildEmployeeProfileV032(fd) {
   if (!['active', 'inactive'].includes(status)) throw Error('حالة الموظف غير صحيحة.');
   if (!validDay(hireDate) || !validDay(terminationDate) || (hireDate && terminationDate && hireDate > terminationDate))
     throw Error('راجع تاريخ التعيين وتاريخ انتهاء العمل.');
+  const terms = finalMonthTermsV123({payType, wage, hireDate, terminationDate, paidDays:paidDaysText||null});
+  const terminationPayableDays = terms?.paidDays ?? null;
   return {name, jobTitle, department, residence, phone, notes, payType, wage, currency,
-    status, hireDate: hireDate || null, terminationDate: terminationDate || null};
+    status, hireDate: hireDate || null, terminationDate: terminationDate || null, terminationPayableDays};
 }

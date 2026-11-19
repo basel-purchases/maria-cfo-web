@@ -1,5 +1,5 @@
-import * as api from '../api.js?v=1.0.17';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
+import * as api from '../api.js?v=1.0.23';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.23';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034} from '../payroll-workbench-v034.js?v=1.0.17';
@@ -15,7 +15,7 @@ const rowMonth=(row,start)=>String(row.period_start||row.work_date||'').startsWi
 
 export async function renderPayrollV034(root){
  const today=todayISO();
- const state={year:Number(today.slice(0,4)),month:Number(today.slice(5,7)),tab:'ready',status:'all',query:'',box:'',ready:[],paid:[],fixed:[],runs:[],staff:[],boxes:[],busy:false};
+ const state={year:Number(today.slice(0,4)),month:Number(today.slice(5,7)),tab:'ready',status:'all',query:'',box:'',ready:[],paid:[],daily:[],fixed:[],runs:[],staff:[],boxes:[],busy:false};
  root.innerHTML=`<div class="page-head"><div><h2>الرواتب · مركز الدفع</h2><p>كشف واحد للمراجعة ثم الاعتماد والدفع. كل مبلغ مصروف يذهب إلى سجل المدفوعات وحركة الصندوق تلقائيًا.</p></div>
  <div class="quick-actions"><a class="btn secondary" href="#/employees-list">الموظفون</a><a class="btn secondary" href="#/advances">السلف</a><a class="btn secondary" href="#/bonuses">المكافآت</a></div></div>
  <section class="card payroll-controller-v034">
@@ -39,6 +39,9 @@ export async function renderPayrollV034(root){
  const mayPay=()=>Boolean(currBox()?.is_active);
  const errorMessage=e=>{
   const s=String(e?.message||'');
+  if(/V123_FINAL_MONTH_DRAFT_NEEDS_RECALC/.test(s))return 'تغيرت أيام أو بيانات التسوية النهائية؛ أعد احتساب مسودة الرواتب أولًا قبل اعتمادها.';
+  if(/V123_FINAL_MONTH_DEDUCTIONS_EXCEED_PAY/.test(s))return 'الحسميات تتجاوز الأجر الأخير. راجع خصومات الموظف قبل إعداد مسير شهر النهاية.';
+  if(/V123_|post_purchase_invoice_paid_v123|prepare_scheduled_workdays_v123|pay_daily_wage_v123/i.test(s))return '\u064a\u062c\u0628 \u062a\u0634\u063a\u064a\u0644 SQL v1.0.23 \u0623\u0648 \u0645\u0631\u0627\u062c\u0639\u0629 \u064a\u0648\u0645 \u0627\u0644\u0639\u0645\u0644 \u0648\u0627\u0644\u0635\u0646\u062f\u0648\u0642.';
   if(/PAYROLL_NOT_APPROVED/.test(s))return 'يجب اعتماد المسير قبل دفع راتب الموظف.';
   if(/PAYROLL_CASHBOX_INVALID/.test(s))return 'اختر صندوقًا نشطًا لدفع الراتب.';
   if(/INVALID_SALARY_PAYMENT_AMOUNT/.test(s))return 'تغيّر الرصيد أو المبلغ غير صالح. حدّث البيانات قبل المحاولة.';
@@ -61,11 +64,17 @@ export async function renderPayrollV034(root){
   state.busy=true;panel.innerHTML=loader();
   try{
    const start=monthStartV034(state.year,state.month);
-   const [ready,paid,staff,boxes,runs]=await Promise.all([
+   if(start===todayISO().slice(0,7)+'-01'){
+     // Standard daily/hourly workdays are assumed automatically; exceptions remain unchanged.
+     await api.prepareScheduledWorkdaysV123(start,todayISO());
+   }
+   const [ready,paid,staff,boxes,runs,daily]=await Promise.all([
     api.payrollReadyV034(start),api.payrollPaidV034(start),api.employees(),api.cashboxes(),
-    api.list('payroll_runs',{order:'period_start',limit:500}),
+    api.list('payroll_runs',{order:'period_start',limit:500}),api.dailyWageDues(),
    ]);
    state.ready=Array.isArray(ready)?ready:[];state.paid=Array.isArray(paid)?paid:[];
+   state.daily=(Array.isArray(daily)?daily:[]).filter(row=>String(row.work_date||'').startsWith(start.slice(0,7))
+      &&Number(row.estimated_due_original)>0.0001);
    state.staff=staff;state.boxes=boxes;state.runs=runs.filter(r=>r.note?.startsWith('MARIA_MONTHLY_V014:')&&rowMonth(r,start));
    state.fixed=staff.filter(e=>e.status==='active'&&e.pay_type==='fixed');
    updateBoxes();paint();
@@ -108,7 +117,7 @@ export async function renderPayrollV034(root){
   <section class="card finance-section payroll-ready-card-v034">
     <div class="finance-section-head"><div><h3>كشف الموظفين والمستحقات</h3><p>الراتب الأساسي، الإضافي، المكافآت، السلف والخصم والصافي في سطر واحد. المبالغ من حساب قاعدة البيانات المعتمد.</p></div>
     <button class="btn" id="new-month-run-v034" type="button" ${!state.staff.some(e=>e.pay_type==='monthly')?'disabled':''}>+ إنشاء مسير ${esc(selectedMonth)}</button></div>
-    ${runs.map(r=>`<div class="payroll-run-alert-v034"><div><strong>مسودة ${dateOnly(r.period_start)} — ${dateOnly(r.period_end)}</strong><small>الراتب الشهري كامل افتراضيًا؛ بعد أي تغيير للسلف أو المكافآت أو الاستثناءات اضغط إعادة احتساب.</small></div>
+    ${runs.map(r=>`<div class="payroll-run-alert-v034"><div><strong>مسودة ${dateOnly(r.period_start)} — ${dateOnly(r.period_end)}</strong><small>الراتب الشهري كامل افتراضيًا باستثناء شهر انتهاء الخدمة، حيث يُطبّق عدد الأيام المحدد في ملف الموظف. بعد أي تغيير للسلف أو المكافآت أو الأيام اضغط إعادة احتساب.</small></div>
       <div class="quick-actions"><button class="btn secondary" data-run-recalc="${esc(r.id)}">إعادة احتساب</button><button class="btn" data-run-approve="${esc(r.id)}">اعتماد المسير</button></div></div>`).join('')}
     <div class="payroll-list-tools-v034"><div class="field"><label>البحث بالاسم</label><input id="payroll-find-v034" type="search" value="${esc(state.query)}" placeholder="اسم الموظف..."></div>
      <div class="field"><label>عرض</label><select id="payroll-status-v034">${options([['all','الكل'],['ready','جاهز للدفع'],['draft','مسودة'],['partial','مدفوع جزئيًا']],state.status)}</select></div>
@@ -124,6 +133,12 @@ export async function renderPayrollV034(root){
       <td><small>${esc(r.note||'—')}</small><div><span class="badge ${r.isDraft?'yellow':r.remaining>0?'green':''}">${r.isDraft?'مسودة · غير معتمدة':r.remaining<=.0001?'مسدد':'معتمد'}</span>${r.pay_type!=='monthly'&&Number(r.missing_attendance_days)>0?`<small class="payroll-danger-v034">⚠ ${r.missing_attendance_days} أيام دوام ناقصة</small>`:''}</div></td>
       <td><button class="btn pay-salary-v034" data-id="${esc(r.payroll_item_id)}" ${!r.payable||noBox?'disabled':''}>دفع</button></td></tr>`).join('')}</tbody></table></div>`:empty('لا توجد مسيرات أو مستحقات مطابقة في هذه الفترة. أنشئ مسيرًا ثم اعتمده.')}
   </section>
+  ${state.daily.length?`<section class="card finance-section staff-v123-daily-wages">
+    <div class="finance-section-head"><div><h3>\u0623\u062c\u0648\u0631 \u064a\u0648\u0645\u064a\u0629 \u0648\u0633\u0627\u0639\u064a\u0629 \u062a\u0644\u0642\u0627\u0626\u064a\u0629</h3><p>\u064a\u064f\u0639\u062a\u0645\u062f \u0627\u0644\u064a\u0648\u0645 \u0627\u0644\u0645\u062c\u062f\u0648\u0644 \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u0625\u0644\u0627 \u0625\u0630\u0627 \u0633\u064f\u062c\u0651\u0644\u062a \u0625\u062c\u0627\u0632\u0629 \u0623\u0648 \u063a\u064a\u0627\u0628 \u0645\u0646 \u0645\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641. \u0627\u0644\u062f\u0641\u0639 \u0627\u0644\u0641\u0639\u0644\u064a \u0645\u0646 \u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u062f\u0641\u0639.</p></div><span class="badge green">${state.daily.length} \u064a\u0648\u0645 \u0645\u0633\u062a\u062d\u0642</span></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>\u0627\u0644\u0645\u0648\u0638\u0641</th><th>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0639\u0645\u0644</th><th>\u0646\u0648\u0639 \u0627\u0644\u0623\u062c\u0631</th><th>\u0627\u0644\u0645\u0633\u062a\u062d\u0642</th><th>\u0627\u0644\u0635\u0631\u0641</th></tr></thead><tbody>
+    ${state.daily.slice(0,75).map(d=>`<tr><td>${esc(d.employee_name)}</td><td>${dateOnly(d.work_date)}</td><td>${esc(PAY_TYPE[d.pay_type]||d.pay_type)}</td><td><strong>${compact(d.estimated_due_original,d.currency_code)}</strong></td><td><button type="button" class="btn staff-v123-pay-day" data-employee="${esc(d.employee_id)}" data-date="${esc(d.work_date)}" ${noBox?'disabled':''}>\u0635\u0631\u0641</button></td></tr>`).join('')}</tbody></table></div>
+    ${state.daily.length>75?'<div class="notice">\u062a\u0648\u062c\u062f \u0623\u064a\u0627\u0645 \u0623\u062e\u0631\u0649 \u0645\u0633\u062a\u062d\u0642\u0629. \u062d\u062f\u062b \u0627\u0644\u0634\u0647\u0631 \u0648\u0631\u0627\u062c\u0639 \u0633\u062c\u0644\u0627\u062a \u0627\u0644\u062f\u0641\u0639.</div>':''}
+   </section>`:''}
   ${state.fixed.length?`<section class="card finance-section"><div class="finance-section-head"><div><h3>الأجور المقطوعة</h3><p>تصرف عند اكتمال العمل وليس كراتب شهري تلقائي. تأكد من تاريخ العمل قبل الدفع.</p></div></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>الموظف</th><th>الأجر</th><th>الحالة</th><th>الصرف</th></tr></thead><tbody>${state.fixed.map(e=>`<tr><td>${esc(e.name)}</td><td>${compact(fixedRate(e),e.wage_currency_code)}</td><td><span class="badge">مقطوع</span></td><td><button class="btn pay-fixed-v034" data-id="${esc(e.id)}" ${noBox?'disabled':''}>صرف أجر</button></td></tr>`).join('')}</tbody></table></div></section>`:''}`;
  }
@@ -161,6 +176,17 @@ export async function renderPayrollV034(root){
       <div class="field"><label>ملاحظة على الدفعة (اختياري)</label><textarea rows="2" maxlength="300" name="note" placeholder="مثال: قبض نقدي بموجب إيصال"></textarea></div>
       <div class="notice">بعد التأكيد ستظهر الحركة في «الرواتب المدفوعة» وفي الصندوق. لا تكرر الدفع إذا انقطع الاتصال قبل ظهور التأكيد؛ حدّث السجل أولًا.</div>`,
     onSubmit:async fd=>{try{const amt=Number(fd.get('amount'));if(!Number.isFinite(amt)||amt<=0||amt>r.remaining+.0001)throw Error('المبلغ أكبر من المتبقي أو غير صالح.');await api.payApprovedSalaryV034(r.payroll_item_id,amt,state.box,fd.get('note'));toast('تم صرف الراتب وحفظ حركة الصندوق.','success');await load();return true;}catch(e){toast(errorMessage(e),'error');return false;}}
+   });
+  });
+  panel.querySelectorAll('.staff-v123-pay-day').forEach(b=>b.onclick=()=>{
+   const row=state.daily.find(d=>String(d.employee_id)===b.dataset.employee&&String(d.work_date)===b.dataset.date);
+   if(!row||!mayPay())return;
+   modal({title:'\u062a\u0623\u0643\u064a\u062f \u0635\u0631\u0641 \u0623\u062c\u0631 \u064a\u0648\u0645\u064a',subtitle:row.employee_name+' \u00b7 '+String(row.work_date)+' \u00b7 '+cashName(),
+     body:`<div class="notice rose"><strong>${compact(row.estimated_due_original,row.currency_code)}</strong> \u00b7 \u0645\u0633\u062a\u062d\u0642 \u0645\u0628\u062f\u0626\u064a \u0642\u0628\u0644 \u0627\u0644\u062a\u0633\u0648\u064a\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629 \u0644\u0644\u0633\u0644\u0641 \u0648\u0627\u0644\u062d\u0633\u0645\u064a\u0627\u062a.</div>`,
+     submitText:'\u0635\u0631\u0641 \u0645\u0646 \u0627\u0644\u0635\u0646\u062f\u0648\u0642',
+     onSubmit:async()=>{try{await api.payDailyWageV034(row.employee_id,row.work_date,state.box);
+       toast('\u062a\u0645 \u0635\u0631\u0641 \u0627\u0644\u0623\u062c\u0631 \u0648\u062a\u0633\u062c\u064a\u0644 \u062d\u0631\u0643\u0629 \u0627\u0644\u0635\u0646\u062f\u0648\u0642.','success');await load();return true;
+     }catch(e){toast(errorMessage(e),'error');return false;}}
    });
   });
   panel.querySelectorAll('.pay-fixed-v034').forEach(b=>b.onclick=()=>{

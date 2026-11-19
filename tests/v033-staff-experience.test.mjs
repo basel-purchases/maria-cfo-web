@@ -60,13 +60,16 @@ test('filters cover all, exceptions, shortage and extra, including absences',()=
  assert.equal(filterAttendanceV033(models,'overtime').length,1);
  assert.equal(filterAttendanceV033(models,'invalid').length,5);
 });
-test('attendance card places paid leave before note, and displayed table exposes applied/approved',()=>{
- const ui=source('js/pages/employees.js');
- assert.ok(ui.indexOf('attendance-leave-field-v033')>0);
- assert.ok(ui.indexOf('attendance-leave-field-v033')<ui.indexOf('name=\\"note\\"')||ui.indexOf('attendance-leave-field-v033')<ui.indexOf('name="note"'));
- assert.match(ui,/الإضافي المعتمد/);assert.match(ui,/النقص المطبق/);
- assert.match(ui,/registerTableExport\(table,exportData\)/);
- assert.match(ui,/const current=filterAttendanceV033\(views,filter.value\)/);
+test('attendance screen is retired; direct employee actions and dated exceptions replace it',()=>{
+ const employees=source('js/pages/employees.js');
+ const app=source('js/app.js');
+ const payroll=source('js/pages/payroll-v034.js');
+ assert.doesNotMatch(employees,/renderAttendance|initializeAttendance|attendance-leave-field-v033/);
+ assert.match(employees,/staff-v123-leave/);
+ assert.match(employees,/staff-v123-deduction/);
+ assert.match(employees,/staff-v123-addition/);
+ assert.match(app,/case 'attendance': location\.hash='#\/employees-list'/);
+ assert.match(payroll,/prepareScheduledWorkdaysV123/);
 });
 test('bonus employee filter is one search input and dialog selection uses shared combobox',()=>{
  const bonuses=source('js/pages/bonuses.js');
