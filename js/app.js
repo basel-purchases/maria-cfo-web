@@ -1,12 +1,12 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.17';
+import * as api from './api.js?v=1.0.19';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
 import { renderHub } from './pages/hubs.js?v=1.0';
 import { renderMaterials } from './pages/materials.js?v=1.0.13';
-import { renderSuppliersWithAmeen as renderSuppliers } from './pages/suppliers.js?v=1.0';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.8';
+import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.19';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.19';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
   renderInventory,
@@ -119,7 +119,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.18</div>
+        <div class="sidebar-foot">Web v1.0.19</div>
       </aside>
 
       <main class="main">
@@ -545,7 +545,7 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', supplier: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
     'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
@@ -587,6 +587,7 @@ async function route() {
     advances: '\u0633\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646',
     bonuses: 'مكافآت الموظفين',
     suppliers: 'الموردون',
+    supplier: 'ملف المورد والإحصائيات',
     purchases: 'فواتير الشراء',
     purchase: 'تفاصيل الفاتورة',
     menu: 'الوجبات والوصفات',
@@ -626,6 +627,7 @@ async function route() {
       case 'advances': return renderAdvances(root);
       case 'bonuses': return renderBonusesV032(root);
       case 'suppliers': return renderSuppliers(root);
+      case 'supplier': return renderSupplierDetail(root,id);
       case 'purchases': return renderPurchases(root);
       case 'purchase': return renderPurchaseDetail(root, id);
       case 'menu': return renderMenu(root,{missingOnly:id==='unpriced'});

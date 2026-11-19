@@ -1975,3 +1975,29 @@ select option{background:#fff;color:var(--text);padding:8px}
 .payroll-monthly-metrics-v117 .metric-note{overflow-wrap:anywhere}
 @media(max-width:1050px){.payroll-monthly-metrics-v117{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:570px){.payroll-monthly-metrics-v117{grid-template-columns:minmax(0,1fr)}}
+
+/* Maria CFO Web v1.0.19 — supplier workflows and invoice corrections */
+.purchase-items-table tfoot .purchase-total-row-v119 td{background:#f8f0f5;color:#523747;font-weight:750;border-top:2px solid var(--plum)}
+.purchase-items-table .row-actions{white-space:nowrap}
+.purchase-live-line-total-v119{display:block;padding:12px;background:var(--rose-soft);border-radius:12px;font-size:19px;color:var(--plum-dark)}
+.supplier-suggest-wrap-v119{position:relative;isolation:isolate;z-index:6}
+.supplier-suggest-results-v119{position:absolute;top:calc(100% - 26px);inset-inline:0;z-index:15;max-height:230px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 44px #3223392b;padding:5px}
+.supplier-suggest-results-v119[hidden]{display:none}
+.supplier-suggest-choice-v119{display:block;width:100%;text-align:right;background:transparent;border:0;padding:10px 11px;border-radius:9px;color:var(--text);cursor:pointer;font:inherit}
+.supplier-suggest-choice-v119:hover,.supplier-suggest-choice-v119.active{background:var(--rose-soft)}
+.supplier-actions-v119{display:flex;gap:6px;min-width:225px;white-space:nowrap}
+.supplier-actions-v119 a{display:inline-flex;align-items:center;text-decoration:none}
+.supplier-kpis-v119,.supplier-money-kpis-v119{margin-bottom:14px}
+.supplier-kpis-v119 .card>strong{font-size:26px;color:var(--plum)}
+.supplier-tabs-v119{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 14px}
+.supplier-tabs-v119 button{border:1px solid var(--line);background:#fff;padding:10px 14px;border-radius:12px;color:var(--text);font-weight:700;cursor:pointer}
+.supplier-tabs-v119 button.active{color:#fff;background:var(--plum);border-color:var(--plum)}
+.supplier-invoice-list-v119{display:grid;gap:10px}
+.supplier-invoice-card-v119{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.supplier-invoice-card-v119>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px;list-style:revert;background:#faf7f9}
+.supplier-invoice-card-v119>summary span{display:flex;flex-direction:column;gap:3px}
+.supplier-invoice-card-v119>summary small{color:var(--muted)}
+.supplier-invoice-actions-v119{padding:10px 14px}
+.supplier-invoice-card-v119 .table{min-width:700px}
+.supplier-material-stats-v119,.supplier-movement-table-v119,.supplier-payments-table-v119{min-width:760px}
+@media(max-width:700px){.supplier-invoice-card-v119>summary{align-items:flex-start;flex-direction:column}.supplier-tabs-v119 button{flex:1 1 46%}.supplier-actions-v119{flex-wrap:wrap}}

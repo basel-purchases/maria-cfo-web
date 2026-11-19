@@ -1,9 +1,11 @@
 import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.19';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
+import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.19';
+import {supplierFieldV119,attachSupplierSuggestV119} from '../supplier-suggest-v119.js?v=1.0.19';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.code==='AMEEN_LEGACY_UNKNOWN_SOURCE_V029' || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
@@ -51,7 +53,7 @@ export async function renderPurchases(root){
           </table>
         </div>`:
         `<div class="card empty"><strong>لا توجد فواتير بعد</strong><div>ابدأ بفاتورة جديدة. المورد اختياري.</div><br><button class="btn new">فاتورة جديدة</button></div>`}`;
-    root.querySelectorAll('.new').forEach(b=>b.onclick=()=>newPurchase());
+    root.querySelectorAll('.new').forEach(b=>b.onclick=()=>newPurchase({suppliers}));
     root.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=e=>{
       if(e.target.closest('button')) return;
       location.hash='#/purchase/'+tr.dataset.id;
@@ -72,35 +74,52 @@ export async function renderPurchases(root){
   }
 }
 
-function newPurchase(){
-  modal({
-    title:'فاتورة شراء جديدة',
-    subtitle:'المورد اختياري تمامًا.',
-    body:`
-      <div class="form-grid">
-        <div class="field"><label>اسم المورد <span class="optional-badge">اختياري</span></label><input name="supplier" autocomplete="off"></div>
-        <div class="field"><label>رقم الفاتورة <span class="optional-badge">اختياري</span></label><input name="number" autocomplete="off"></div>
-        <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
-        <div class="field"><label>العملة</label><select name="currency"><option value="SYP">ل.س</option><option>USD</option></select></div>
-      </div>`,
+export async function newPurchase({supplier=null,suppliers=null,openCatalog=false}={}){
+  let all=suppliers;
+  try{if(!all)all=await api.suppliers();}
+  catch(e){toast(friendlyError(e,'تعذر تحميل قائمة الموردين.'),'error');return;}
+  const dlg=modal({
+    title:supplier?`فاتورة جديدة — ${supplier.name}`:'فاتورة شراء جديدة',
+    subtitle:supplier?'ستُربط الفاتورة بالمورد المحدد، وستظهر مواده السابقة فور إنشائها.':'المورد اختياري، ويمكن البحث بالاسم من أول حرف.',
+    body:`<div class="form-grid">
+      ${supplierFieldV119({value:supplier?.name||'',label:'اسم المورد (اختياري)'})}
+      <div class="field"><label>رقم الفاتورة (اختياري)</label><input name="number" autocomplete="off"></div>
+      <div class="field"><label>التاريخ</label><input name="date" type="date" value="${todayISO()}" required></div>
+      <div class="field"><label>العملة</label><select name="currency"><option value="SYP">ل.س</option><option value="USD">USD</option></select></div>
+    </div>`,
     submitText:'إنشاء الفاتورة',
-    onSubmit:async fd=>{
+    onSubmit:async(fd,form)=>{
       try{
-        const id=await api.createPurchase({
-          supplierName:String(fd.get('supplier')||''),
-          currency:fd.get('currency'),
-          invoiceNumber:String(fd.get('number')||'').trim()||null,
-          date:fd.get('date'),
-        });
-        toast('تم إنشاء المسودة','success');
+        const name=String(fd.get('supplier')||'').trim();
+        const id=await api.createPurchase({supplierName:name,currency:fd.get('currency'),
+          invoiceNumber:String(fd.get('number')||'').trim()||null,date:fd.get('date')});
+        if(openCatalog&&supplier&&normalizeName(name)===normalizeName(supplier.name))
+          sessionStorage.setItem('maria_open_supplier_catalog_v119',String(id));
+        toast('تم إنشاء مسودة الفاتورة','success');
         location.hash='#/purchase/'+id;
         return true;
-      }catch(e){
-        toast(friendlyError(e),'error');
-        return false;
-      }
+      }catch(e){toast(friendlyError(e),'error');return false;}
     },
   });
+  attachSupplierSuggestV119(dlg.form,all);
+}
+
+// The server owns the revision, its inventory reversal, transfer of existing
+// payment allocations, recalculation and audit; never write a posted invoice
+// directly from the browser.
+async function saveInvoiceRevisionV119(root,invoice,items,patch={},reason='تصحيح فاتورة'){
+  const nextId=await api.revisePurchaseInvoiceV119({
+    invoiceId:invoice.id,
+    supplierId:patch.supplierId||invoice.supplier_id,
+    invoiceNumber:patch.invoiceNumber!==undefined?patch.invoiceNumber:invoice.invoice_number,
+    invoiceDate:patch.invoiceDate||String(invoice.invoice_date||invoice.occurred_at||'').slice(0,10),
+    currency:patch.currency||invoice.currency_code||'SYP',
+    items:revisionLinesV119(items),reason,
+  });
+  toast(invoice.status==='posted'?'تم تصحيح الفاتورة ونقل أثر المخزون والدفعات بأمان':'تم تحديث الفاتورة والإجمالي','success');
+  if(String(nextId)!==String(invoice.id))location.hash='#/purchase/'+nextId;
+  else await renderPurchaseDetail(root,invoice.id);
+  return nextId;
 }
 
 export async function renderPurchaseDetail(root,id){
@@ -115,6 +134,10 @@ export async function renderPurchaseDetail(root,id){
       api.aiJobsForEntity('purchase_invoice',id).catch(()=>[]),
     ]);
     if(!invoice) throw new Error('INVOICE_NOT_FOUND');
+    const revisions=await api.purchaseRevisionsV119(id).catch(()=>[]);
+    const successor=revisions.find(r=>String(r.previous_invoice_id)===String(id));
+    const totals=purchaseTotalsV119(items);
+    const editable=['draft','posted'].includes(invoice.status)&&!invoice.is_voided&&!invoice.is_ameen_legacy_v029;
     const mm=Object.fromEntries(mats.map(m=>[String(m.id),m]));
     const um=Object.fromEntries(units.map(u=>[String(u.id),u]));
     const supplier=allSup.find(s=>String(s.id)===String(invoice.supplier_id));
@@ -130,9 +153,11 @@ export async function renderPurchaseDetail(root,id){
         <div>
           <h2>تفاصيل الفاتورة</h2>${invoice.is_ameen_legacy_v029?'<div class="notice">شراء تاريخي من التقرير المستورد؛ المورد والدفع غير معروفين، فلا يحتسب ضمن ديون الموردين ولا ينشئ حركة صندوق.</div>':''}
           <p>${direct?'شراء مباشر بدون مورد':`المورد: ${esc(supplier?.name||'—')}`}</p>
+          ${successor?`<div class="notice green">هذه نسخة سابقة مصححة؛ <a href="#/purchase/${esc(successor.replacement_invoice_id)}">افتح الفاتورة الجديدة</a>.</div>`:''}
         </div>
         <div class="page-head-actions">
           <a class="btn secondary purchase-to-images-v108" href="#/images">الإدخال بالصور</a>
+          ${editable?'<button class="btn secondary edit-invoice-v119">تعديل بيانات الفاتورة</button>':''}
           ${draft?'<button class="btn secondary delete-draft-detail">حذف المسودة</button>':''}
           ${posted&&!invoice.is_ameen_legacy_v029?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
         </div>
@@ -144,7 +169,9 @@ export async function renderPurchaseDetail(root,id){
             <div class="k">المورد</div><div>${direct?'بدون مورد':esc(supplier?.name||'—')}</div>
             <div class="k">الحالة</div><div>${invoiceStatus(invoice)}</div>
             <div class="k">العملة</div><div>${esc(currencyLabel(invoice.currency_code||'SYP'))}</div>
-            <div class="k">الإجمالي</div><div><strong>${money(invoice.is_voided?(invoice.voided_original_total||0):(invoice.total_original||0),invoice.currency_code||'SYP')}</strong></div>
+            <div class="k">مجموع البنود قبل الخصم</div><div>${money(totals.subtotal,invoice.currency_code||'SYP')}</div>
+            <div class="k">مجموع الخصومات</div><div>${money(totals.discounts,invoice.currency_code||'SYP')}</div>
+            <div class="k">الإجمالي النهائي</div><div><strong>${money(invoice.is_voided?(invoice.voided_original_total||0):(invoice.total_original??totals.total),invoice.currency_code||'SYP')}</strong></div>
           </div>
           ${invoice.is_voided?`<div class="notice rose compact-notice">أُلغيت هذه الفاتورة وتم تسجيل حركة عكسية للمخزون.${invoice.void_reason?` السبب: ${esc(invoice.void_reason)}`:''}</div>`:''}
         </div>
@@ -153,12 +180,13 @@ export async function renderPurchaseDetail(root,id){
           <p>أضف بندًا يدويًا، اختر من مواد هذا المورد السابقة، أو حلّل صورة الفاتورة بالذكاء الاصطناعي.</p>
           <div class="quick-actions purchase-actions">
             <a class="btn secondary purchase-to-images-v108" href="#/images">الانتقال إلى الصور</a>
-            <button class="btn add" ${!draft?'disabled':''}>إضافة مادة</button>
-            <button class="btn secondary reuse" ${!draft||direct?'disabled':''}>مواد هذا المورد</button>
+            <button class="btn add" ${!editable?'disabled':''}>إضافة مادة</button>
+            <button class="btn secondary reuse" ${!editable||direct?'disabled':''}>مواد هذا المورد</button>
             <button class="btn secondary ocr" ${!draft?'disabled':''}>تحليل صورة الفاتورة</button>
             <input type="file" class="ocr-file" accept="image/*" hidden>
             <button class="btn soft post" ${!draft||!items.length?'disabled':''}>نشر الفاتورة</button>
           </div>
+          ${posted?'<small class="action-hint">تعديل فاتورة منشورة ينشئ نسخة مصححة موثقة ويعكس أثر النسخة القديمة؛ وتبقى أي دفعات مسجلة محفوظة إذا سمحت المطابقة المالية بذلك.</small>':''}
           ${direct?'<small class="action-hint">اقتراحات المورد تظهر فقط عندما تكون الفاتورة مرتبطة بمورد حقيقي.</small>':''}
           ${pendingAi.length?`<div class="ai-inline-card processing"><strong>جاري تحليل ${pendingAi.length} صورة</strong><span>يمكنك مغادرة الصفحة ومتابعة العمل. سنحفظ النتيجة وننبهك عند اكتمالها.</span></div>`:''}
           ${latestReadyAi?`<div class="ai-inline-card ready"><strong>نتيجة تحليل جاهزة</strong><span>${esc(latestReadyAi.public_message||'تم تحليل الصورة.')}</span><button type="button" class="mini-action review-ai-result" data-job="${esc(latestReadyAi.id)}">مراجعة النتيجة</button></div>`:''}
@@ -170,7 +198,7 @@ export async function renderPurchaseDetail(root,id){
         ${items.length?`
           <div class="table-wrap table-fit">
             <table class="table purchase-items-table">
-              <thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th>${draft?'<th>إجراء</th>':''}</tr></thead>
+              <thead><tr><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>سعر الوحدة</th><th>الخصم</th><th>إجمالي البند</th>${editable?'<th>إجراء</th>':''}</tr></thead>
               <tbody>${items.map(x=>`
                 <tr>
                   <td>${esc(mm[String(x.material_id)]?.name||x.material_id)}</td>
@@ -178,15 +206,22 @@ export async function renderPurchaseDetail(root,id){
                   <td>${esc(x.quantity_purchase_unit??x.quantity_base??'—')}</td>
                   <td>${money(x.unit_price_original||0,invoice.currency_code||'SYP')}</td>
                   <td>${money(x.line_discount_original||0,invoice.currency_code||'SYP')}</td>
-                  ${draft?`<td class="row-actions"><button class="mini-action edit-item" data-item="${esc(x.id)}">تعديل</button><button class="mini-action danger delete-item" data-item="${esc(x.id)}">حذف</button></td>`:''}
+                  <td><strong>${money(purchaseLineTotalV119(x),invoice.currency_code||'SYP')}</strong></td>
+                  ${editable?`<td class="row-actions"><button class="mini-action edit-item" data-item="${esc(x.id)}">تعديل</button><button class="mini-action danger delete-item" data-item="${esc(x.id)}">حذف</button></td>`:''}
                 </tr>`).join('')}</tbody>
+              <tfoot><tr class="purchase-total-row-v119"><td colspan="5">الإجمالي بعد الخصومات</td><td><strong>${money(totals.total,invoice.currency_code||'SYP')}</strong></td>${editable?'<td></td>':''}</tr></tfoot>
             </table>
           </div>`:
           '<div class="empty"><strong>لا توجد بنود</strong><div>أضف مواد الفاتورة قبل النشر.</div></div>'}
       </div>`;
 
-    root.querySelector('.add')?.addEventListener('click',()=>addItem(root,id,mats,units,invoice.currency_code||'SYP'));
+    root.querySelector('.add')?.addEventListener('click',()=>addItem(root,id,mats,units,invoice.currency_code||'SYP',{invoice,items}));
     root.querySelector('.reuse')?.addEventListener('click',()=>openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier}));
+    root.querySelector('.edit-invoice-v119')?.addEventListener('click',()=>editInvoiceHeaderV119(root,{invoice,items,allSup}));
+    if(draft&&!direct&&sessionStorage.getItem('maria_open_supplier_catalog_v119')===String(id)){
+      sessionStorage.removeItem('maria_open_supplier_catalog_v119');
+      setTimeout(()=>openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier}),0);
+    }
     const ocrFile=root.querySelector('.ocr-file');
     root.querySelector('.ocr')?.addEventListener('click',()=>ocrFile?.click());
     ocrFile?.addEventListener('change',async()=>{
@@ -212,11 +247,14 @@ export async function renderPurchaseDetail(root,id){
 
     root.querySelectorAll('.edit-item').forEach(b=>b.onclick=()=>{
       const item=items.find(x=>String(x.id)===String(b.dataset.item));
-      if(item) editPurchaseItem(root,{invoice,item,mats,units});
+      if(item) editPurchaseItem(root,{invoice,item,items,mats,units});
     });
     root.querySelectorAll('.delete-item').forEach(b=>b.onclick=async()=>{
-      if(!(await confirmBox('حذف هذا البند من المسودة؟','حذف البند'))) return;
-      try{await api.deletePurchaseItem(b.dataset.item);toast('تم حذف البند','success');await renderPurchaseDetail(root,id);}
+      if(!(await confirmBox(invoice.status==='posted'?'سيتم إنشاء نسخة مصححة من الفاتورة وعكس أثر البند القديم على المخزون. متابعة؟':'حذف هذا البند من المسودة؟','حذف البند'))) return;
+      try{
+        if(posted)await saveInvoiceRevisionV119(root,invoice,items.filter(x=>String(x.id)!==String(b.dataset.item)),{},'حذف بند');
+        else{await api.deletePurchaseItem(b.dataset.item);toast('تم حذف البند','success');await renderPurchaseDetail(root,id);}
+      }
       catch(e){toast(friendlyError(e,'تعذر حذف البند.'),'error');}
     });
 
@@ -264,14 +302,20 @@ async function openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier
   }
   try{
     const catalog=await api.supplierPurchaseCatalog(invoice.supplier_id);
-    if(!catalog.length){toast('لا توجد مواد سابقة مسجلة لهذا المورد بعد.');return;}
+    if(!catalog.length){toast('لا توجد مواد سابقة لهذا المورد، اختر مادة جديدة لهذه الفاتورة.');addItem(root,invoice.id,mats,units,invoice.currency_code||'SYP',{invoice,items});return;}
     const existing=new Set(items.map(x=>String(x.material_id)));
     const prepared=[];
     for(const row of catalog){
       const material=mats.find(m=>String(m.id)===String(row.material_id));
       if(!material) continue;
       const choices=await materialUnitChoices(material,units);
+      if(!choices.length) continue;
       prepared.push({...row,material,choices,already:existing.has(String(row.material_id))});
+    }
+    if(!prepared.length){
+      toast('مواد هذا المورد السابقة غير متاحة بوحدات شراء صالحة؛ أضف المادة يدويًا.');
+      addItem(root,invoice.id,mats,units,invoice.currency_code||'SYP',{invoice,items});
+      return;
     }
     const m=modal({
       title:`مواد ${supplier.name}`,
@@ -298,18 +342,13 @@ async function openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier
         prepared.forEach((r,i)=>{if(!r.already && fd.get(`pick_${i}`)) selected.push({r,i});});
         if(!selected.length){toast('حدد مادة واحدة على الأقل.');return false;}
         try{
+          const pending=[];
           for(const {r,i} of selected){
-            await api.addPurchaseItem({
-              invoiceId:invoice.id,
-              materialId:r.material_id,
-              purchaseUnitId:fd.get(`unit_${i}`),
-              quantity:fd.get(`qty_${i}`),
-              unitPrice:fd.get(`price_${i}`),
-              discount:fd.get(`discount_${i}`)||0,
-            });
+            pending.push({material_id:r.material_id,purchase_unit_id:fd.get(`unit_${i}`),
+              quantity:Number(fd.get(`qty_${i}`)),unit_price:Number(fd.get(`price_${i}`)),
+              discount:Number(fd.get(`discount_${i}`)||0)});
           }
-          toast(`تمت إضافة ${selected.length} مادة من سجل المورد`,'success');
-          await renderPurchaseDetail(root,invoice.id);
+          await saveInvoiceRevisionV119(root,invoice,[...revisionLinesV119(items),...pending],{},'إضافة مواد من سجل المورد');
           return true;
         }catch(e){toast(friendlyError(e,'تعذر إضافة المواد المحددة.'),'error');return false;}
       },
@@ -328,37 +367,77 @@ async function openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier
   }catch(e){toast(friendlyError(e,'تعذر جلب مواد المورد السابقة.'),'error');}
 }
 
-function editPurchaseItem(root,{invoice,item,mats,units}){
+async function editPurchaseItem(root,{invoice,item,items,mats,units}){
   const material=mats.find(m=>String(m.id)===String(item.material_id));
-  if(!material) return;
-  (async()=>{
-    const choices=await materialUnitChoices(material,units);
-    modal({
-      title:`تعديل ${material.name}`,
-      subtitle:'عدّل الوحدة أو الكمية أو السعر أو الخصم قبل نشر الفاتورة.',
-      body:`<div class="purchase-item-row purchase-item-fields">
-        <div class="field"><label>الوحدة</label><select name="unit">${choices.map(c=>`<option value="${esc(c.unitId)}" ${String(c.unitId)===String(item.purchase_unit_id)?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
-        <div class="field"><label>الكمية</label><input name="qty" type="number" step="any" min="0.000001" value="${esc(item.quantity_purchase_unit??item.quantity_base??1)}"></div>
-        <div class="field"><label>سعر الوحدة</label><input name="price" type="number" step="any" min="0" value="${esc(item.unit_price_original??0)}"></div>
+  if(!material)return;
+  try{
+    const allowed=await materialUnitChoices(material,units);
+    const m=modal({
+      title:`تعديل بند الفاتورة — ${material.name}`,
+      subtitle:invoice.status==='posted'?'سيُنشأ إصدار مصحح من الفاتورة مع إعادة احتساب المخزون والإجمالي.':'يمكن تغيير المادة نفسها أو وحدتها أو الكمية أو السعر أو الخصم.',
+      body:`<div class="form-grid">
+        <div class="field full"><label>المادة</label><select name="material" required>${mats.map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(item.material_id)?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>الوحدة</label><select name="unit" required>${allowed.map(c=>`<option value="${esc(c.unitId)}" ${String(c.unitId)===String(item.purchase_unit_id)?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
+        <div class="field"><label>الكمية</label><input name="qty" type="number" step="any" min="0.000001" value="${esc(item.quantity_purchase_unit??item.quantity_base??1)}" required></div>
+        <div class="field"><label>سعر الوحدة</label><input name="price" type="number" step="any" min="0" value="${esc(item.unit_price_original??0)}" required></div>
         <div class="field"><label>الخصم</label><input name="discount" type="number" step="any" min="0" value="${esc(item.line_discount_original??0)}"></div>
+        <div class="field full"><label>إجمالي البند بعد الخصم</label><strong class="purchase-live-line-total-v119">${money(purchaseLineTotalV119(item),invoice.currency_code||'SYP')}</strong></div>
       </div>`,
-      submitText:'حفظ التعديل',
+      submitText:'حفظ البند والتحديث',
       onSubmit:async fd=>{
         try{
-          await api.updatePurchaseItem({
-            itemId:item.id,
-            purchaseUnitId:fd.get('unit'),
-            quantity:fd.get('qty'),
-            unitPrice:fd.get('price'),
-            discount:fd.get('discount')||0,
-          });
-          toast('تم تحديث البند','success');
-          await renderPurchaseDetail(root,invoice.id);
+          const changed={...item,material_id:String(fd.get('material')),
+            purchase_unit_id:String(fd.get('unit')),quantity_purchase_unit:Number(fd.get('qty')),
+            unit_price_original:Number(fd.get('price')),line_discount_original:Number(fd.get('discount')||0)};
+          if(!(purchaseLineTotalV119(changed)>=0))throw Error('PURCHASE_REVISION_INVALID_LINE');
+          await saveInvoiceRevisionV119(root,invoice,items.map(x=>String(x.id)===String(item.id)?changed:x),{},'تعديل بند');
           return true;
         }catch(e){toast(friendlyError(e,'تعذر تعديل البند.'),'error');return false;}
       },
     });
-  })();
+    const matSel=m.form.querySelector('[name="material"]'),unitSel=m.form.querySelector('[name="unit"]');
+    matSel.onchange=async()=>{
+      const selected=mats.find(x=>String(x.id)===matSel.value);
+      if(!selected)return;
+      unitSel.disabled=true;
+      try{const choices=await materialUnitChoices(selected,units);
+        unitSel.innerHTML=choices.map(x=>`<option value="${esc(x.unitId)}">${esc(x.label)}</option>`).join('');
+      }catch(e){toast(friendlyError(e),'error');}finally{unitSel.disabled=false;}
+    };
+    const refresh=()=>{const qty=Number(m.form.querySelector('[name="qty"]').value||0);
+      const price=Number(m.form.querySelector('[name="price"]').value||0);
+      const disc=Number(m.form.querySelector('[name="discount"]').value||0);
+      m.form.querySelector('.purchase-live-line-total-v119').textContent=money(qty*price-disc,invoice.currency_code||'SYP');
+    };
+    ['qty','price','discount'].forEach(n=>m.form.querySelector(`[name="${n}"]`).addEventListener('input',refresh));
+  }catch(e){toast(friendlyError(e,'تعذر فتح تعديل البند.'),'error');}
+}
+
+async function editInvoiceHeaderV119(root,{invoice,items,allSup}){
+  const supplier=allSup.find(x=>String(x.id)===String(invoice.supplier_id));
+  const m=modal({
+    title:'تعديل بيانات فاتورة الشراء',
+    subtitle:invoice.status==='posted'?'سيتم استبدال النسخة المنشورة بنسخة صحيحة مرتبطة بسجل تصحيحات؛ لا تُحذف الحركات التاريخية.':'يمكنك تعديل المورد والتاريخ والرقم والعملة الآن.',
+    body:`<div class="form-grid">
+      ${supplierFieldV119({value:isDirectSupplier(supplier)?'':supplier?.name||'',label:'المورد (اختياري)'})}
+      <div class="field"><label>رقم الفاتورة</label><input name="number" value="${esc(invoice.invoice_number||'')}"></div>
+      <div class="field"><label>تاريخ الفاتورة</label><input name="date" type="date" required value="${esc(String(invoice.invoice_date||invoice.occurred_at||'').slice(0,10))}"></div>
+      <div class="field"><label>العملة</label><select name="currency"><option value="SYP" ${invoice.currency_code==='SYP'?'selected':''}>ل.س</option><option value="USD" ${invoice.currency_code==='USD'?'selected':''}>USD</option></select></div>
+      <div class="field full"><label>سبب التعديل (اختياري)</label><input name="reason" placeholder="مثال: تصحيح تاريخ أو اسم المورد"></div>
+      <div class="notice field full">الانتقال لعملة أخرى لا يُحوّل أسعار البنود تلقائيًا. راجع أسعار الوحدات أولًا. الفاتورة ذات الدفعات المخصصة لا تسمح بتغيير المورد أو العملة.</div>
+    </div>`,
+    submitText:'حفظ الفاتورة والتحديث',
+    onSubmit:async fd=>{
+      try{
+        const s=await api.findOrCreateSupplier(String(fd.get('supplier')||''));
+        await saveInvoiceRevisionV119(root,invoice,items,{
+          supplierId:s.id,invoiceNumber:String(fd.get('number')||''),
+          invoiceDate:fd.get('date'),currency:fd.get('currency')},String(fd.get('reason')||'تصحيح بيانات الفاتورة'));
+        return true;
+      }catch(e){toast(friendlyError(e,'تعذر تعديل بيانات الفاتورة.'),'error');return false;}
+    },
+  });
+  attachSupplierSuggestV119(m.form,allSup);
 }
 
 function fileToBase64(file){
@@ -575,7 +654,7 @@ function normalizeName(value){
   return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
 }
 
-function addItem(root,id,mats,units,currency='SYP'){
+function addItem(root,id,mats,units,currency='SYP',context=null){
   const unitListId=`purchase-material-base-units-${Date.now()}`;
   const materialOptions=()=>mats.length
     ? mats.map(x=>`<option data-search="${esc(materialSearchTextV106(x))}" value="${esc(x.id)}">${esc(x.name)}${x.quick_code||x.code?` — ${esc(x.quick_code||x.code)}`:''}</option>`).join('')
@@ -643,6 +722,9 @@ function addItem(root,id,mats,units,currency='SYP'){
           <label>خصم السطر</label>
           <input name="discount" type="number" step="any" min="0" value="0" autocomplete="off">
         </div>
+        <div class="field full"><label>إجمالي البند بعد الخصم</label>
+          <strong class="purchase-live-line-total-v119">${money(0,currency)}</strong>
+        </div>
       </div>`,
     submitText:'إضافة البند',
     onSubmit:async fd=>{
@@ -657,16 +739,16 @@ function addItem(root,id,mats,units,currency='SYP'){
           toast('اختر وحدة الشراء أو أضف تحويلًا لها.','error');
           return false;
         }
-        await api.addPurchaseItem({
-          invoiceId:id,
-          materialId,
-          purchaseUnitId:unitId,
-          quantity:fd.get('qty'),
-          unitPrice:fd.get('price'),
-          discount:fd.get('discount')||0,
-        });
-        toast('تمت إضافة البند','success');
-        await renderPurchaseDetail(root,id);
+        if(context){
+          const newLine={material_id:materialId,purchase_unit_id:unitId,
+            quantity:Number(fd.get('qty')),unit_price:Number(fd.get('price')),
+            discount:Number(fd.get('discount')||0)};
+          await saveInvoiceRevisionV119(root,context.invoice,[...revisionLinesV119(context.items),newLine],{},'إضافة بند');
+        }else{
+          await api.addPurchaseItem({invoiceId:id,materialId,purchaseUnitId:unitId,
+            quantity:fd.get('qty'),unitPrice:fd.get('price'),discount:fd.get('discount')||0});
+          toast('تمت إضافة البند','success');await renderPurchaseDetail(root,id);
+        }
         return true;
       }catch(e){
         toast(friendlyError(e,'تعذر إضافة البند. تأكد من تشغيل تحديث قاعدة البيانات v0.10 ثم حاول مرة أخرى.'),'error');
@@ -678,6 +760,14 @@ function addItem(root,id,mats,units,currency='SYP'){
   const materialSel=m.form.querySelector('[name="material"]');
   const unitSel=m.form.querySelector('[name="unit"]');
   const priceSuffix=m.form.querySelector('[data-price-suffix]');
+  const refreshAddedLineTotal=()=>{
+    const qty=Number(m.form.querySelector('[name="qty"]')?.value||0);
+    const price=Number(m.form.querySelector('[name="price"]')?.value||0);
+    const discount=Number(m.form.querySelector('[name="discount"]')?.value||0);
+    const output=m.form.querySelector('.purchase-live-line-total-v119');
+    if(output)output.textContent=money(qty*price-discount,currency);
+  };
+  ['qty','price','discount'].forEach(name=>m.form.querySelector(`[name="${name}"]`)?.addEventListener('input',refreshAddedLineTotal));
   const panel=m.form.querySelector('[data-new-material-panel]');
   const toggle=m.form.querySelector('.new-material-toggle');
   const nameInput=m.form.querySelector('[name="new_material_name"]');

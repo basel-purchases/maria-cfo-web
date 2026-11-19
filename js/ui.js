@@ -67,6 +67,14 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('cashbox')&&(msg.includes('required')||msg.includes('not set')||msg.includes('missing')||msg.includes('null'))) return 'حدد الصندوق قبل نشر الأوردر.';
   if(msg.includes('no_valid_order_images')) return 'اختر صورة أوردر صالحة بحجم أقل من 8 MB.';
   if(msg.includes('ocr_item_needs_review')) return 'هناك بند مستخرج يحتاج ربطه بمادة ووحدة قبل إضافته.';
+  if(msg.includes('purchase_revision_below_paid_amount')) return 'الإجمالي الجديد أقل من دفعات المورد المخصصة للفواتير؛ عدّل البند أو راجع الدفعات أولًا.';
+  if(msg.includes('purchase_revision_paid_party_or_currency')) return 'الفاتورة مرتبطة بدفعة؛ لا يمكنك تغيير المورد أو العملة قبل معالجة تخصيص الدفعة.';
+  if(msg.includes('purchase_revision_paid_exchange_rate')) return 'سعر صرف النسخة الجديدة لا يطابق سعر صرف الدفعات السابقة؛ أوقفنا التعديل دون أي تغيير.';
+  if(msg.includes('purchase_revision_historic_locked')) return 'الفاتورة التاريخية المستوردة مرجعية، ولا يمكن تعديلها كفاتورة شراء حقيقية.';
+  if(msg.includes('purchase_revision_old_version')) return 'هذه نسخة فاتورة مصححة/ملغاة؛ افتح النسخة الأحدث للتعديل.';
+  if(msg.includes('purchase_revision_empty_posted')) return 'لا يمكن حذف كل بنود الفاتورة المنشورة. استخدم إلغاء الفاتورة بدلًا من ذلك.';
+  if(msg.includes('purchase_revision_invalid_line')) return 'تأكد من الكمية والسعر والخصم: لا يجوز الخصم أكبر من قيمة البند.';
+  if(msg.includes('revise_purchase_invoice_v119')||msg.includes('supplier_activity_v119')) return 'حدّث قاعدة Supabase بملف SQL الخاص بـ v1.0.19 قبل استخدام هذه الميزة.';
   if(msg.includes('purchase_invoice_has_payments')) return 'لا يمكن إلغاء هذه الفاتورة قبل معالجة دفعات المورد المرتبطة بها.';
   if(msg.includes('purchase_invoice_already_voided')) return 'هذه الفاتورة ملغاة بالفعل.';
   if(msg.includes('only_draft_invoice_can_be_deleted')) return 'يمكن حذف المسودات فقط. الفاتورة المنشورة تُلغى بحركة عكسية.';
@@ -90,7 +98,7 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('function')&&msg.includes('not found')) return 'هذه الخدمة لم تُحدّث على الخادم بعد.';
   return fallback;
 }
-// Close all standard dialogs by backdrop, Escape, cancel or the close button.
+// Close dialogs with Escape, Cancel or the close button; not the backdrop.
 // Never close while submitting: an accidental click must not duplicate a write.
 export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638',onSubmit=async()=>true,wide=false,hideActions=false,onClose=null}){
   const previouslyFocused=document.activeElement;
@@ -115,13 +123,9 @@ export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638'
   };
   back.querySelector('.x-btn').addEventListener('click',()=>close());
   back.querySelector('.cancel')?.addEventListener('click',()=>close());
-  // Pointer-down on the dimmed area dismisses only the topmost dialog.
-  // This also works when a bonus dialog is opened above an employee profile.
-  back.addEventListener('pointerdown',e=>{
-    if(e.target!==back)return;
-    const stack=[...document.querySelectorAll('.modal-backdrop')];
-    if(stack[stack.length-1]===back)close();
-  },true);
+  // v1.0.19: never close dialogs by clicking the backdrop.
+  // Explicit close, Cancel, or Escape still work; accidental outside clicks
+  // must never discard an edited purchase invoice or other form.
   document.addEventListener('keydown',onKey);
   const form=back.querySelector('form');
   form.addEventListener('submit',async e=>{
@@ -139,7 +143,7 @@ export function modal({title,subtitle='',body='',submitText='\u062d\u0641\u0638'
   return {close,element:back,form};
 }
 
-// Resolve false on any dismissal, including clicking outside the dialog.
+// Resolve false on explicit dismissal (Escape, Cancel, close button).
 export function confirmBox(message,yes='\u0646\u0639\u0645'){
   return new Promise(resolve=>{
     let decided=false;

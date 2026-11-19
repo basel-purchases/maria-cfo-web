@@ -1466,3 +1466,16 @@ export const eventCompleteSeatsV113=(eventId,actualGuests,note)=>rpc('event_comp
  p_event_id:eventId,p_actual_guests:Number(actualGuests),p_notes:note||null,
 });
 export const eventServiceBucketV113=eventId=>rpc('event_service_bucket_v113',{p_event_id:eventId});
+
+// v1.0.19: one PostgreSQL transaction corrects a draft in place or replaces
+// a posted invoice with an audited successor and reverses its stock impact.
+export const revisePurchaseInvoiceV119=({invoiceId,supplierId,invoiceNumber='',invoiceDate,currency='SYP',items,reason=''})=>
+  rpc('revise_purchase_invoice_v119',{
+    p_invoice_id:invoiceId,p_supplier_id:supplierId,
+    p_invoice_number:invoiceNumber||null,p_invoice_date:invoiceDate,
+    p_currency_code:currency,p_items:items,p_reason:reason||null,
+  });
+export const supplierActivityV119=id=>rpc('supplier_activity_v119',{p_supplier_id:id});
+export const purchaseRevisionsV119=id=>list('purchase_invoice_revisions_v119',{
+  eq:{previous_invoice_id:id},limit:10,
+});

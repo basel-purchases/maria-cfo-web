@@ -81,7 +81,7 @@ test('bonus employee filter is one search input and dialog selection uses shared
 });
 test('backdrop dismissal respects only the topmost dialog and the busy state',()=>{
  const ui=source('js/ui.js');
- assert.match(ui,/back\.addEventListener\('pointerdown'/);
- assert.match(ui,/stack\[stack\.length-1\]===back/);
+ assert.doesNotMatch(ui,/back\.addEventListener\('pointerdown'/);
+ assert.match(ui,/v1\.0\.19: never close dialogs by clicking the backdrop/);
  assert.match(ui,/if\(closed\|\|busy\)return/);
 });

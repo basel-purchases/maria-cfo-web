@@ -50,7 +50,7 @@ test('stale quote is display-only, not valid for rate approval',()=>{
 });
 
 test('loads stored quotes for display but refresh on approval; no unverified approval',()=>{
- const q=parseParallelUsdV114(service(),Date.now());
+ const q=parseParallelUsdV114(service({timestampUtc:new Date().toISOString(),marketRates:[{currency:'USD',buy:140.25,sell:141.75,timestampUtc:new Date().toISOString()}]}),Date.now());
  // Display-only cache may be used; approval performs a fresh authenticated fetch.
  assert.ok(marketCachedQuoteV114({quote:q,savedAt:new Date().toISOString()}));
  const app=read('js/app.js');
@@ -85,9 +85,9 @@ test('header is adjacent to bell, has explicit approval button and no automatic 
  assert.match(app,/marketCacheSaveV115/);
  assert.match(css,/\.market-usd-group-v115/);
  assert.match(css,/@media\(max-width:430px\)/);
- assert.equal(read('VERSION').trim(),'1.0.18');
- assert.match(index,/Web v1\.0\.18/);
- assert.match(app,/Web v1\.0\.18/);
+ assert.equal(read('VERSION').trim(),'1.0.19');
+ assert.match(index,/Web v1\.0\.19/);
+ assert.match(app,/Web v1\.0\.19/);
  assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 
