@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=1.0.19';
-import {modal,toast,loader,friendlyError} from '../ui.js?v=1.0';
+import * as api from '../api.js?v=1.0.20';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.20';
 import {esc,money,dateOnly,unitLabel} from '../utils.js?v=1.0';
-import {newPurchase} from './purchases.js?v=1.0.19';
-import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.19';
+import {newPurchase} from './purchases.js?v=1.0.20';
+import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.20';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=1.0';
 
@@ -36,6 +36,41 @@ function addSupplier(root){
    }catch(e){toast(friendlyError(e),'error');return false;}
   }
  });
+}
+
+// v1.0.20: Native supplier edit/delete actions are adjacent to one-click new invoice.
+// Foreign keys prevent deleting a supplier who already has invoices or payments.
+function editSupplierV120(root,supplier){
+ if(!supplier?.id)return;
+ modal({
+  title:`تعديل المورد: ${supplier.name}`,
+  body:`<div class="form-grid">
+    <div class="field"><label>اسم المورد</label><input name="name" required maxlength="200" value="${esc(supplier.name||'')}"></div>
+    <div class="field"><label>الهاتف</label><input name="phone" value="${esc(supplier.phone||'')}"></div>
+    <div class="field"><label>جهة الاتصال</label><input name="contact" value="${esc(supplier.contact||supplier.contact_name||'')}"></div>
+  </div>`,
+  onSubmit:async fd=>{
+   const name=String(fd.get('name')||'').trim();
+   if(!name){toast('اسم المورد مطلوب','error');return false;}
+   try{
+    await api.update('suppliers',supplier.id,{name,
+      phone:String(fd.get('phone')||'').trim()||null,
+      contact_name:String(fd.get('contact')||'').trim()||null});
+    toast('تم حفظ بيانات المورد','success');
+    await renderSuppliersWithAmeen(root);return true;
+   }catch(e){toast(friendlyError(e),'error');return false;}
+  },
+ });
+}
+
+async function deleteSupplierV120(root,supplier){
+ if(!supplier?.id)return;
+ if(!(await confirmBox(`حذف المورد «${supplier.name}» نهائيًا؟ لن تُحذف أي فاتورة أو دفعة مرتبطة به. إذا كانت له حركات مالية فسيمنع النظام الحذف.`, 'حذف المورد')))return;
+ try{
+  await api.supplierDeleteIfUnusedV120(supplier.id);
+  toast('تم حذف المورد غير المرتبط بحركات','success');
+  await renderSuppliersWithAmeen(root);
+ }catch(e){toast('لا يمكن حذف مورد مرتبط بفواتير أو دفعات أو مواد أو كشف حساب محفوظ. '+friendlyError(e),'error');}
 }
 
 async function showLedger(account){
@@ -128,7 +163,7 @@ export async function renderSuppliersWithAmeen(root){
    state.page=info.page;
    root.querySelector('#supplier-count').textContent=`${filtered.length} مورد`;
    root.querySelector('#supplier-results').innerHTML=`<div class="table-wrap supplier-table-scroll"><table class="table supplier-full-table">
-    <thead><tr><th>المورد</th><th>رقم رقم الحساب المرجعي</th><th>الهاتف</th><th>جهة الاتصال</th>
+    <thead><tr><th>المورد</th><th>رقم الحساب المرجعي</th><th>الهاتف</th><th>جهة الاتصال</th>
       <th>الرصيد السابق</th><th>مدين إجمالي</th><th>دائن إجمالي</th>
       <th>الأوراق التجارية غير المحصلة</th><th>الرصيد الحالي</th><th>الحالة</th><th>الحركات</th><th>الإجراءات</th></tr></thead>
     <tbody>${info.rows.map((s,i)=>{
@@ -144,7 +179,9 @@ export async function renderSuppliersWithAmeen(root){
        <td>${statusBadge(a)}</td>
        <td>${a?`<button class="mini-btn view-supplier-ledger" data-code="${esc(a.external_account)}">عرض الحركات المستوردة</button>`:'—'}</td>
        <td class="row-actions supplier-actions-v119">
-         <button type="button" class="mini-action supplier-new-invoice-v119" data-supplier-index="${(info.page-1)*PAGE_SIZES.suppliers+i}">فاتورة جديدة</button>
+         ${s.id?`<button type="button" class="mini-action supplier-edit-v120" data-supplier-index="${(info.page-1)*PAGE_SIZES.suppliers+i}">تعديل</button>
+         <button type="button" class="mini-action danger supplier-delete-v120" data-supplier-index="${(info.page-1)*PAGE_SIZES.suppliers+i}">حذف</button>`:''}
+         <button type="button" class="mini-action supplier-new-invoice-v119" data-supplier-index="${(info.page-1)*PAGE_SIZES.suppliers+i}">+ إضافة فاتورة</button>
          ${s.id?`<a class="mini-action" href="#/supplier/${esc(s.id)}">الملف والإحصائيات</a>`:''}
        </td>
      </tr>`;
@@ -156,9 +193,17 @@ export async function renderSuppliersWithAmeen(root){
     </div>`:''}`;
    registerTableExport(root.querySelector('.supplier-full-table'),()=>({
      title:'الموردون - حسب البحث والفلتر',
-     headers:['المورد','رقم رقم الحساب المرجعي','الهاتف','جهة الاتصال','الرصيد السابق','مدين إجمالي','دائن إجمالي','أوراق تجارية','الرصيد الحالي','الحالة'],
+     headers:['المورد','رقم الحساب المرجعي','الهاتف','جهة الاتصال','الرصيد السابق','مدين إجمالي','دائن إجمالي','أوراق تجارية','الرصيد الحالي','الحالة'],
      rows:filtered.map(s=>{const a=s.account;return [s.name,s.code||'',s.phone||'',s.contact||'',a?.previous_balance??'',a?.total_debit??'',a?.total_credit??'',a?.uncollected_papers_v025??'',a?.current_balance??'',supplierBalanceState(a)];})
    }));
+   root.querySelectorAll('.supplier-edit-v120').forEach(b=>b.onclick=()=>{
+     const supplier=filtered[Number(b.dataset.supplierIndex)];
+     if(supplier?.id)editSupplierV120(root,supplier);
+   });
+   root.querySelectorAll('.supplier-delete-v120').forEach(b=>b.onclick=()=>{
+     const supplier=filtered[Number(b.dataset.supplierIndex)];
+     if(supplier?.id)deleteSupplierV120(root,supplier);
+   });
    root.querySelectorAll('.supplier-new-invoice-v119').forEach(b=>b.onclick=()=>{
      const entry=filtered[Number(b.dataset.supplierIndex)];
      if(entry)newPurchase({supplier:entry,openCatalog:true});

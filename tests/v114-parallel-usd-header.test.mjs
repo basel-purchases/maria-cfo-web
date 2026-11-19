@@ -56,11 +56,12 @@ test('loads stored quotes for display but refresh on approval; no unverified app
  const app=read('js/app.js');
  assert.match(app,/const q=await refreshMarketUsdV115\(\{force:true\}\)/);
  assert.match(app,/if\(!marketQuoteFreshV114\(q\)\)/);
- assert.match(app,/await api\.materialPriceApplyExchangeV110\(rate,update\)/);
+ assert.match(app,/await api\.materialPriceSetNewExchangeV120\(rate\)/);
+ assert.match(app,/marketNewSypPerUsdV120\(q,side\)/);
  assert.match(app,/data-market-fx-update/);
- assert.match(app,/data-market-fx-only/);
+ assert.doesNotMatch(app,/data-market-fx-only/);
  assert.match(app,/data-market-fx-cancel/);
- assert.match(app,/disabled>✓/);
+ assert.match(app,/btn\.disabled=true/);
 });
 
 test('uses a single GET with a timeout and returns well-formed normalized quote',async()=>{
@@ -85,9 +86,9 @@ test('header is adjacent to bell, has explicit approval button and no automatic 
  assert.match(app,/marketCacheSaveV115/);
  assert.match(css,/\.market-usd-group-v115/);
  assert.match(css,/@media\(max-width:430px\)/);
- assert.equal(read('VERSION').trim(),'1.0.19');
- assert.match(index,/Web v1\.0\.19/);
- assert.match(app,/Web v1\.0\.19/);
+ assert.equal(read('VERSION').trim(),'1.0.20');
+ assert.match(index,/Web v1\.0\.20/);
+ assert.match(app,/Web v1\.0\.20/);
  assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 

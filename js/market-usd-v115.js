@@ -5,15 +5,15 @@ import {parseParallelUsdV114} from './market-usd-v114.js?v=1.0.14';
 
 export const MARKET_DISPLAY_KEY_V115='maria_cfo_market_usd_denomination_v115';
 export const MARKET_SIDE_KEY_V115='maria_cfo_market_usd_side_v115';
-const validUnit=value=>value==='new'?'new':'old';
+const validUnit=_value=>'new';
 const validSide=value=>value==='buy'?'buy':'sell';
 
 export function readMarketDisplayUnitV115(storage){
-  try{return validUnit((storage??globalThis.localStorage)?.getItem(MARKET_DISPLAY_KEY_V115));}catch(_){return 'old';}
+  return 'new';
 }
 export function setMarketDisplayUnitV115(unit,{storage,notify=true}={}){
   const value=validUnit(unit);
-  try{(storage??globalThis.localStorage)?.setItem(MARKET_DISPLAY_KEY_V115,value);}catch(_){}
+  // New SYP only: old/new switch removed. The old key is ignored.
   if(notify && typeof window!=='undefined' && typeof CustomEvent!=='undefined'){
     window.dispatchEvent(new CustomEvent('maria-market-display-unit-v115',{detail:{unit:value}}));
   }
@@ -27,7 +27,7 @@ export function setMarketSideV115(side,storage){
   try{(storage??globalThis.localStorage)?.setItem(MARKET_SIDE_KEY_V115,value);}catch(_){}
   return value;
 }
-export function marketValueV115(quote,side='sell',unit='old'){
+export function marketValueV115(quote,side='sell',unit='new'){
   if(!quote)return '—';
   const key=`${validSide(side)}${validUnit(unit)==='new'?'New':'Old'}`;
   const value=quote[key];

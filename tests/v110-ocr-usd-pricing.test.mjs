@@ -93,8 +93,9 @@ test('SQL pricing migration is additive and has atomic owner-checks and an audit
  assert.doesNotMatch(sql,/\bUPDATE\s+public\.(?:inventory_movements|purchase_invoices|purchase_invoice_items|cashbox_transactions)\b/i);
  assert.match(sql,/IF p_update_material_prices THEN/);
  const settings=source('js/pages/settings.js');
- assert.match(settings,/data-fx-yes/);assert.match(settings,/data-fx-no/);assert.match(settings,/data-fx-cancel/);
- assert.match(settings,/materialPriceApplyExchangeV110\(rate,apply\)/);
+ assert.match(settings,/materialPriceSetNewExchangeV120\(rate\)/);
+ assert.match(settings,/سعر الدولار بالليرة الجديدة/);
+ assert.doesNotMatch(settings,/data-fx-no|data-fx-yes/);
  assert.equal(existsSync(resolve(root,'config.js')),false);
 });
 
@@ -107,5 +108,5 @@ test('New UI is a single extraction control without separate magnifier or reread
  assert.match(src,/Number\(candidate\?\.value\)/,'reviewed Arabic zero candidate can be accepted by a deliberate click');
  assert.match(src,/annotateSupplierOcrV110/);
  const index=source('index.html');const app=source('js/app.js');
- assert.match(index,/Web v1\.0\.19/);assert.match(app,/Web v1\.0\.19/);
+ assert.match(index,/Web v1\.0\.20/);assert.match(app,/Web v1\.0\.20/);
 });

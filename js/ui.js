@@ -24,6 +24,13 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('daily_ambiguous_menu')) return 'هناك أكثر من وجبة بنفس الاسم، ولا يمكن اختيار واحدة تلقائيًا. راجع أسماء المنيو المكررة أولًا.';
   if(msg.includes('daily_line_menu_not_resolved')) return 'تعذر تحديد وجبة أحد بنود الأوردر بأمان؛ لم يحفظ التقرير جزئيًا.';
   if(msg.includes('daily_item_already_matched')) return 'الصنف مرتبط بوجبة موجودة بالفعل. لا يمكن إنشاؤه مرة ثانية.';
+  // v1.0.20 has its own migration; do not incorrectly show the older v1.0.10 guidance.
+  if(msg.includes('purchase_revision_stale_invoice')) return 'تغيّرت الفاتورة بعد فتحها في هذه الصفحة. أعد تحميل الفاتورة ثم أدخل تصحيحك على آخر نسخة.';
+  if(msg.includes('purchase_void_movements_mismatch')) return 'حركات مخزون الفاتورة لا تطابق بنودها. أُلغي التصحيح بالكامل حفاظًا على سلامة المخزون؛ راجع الحركات أولًا.';
+  if(msg.includes('supplier_has_history_cannot_delete')) return 'لا يمكن حذف هذا المورد، لأن له فواتير أو دفعات أو مواد أو كشفًا محفوظًا؛ يمكنك تعديل بياناته بدل حذفه.';
+  if(msg.includes('fx_new_syp_rate_review_required')) return 'سعر الدولار المحفوظ يحتاج مراجعة: يجب أن يكون بالليرة السورية الجديدة، لا القديمة.';
+  if(msg.includes('invalid_new_syp_exchange_rate')||msg.includes('invalid_new_syp_rate')) return 'أدخل سعر الدولار بالليرة السورية الجديدة مثل 149.5، وليس 14950.';
+  if(msg.includes('revise_purchase_invoice_v120')||msg.includes('material_price_sync_current_fx_v120')||msg.includes('material_price_set_new_exchange_v120')||msg.includes('supplier_delete_if_unused_v120')) return 'نفّذ ملف SQL v1.0.20 من قاعدة Supabase ثم أعد فتح الموقع.';
   if(msg.includes('material_price_')||msg.includes('material_identity_create_priced_v110')||msg.includes('material_identity_update_priced_v110')) return 'هذه العملية تحتاج تشغيل ملف SQL الخاص بالإصدار v1.0.10 في Supabase أولًا، ثم تحديث الصفحة.';
   if(msg.includes('usd_rate_required')) return 'حدد سعر الدولار من الإعدادات قبل حفظ سعر المادة بالدولار.';
   if(msg.includes('material_aliases_v106_migration_required')||msg.includes('material_aliases_v106')) return 'يجب تشغيل ملف SQL الإصدار v1.0.6 في Supabase أولًا، ثم تحديث الموقع.';

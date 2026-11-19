@@ -1,8 +1,8 @@
-import {readMarketDisplayUnitV115,setMarketDisplayUnitV115} from '../market-usd-v115.js?v=1.0.15';
+import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.20';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
-import * as api from '../api.js?v=1.0.12';
+import * as api from '../api.js?v=1.0.20';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
-import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
+import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.20';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
 import { conversionChoices,preferredChoice,fromBase,toBase, invertedRelationIsClear, relationAmountFromBase, relationBaseFromAmount } from '../unit-display-conversion.js?v=1.0';
 import {
@@ -75,16 +75,11 @@ export async function renderSettings(root, selectedTab='general') {
             <div class="k">Food Cost الافتراضي</div><div>${esc(s.default_food_cost_percent ?? '30')}%</div>
             <div class="k">المنطقة الزمنية</div><div>${esc(s.timezone || '—')}</div>
           </div></div>
-          <div class="card"><h3>سعر الصرف</h3><p>عند تغيير السعر يمكنك إبقاء أسعار المواد المرجعية بالليرة كما هي أو تحديثها اعتمادًا على أسعارها بالدولار. المشتريات السابقة لا تتغير.</p>
+          <div class="card"><h3>سعر الدولار بالليرة الجديدة</h3><p>عند حفظ سعر جديد يتم تحديث الأسعار المرجعية للمواد المسعّرة بالدولار تلقائيًا، ولا تتغير فواتير الشراء أو حركات المخزون التاريخية.</p>
             <div class="form-grid" style="margin-top:12px">
               <div class="field"><label>العملة</label><select id="fx-cur"><option>USD</option></select></div>
-              <div class="field"><label>1 USD = كم ل.س</label><input id="fx-rate" type="number" min="0.000001" step="any" value="${esc(s.usd_to_base_rate??'')}"></div>
-              <div class="field"><label>عرض دولار السوق في الشريط</label>
-                <select id="usd-market-unit-v115" title="يغيّر طريقة العرض فقط، دون تغيير السعر المعتمد">
-                  <option value="old" ${readMarketDisplayUnitV115()==='old'?'selected':''}>ليرة قديمة (14,000)</option>
-                  <option value="new" ${readMarketDisplayUnitV115()==='new'?'selected':''}>ليرة جديدة (140)</option>
-                </select>
-              </div>
+              <div class="field"><label>1 USD = كم ل.س جديدة</label><input id="fx-rate" type="number" min="0.000001" max="1000" step="any" value="${esc(s.usd_to_base_rate??'')}"></div>
+              <small class="metric-note">الرقم المعروض هو السعر المحفوظ في قاعدة البيانات بالليرة الجديدة، وليس مضروبًا ×100.</small>
             </div><div class="quick-actions"><button class="btn" id="fx-save">حفظ السعر</button></div>
           </div>
           <div class="card soft"><h3>جلسة الدخول</h3><p>تسجيل الخروج موجود هنا فقط حتى لا يزعج الاستخدام اليومي.</p>
@@ -189,34 +184,19 @@ export async function renderSettings(root, selectedTab='general') {
       try{await api.setPayrollCashbox(id);toast('تم حفظ صندوق الرواتب.','success');}
       catch(e){toast(friendlyError(e),'error');}
     };
-    root.querySelector('#usd-market-unit-v115').onchange=e=>setMarketDisplayUnitV115(e.target.value);
     root.querySelector('#fx-save').onclick=async()=>{
       const rate=Number(root.querySelector('#fx-rate').value);
-      if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر صرف صحيحًا وموجبًا.','error');return;}
-      // Three distinct decisions. Never update materials just because the
-      // exchange rate changed. Both DB operations run atomically in one RPC.
-      const prompt=modal({
-        title:'تحديث سعر الدولار',subtitle:`السعر الجديد: 1 USD = ${rate.toLocaleString('en-US')} ل.س`,
-        hideActions:true,
-        body:`<p>هل تريد تحديث أسعار المواد المرجعية بالليرة بناءً على سعر الدولار الجديد؟</p>
-          <p class="metric-note">«تحديث» يعيد حساب سعر المواد التي لديها سعر بالدولار فقط. «عدم التحديث» يحفظ سعر الصرف الجديد دون تغيير أسعار المواد. آخر أسعار الشراء والفواتير التاريخية لن تتغير في الحالتين.</p>
-          <div class="modal-actions"><button type="button" class="btn" data-fx-yes>نعم، تحديث أسعار المواد</button>
-          <button type="button" class="btn secondary" data-fx-no>عدم التحديث</button><button type="button" class="btn secondary" data-fx-cancel>إلغاء</button></div>`,
-      });
-      let busy=false;
-      const decide=async apply=>{
-        if(busy)return;busy=true;
-        prompt.form.querySelectorAll('button').forEach(b=>b.disabled=true);
-        try{
-          const result=await api.materialPriceApplyExchangeV110(rate,apply);
-          toast(apply?`تم حفظ سعر الصرف وتحديث ${result?.updated_materials??0} سعر مادة مرجعي بالليرة.`:'تم حفظ سعر الدولار، دون تغيير أسعار المواد.','success');
-          prompt.close();
-          await renderSettings(root,'general');
-        }catch(e){busy=false;prompt.form.querySelectorAll('button').forEach(b=>b.disabled=false);toast(materialPricingErrorV111(e),'error');}
-      };
-      prompt.form.querySelector('[data-fx-yes]').onclick=()=>decide(true);
-      prompt.form.querySelector('[data-fx-no]').onclick=()=>decide(false);
-      prompt.form.querySelector('[data-fx-cancel]').onclick=()=>prompt.close();
+      if(!validateNewSypRateV120(rate)){toast('أدخل سعر الدولار بالليرة السورية الجديدة، مثل 149.5، وليس 14950.','error');return;}
+      const accepted=await confirmBox('اعتماد 1 دولار = '+rate+' ل.س جديدة؟ ستتحدث الأسعار المرجعية للمواد التي لها سعر بالدولار فقط، ولن تتغير فواتير الشراء السابقة.', 'اعتماد السعر والتحديث');
+      if(!accepted)return;
+      const button=root.querySelector('#fx-save');button.disabled=true;
+      try{
+        const result=await api.materialPriceSetNewExchangeV120(rate);
+        if(!result || Math.abs(Number(result.rate)-rate)>0.000001)throw new Error('PRICING_RESULT_NOT_CONFIRMED');
+        toast('حُفظ السعر الجديد، وتزامن تسعير '+Number(result.updated_materials||0)+' مادة.','success');
+        await renderSettings(root,'general');
+      }catch(e){toast(materialPricingErrorV111(e),'error');}
+      finally{if(button.isConnected)button.disabled=false;}
     };
     root.querySelector('#save-order-settings').onclick=async()=>{
       try{

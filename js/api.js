@@ -888,8 +888,11 @@ export async function findOrCreateSupplier(name){
   return insertFirst('suppliers',[{name:name.trim()},{name:name.trim(),notes:null}]);
 }
 
-export async function createPurchase({supplierName='',currency='SYP',invoiceNumber=null,date=todayISO()}){
-  const s=await findOrCreateSupplier(supplierName);
+export const supplierDeleteIfUnusedV120=id=>rpc('supplier_delete_if_unused_v120',{p_supplier_id:id});
+
+export async function createPurchase({supplierId=null,supplierName='',currency='SYP',invoiceNumber=null,date=todayISO()}){
+  const s=supplierId?await one('suppliers',supplierId):await findOrCreateSupplier(supplierName);
+  if(!s?.id || s.is_active===false)throw new Error('SUPPLIER_NOT_FOUND');
   const args={
     p_supplier_id:s.id,
     p_currency_code:currency,
@@ -1476,6 +1479,15 @@ export const revisePurchaseInvoiceV119=({invoiceId,supplierId,invoiceNumber='',i
     p_currency_code:currency,p_items:items,p_reason:reason||null,
   });
 export const supplierActivityV119=id=>rpc('supplier_activity_v119',{p_supplier_id:id});
+export const revisePurchaseInvoiceV120=({invoiceId,supplierId,invoiceNumber='',invoiceDate,currency='SYP',items,reason='',updatedAt=null})=>
+  rpc('revise_purchase_invoice_v120',{
+    p_invoice_id:invoiceId,p_supplier_id:supplierId,
+    p_invoice_number:invoiceNumber||null,p_invoice_date:invoiceDate,
+    p_currency_code:currency,p_items:items,p_reason:reason||null,
+    p_expected_updated_at:updatedAt,
+  });
+export const materialPriceSyncCurrentFxV120=()=>rpc('material_price_sync_current_fx_v120');
+export const materialPriceSetNewExchangeV120=rate=>rpc('material_price_set_new_exchange_v120',{p_rate:rate});
 export const purchaseRevisionsV119=id=>list('purchase_invoice_revisions_v119',{
   eq:{previous_invoice_id:id},limit:10,
 });

@@ -1,12 +1,12 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.19';
+import * as api from './api.js?v=1.0.20';
 import { esc } from './utils.js?v=1.0';
-import { toast, friendlyError, modal } from './ui.js?v=1.0';
+import { toast, friendlyError, modal } from './ui.js?v=1.0.20';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
 import { renderHub } from './pages/hubs.js?v=1.0';
-import { renderMaterials } from './pages/materials.js?v=1.0.13';
-import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.19';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.19';
+import { renderMaterials } from './pages/materials.js?v=1.0.20';
+import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.20';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.20';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
   renderInventory,
@@ -22,7 +22,7 @@ import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.18';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.13';
+import { renderSettings } from './pages/settings.js?v=1.0.20';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
@@ -30,7 +30,8 @@ import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
 import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
-import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketDisplayUnitV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.15';
+import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.20';
+import {marketNewSypPerUsdV120,rateApprovalStateV120} from './fx-rate-v120.js?v=1.0.20';
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
 import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.16';
 
@@ -119,7 +120,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.19</div>
+        <div class="sidebar-foot">Web v1.0.20</div>
       </aside>
 
       <main class="main">
@@ -164,6 +165,7 @@ function shell() {
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
   installMarketUsdV115();
   installCashboxQuickV116();
+  void syncStoredMaterialFxOnLaunchV120();
 
   app.querySelector('#back-btn').onclick = () => {
     const path = (location.hash || '#/dashboard').replace(/^#/, '');
@@ -252,7 +254,7 @@ function installCashboxQuickV116(){
 // v1.0.15: one quiet number, two rate sides, and a server-side quote bridge.
 const MARKET_CACHE_KEY_V115='maria_cfo_parallel_usd_v114'; // compatible with saved v1.0.14 quotes
 const marketStateV115={quote:null,lastSuccessAt:0,lastAttemptAt:0,inFlight:null,verified:false,error:null,timer:null,
-  side:readMarketSideV115(),unit:readMarketDisplayUnitV115()};
+  side:readMarketSideV115(),unit:'new'};
 function marketDateV115(value){
   try{return new Intl.DateTimeFormat('ar-SY',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Damascus'}).format(new Date(value));}
   catch(_){return String(value||'—');}
@@ -271,7 +273,7 @@ function showMarketUsdV115(){
   const toggle=app.querySelector('#market-usd-side');
   if(!chip||!price||!approve||!toggle)return;
   const state=marketStateV115;
-  const q=state.quote,side=state.side,unit=state.unit;
+  const q=state.quote,side=state.side,unit='new';
   const usable=marketQuoteFreshV114(q);
   const label=side==='buy'?'شراء':'مبيع';
   const number=marketValueV115(q,side,unit);
@@ -279,7 +281,7 @@ function showMarketUsdV115(){
   const isStale=!!q&&(!usable||!!state.error);
   chip.classList.toggle('market-usd-stale-v115',isStale);
   chip.classList.toggle('market-usd-loading-v115',!!state.inFlight);
-  const unitText=unit==='old'?'ليرة قديمة':'ليرة جديدة';
+  const unitText='ليرة جديدة';
   const status=state.error?marketProxyErrorTextV115(state.error):
       !q?'جارٍ جلب سعر السوق...':!usable?'هذه قراءة قديمة، وليست السعر الحالي.':
       !state.verified?'هذه قراءة محفوظة حتى يتم تحديث الاتصال.':'سعر السوق لم يُعتمد تلقائيًا.';
@@ -336,7 +338,8 @@ async function approveMarketUsdV115(){
     showMarketUsdV115();return;
   }
   const side=marketStateV115.side;
-  const rate=side==='buy'?q.buyOld:q.sellOld;
+  const rate=marketNewSypPerUsdV120(q,side);
+  if(rate===null){toast('قراءة سعر الدولار الجديد غير صالحة.','error');showMarketUsdV115();return;}
   let previous=null;
   try{
     const rows=await api.list('app_settings',{limit:1});
@@ -345,24 +348,23 @@ async function approveMarketUsdV115(){
     toast(friendlyError(error,'تعذر قراءة سعر الصرف الحالي؛ لم تتغير الأسعار.'),'error');
     showMarketUsdV115();return;
   }
-  let selectedDecision=null,saved=false;
+  const approval=rateApprovalStateV120(rate,previous);
+  if(!approval.valid){toast(approval.reason==='OLD_SYP_RATE_REVIEW_REQUIRED'?'سعر القاعدة يبدو بالليرة القديمة؛ يلزم مراجعة التحويل قبل اعتماد سعر جديد.':'سعر الليرة الجديدة غير صالح.','error');showMarketUsdV115();return;}
+  let saved=false;
   const m=modal({
     title:'اعتماد سعر الدولار',
     subtitle:`سوق موازية · ${side==='buy'?'شراء':'مبيع'} · ${marketDateV115(q.updatedAt)}`,
     hideActions:true,
     body:`<div class="market-approval-summary-v114">
-      <div><small>السعر المقترح (ليرة قديمة)</small><strong>${esc(marketValueV115(q,side,'old'))}</strong></div>
-      <div><small>السعر المعتمد حاليًا</small><strong>${previous>0?esc(previous.toLocaleString('en-US')):'—'}</strong></div>
+      <div><small>السعر المقترح (ليرة جديدة)</small><strong>${esc(marketValueV115(q,side,'new'))}</strong></div>
+      <div><small>السعر المعتمد حاليًا (ل.س جديدة)</small><strong>${previous>0?esc(String(previous)):'—'}</strong></div>
     </div>
     <p class="market-approval-error-v114" data-market-approval-error hidden role="alert"></p>
     <div class="modal-actions market-approval-actions-v114">
-      <button type="button" class="btn" data-market-fx-update>حفظ وتحديث أسعار المواد</button>
-      <button type="button" class="btn secondary" data-market-fx-only>حفظ السعر فقط</button>
+      <button type="button" class="btn" data-market-fx-update>اعتماد وتحديث أسعار المواد بالدولار</button>
       <button type="button" class="btn secondary" data-market-fx-cancel>إلغاء</button>
     </div>`,
     onSubmit:async()=>{
-      if(selectedDecision===null)return false;
-      const update=selectedDecision;
       const errorEl=m.form.querySelector('[data-market-approval-error]');
       errorEl.hidden=true;
       if(!marketQuoteFreshV114(q)){
@@ -372,11 +374,11 @@ async function approveMarketUsdV115(){
       const buttons=m.form.querySelectorAll('button');
       buttons.forEach(b=>b.disabled=true);
       try{
-        const result=await api.materialPriceApplyExchangeV110(rate,update);
-        if(!result||Math.abs(Number(result.rate)-rate)>0.011||Boolean(result.applied)!==update)
+        const result=await api.materialPriceSetNewExchangeV120(rate);
+        if(!result||Math.abs(Number(result.rate)-rate)>0.000001)
           throw new Error('PRICING_RESULT_NOT_CONFIRMED');
         saved=true;
-        toast(update?`تم حفظ السعر وتحديث ${result.updated_materials??0} سعر مادة مرجعي.`:'تم حفظ السعر دون تغيير المواد.','success');
+        toast(`تم حفظ السعر الجديد وتحديث ${result.updated_materials??0} سعر مادة مرجعي.`, 'success');
         return true;
       }catch(error){
         errorEl.textContent=materialPricingErrorV111(error);
@@ -387,16 +389,10 @@ async function approveMarketUsdV115(){
       if(saved&&(location.hash||'').startsWith('#/settings'))await route();
     },
   });
-  const decide=update=>{selectedDecision=update;m.form.requestSubmit();};
-  m.form.querySelector('[data-market-fx-update]').onclick=()=>decide(true);
-  m.form.querySelector('[data-market-fx-only]').onclick=()=>decide(false);
+  m.form.querySelector('[data-market-fx-update]').onclick=()=>m.form.requestSubmit();
   m.form.querySelector('[data-market-fx-cancel]').onclick=()=>m.close();
   showMarketUsdV115();
 }
-window.addEventListener('maria-market-display-unit-v115',event=>{
-  marketStateV115.unit=event.detail?.unit==='new'?'new':'old';
-  showMarketUsdV115();
-});
 function installMarketUsdV115(){
   if(marketStateV115.timer)clearInterval(marketStateV115.timer);
   marketStateV115.quote=null;
@@ -405,7 +401,7 @@ function installMarketUsdV115(){
   marketStateV115.lastSuccessAt=0;
   marketStateV115.lastAttemptAt=0;
   marketStateV115.side=readMarketSideV115();
-  marketStateV115.unit=readMarketDisplayUnitV115();
+  marketStateV115.unit='new';
   const cached=marketCacheReadV115();
   if(cached){marketStateV115.quote=cached.quote;marketStateV115.lastSuccessAt=cached.savedAt;}
   showMarketUsdV115();
@@ -420,6 +416,23 @@ function installMarketUsdV115(){
   marketStateV115.timer=setInterval(()=>{
     if(document.visibilityState==='visible')void refreshMarketUsdV115();
   },15*60*1000);
+}
+
+let materialFxSyncPendingV120=null;
+function syncStoredMaterialFxOnLaunchV120(){
+  if(!currentSession||materialFxSyncPendingV120)return materialFxSyncPendingV120;
+  materialFxSyncPendingV120=(async()=>{
+    try{
+      const result=await api.materialPriceSyncCurrentFxV120();
+      if(Number(result?.updated_materials||0)>0){
+        toast(`تم تحديث ${result.updated_materials} سعر مادة بالدولار وفق آخر سعر صرف معتمد.`, 'success');
+      }
+    }catch(error){
+      console.warn('Material reference FX sync failed:',error);
+      toast(friendlyError(error,'تعذر فحص تحديث مواد الدولار؛ تحقّق من SQL v1.0.20.'),'error');
+    }finally{materialFxSyncPendingV120=null;}
+  })();
+  return materialFxSyncPendingV120;
 }
 
 function aiJobStatusText(job){

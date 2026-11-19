@@ -2001,3 +2001,18 @@ select option{background:#fff;color:var(--text);padding:8px}
 .supplier-invoice-card-v119 .table{min-width:700px}
 .supplier-material-stats-v119,.supplier-movement-table-v119,.supplier-payments-table-v119{min-width:760px}
 @media(max-width:700px){.supplier-invoice-card-v119>summary{align-items:flex-start;flex-direction:column}.supplier-tabs-v119 button{flex:1 1 46%}.supplier-actions-v119{flex-wrap:wrap}}
+
+/* v1.0.20 — editable purchase lines, supplier quick actions, classification. */
+.supplier-actions-v119{min-width:360px;align-items:center}
+.supplier-actions-v119 .mini-action{white-space:nowrap}
+.select-action-row .material-new-category-v120{align-self:stretch;white-space:nowrap}
+.purchase-bulk-list-v120{display:grid;gap:12px;margin:14px 0}
+.purchase-bulk-row-v120{display:grid;grid-template-columns:minmax(155px,2fr) minmax(110px,1.2fr) minmax(85px,1fr) minmax(100px,1fr) minmax(95px,1fr) minmax(112px,1.2fr);gap:10px;align-items:end;padding:13px;border:1px solid var(--line);border-radius:14px;background:#fbf9fa;min-width:0}
+.purchase-bulk-row-v120 .field{min-width:0}
+.purchase-bulk-row-v120 .field select,.purchase-bulk-row-v120 .field input{min-width:0}
+.purchase-bulk-row-actions-v120{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0}
+.purchase-bulk-row-actions-v120 strong{font-weight:750;white-space:nowrap;font-size:13px}
+.purchase-bulk-summary-v120{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 17px;margin:10px 0;background:var(--rose-soft);border-radius:14px;font-weight:750;color:var(--plum-dark)}
+.purchase-bulk-summary-v120 strong{font-size:19px}
+@media(max-width:930px){.purchase-bulk-row-v120{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:560px){.purchase-bulk-row-v120{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.purchase-bulk-row-actions-v120{flex-direction:row;align-items:center}.select-action-row:has(.material-new-category-v120){grid-template-columns:minmax(0,1fr)}.supplier-actions-v119{min-width:0}}

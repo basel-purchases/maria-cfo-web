@@ -30,19 +30,19 @@ test('compact header formats market sell or buy using old/new SYP with no unit l
   assert.equal(calls,1);
   assert.equal(q.sellNew,141.75);
   assert.equal(marketValueV115(q,'sell','new'),'141.75');
-  assert.equal(marketValueV115(q,'sell','old'),'14,175');
+  assert.equal(marketValueV115(q,'sell','old'),'141.75'); // Old display unit is deliberately ignored in v1.0.20
   assert.equal(marketValueV115(q,'buy','new'),'140');
-  assert.equal(marketValueV115(q,'buy','old'),'14,000');
+  assert.equal(marketValueV115(q,'buy','old'),'140');
   assert.equal(marketValueV115(null,'buy','old'),'—');
 });
 
 test('display denomination and buy/sell choice persist without database writes',()=>{
   const mem=storage();
-  assert.equal(readMarketDisplayUnitV115(mem),'old');
+  assert.equal(readMarketDisplayUnitV115(mem),'new');
   assert.equal(setMarketDisplayUnitV115('new',{storage:mem,notify:false}),'new');
   assert.equal(readMarketDisplayUnitV115(mem),'new');
-  assert.equal(mem.getItem(MARKET_DISPLAY_KEY_V115),'new');
-  assert.equal(setMarketDisplayUnitV115('invalid',{storage:mem,notify:false}),'old');
+  assert.equal(mem.getItem(MARKET_DISPLAY_KEY_V115),null); // Denomination choice no longer persists
+  assert.equal(setMarketDisplayUnitV115('invalid',{storage:mem,notify:false}),'new');
   assert.equal(readMarketSideV115(mem),'sell');
   assert.equal(setMarketSideV115('buy',mem),'buy');
   assert.equal(readMarketSideV115(mem),'buy');
@@ -68,26 +68,26 @@ test('the shell uses one server-side path and a numeric-only chip with side/appr
   assert.match(markup,/id="market-usd-approve"/);
   assert.doesNotMatch(markup,/دولار السوق ·|ل\.س قديمة|جارٍ التحديث/);
   assert.match(app,/marketStateV115\.side=setMarketSideV115/);
-  assert.match(app,/side==='buy'\?q\.buyOld:q\.sellOld/);
+  assert.match(app,/marketNewSypPerUsdV120\(q,side\)/);
   assert.match(app,/fetchParallelUsdViaSupabaseV115\(supabase\)/);
   assert.doesNotMatch(app,/await fetchParallelUsdV114\(/);
   assert.match(app,/MARKET_CACHE_KEY_V115/);
-  assert.match(app,/Web v1\.0\.19/);
-  assert.equal(read('VERSION').trim(),'1.0.19');
+  assert.match(app,/Web v1\.0\.20/);
+  assert.equal(read('VERSION').trim(),'1.0.20');
   assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 
 test('settings offer old or new pound presentation without changing financial records',()=>{
   const settings=read('js/pages/settings.js');
-  assert.match(settings,/id="usd-market-unit-v115"/);
-  assert.match(settings,/ليرة قديمة \(14,000\)/);
-  assert.match(settings,/ليرة جديدة \(140\)/);
-  assert.match(settings,/setMarketDisplayUnitV115\(e\.target\.value\)/);
+  assert.doesNotMatch(settings,/id="usd-market-unit-v115"/);
+  assert.doesNotMatch(settings,/ليرة قديمة/);
+  assert.match(settings,/سعر الدولار بالليرة الجديدة/);
+  assert.match(settings,/materialPriceSetNewExchangeV120\(rate\)/);
   const css=read('assets/styles.css');
   assert.match(css,/\.market-usd-chip-v115/);
   assert.match(css,/\.market-usd-side-v115/);
   assert.match(css,/@media\(max-width:430px\)/);
-  assert.match(read('index.html'),/v=1\.0\.19/);
+  assert.match(read('index.html'),/v=1\.0\.20/);
 });
 
 test('Edge Function checks logged-in owner, uses a fixed provider URL, responds with CORS and only market prices',()=>{

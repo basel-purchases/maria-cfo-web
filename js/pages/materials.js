@@ -1,5 +1,7 @@
-import * as api from '../api.js?v=1.0.13';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0';
+import * as api from '../api.js?v=1.0.20';
+import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.20';
+import {roundUpKnownMaterialPriceV120,displayKnownMaterialPriceV120,editedKnownMaterialPriceV120} from '../material-price-rounding-v120.js?v=1.0.20';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.20';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
@@ -139,7 +141,7 @@ export async function renderMaterials(root) {
         title:'المواد - حسب الفلتر',
         headers:['المادة','التصنيف','الوحدة','الكود','الرصيد الحالي','الحد الأدنى','آخر سعر شراء','سعر المادة بالدولار','السعر المرجعي بالليرة','تاريخ آخر شراء معروف','الجرد المستورد','سعر التقرير'],
         rows:filtered.map(x=>{const source=importedRowsFor(x,importedIndex),price=purchasePrices.get(String(x.id))??priceOf(x);const sprice=importedPrice(source);
-          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',price??'',formatUsdPriceV113(x.price_usd_v110),x.price_syp_v110??'',formatMaterialLastPurchaseDate(x.last_purchase_at),importedStockSummary(source),sprice??''];})
+          return [x.name,categoryMap.get(String(x.category_id_v023))||'',materialUnit(x,units),materialCode(x),formatSmartStock(x,units,materialLinks,stockOf(x)).text,targetOf(x)??'',roundUpKnownMaterialPriceV120(price)??'',formatUsdPriceV113(x.price_usd_v110),x.price_syp_v110??'',formatMaterialLastPurchaseDate(x.last_purchase_at),importedStockSummary(source),sprice??''];})
       }));
       list.querySelectorAll('[data-material-detail]').forEach((node) => {
         const row=rows.find(r=>String(r.id)===node.dataset.materialDetail);
@@ -200,7 +202,7 @@ function table(rows, units, materialLinks=[],categoryMap=new Map(),importedIndex
           <td data-label="المادة"><strong>${esc(r.name)}</strong>${r.__aliases?.length?`<small class="material-alias-list-v106">${esc(r.__aliases.slice(0,2).join(' · '))}</small>`:''}</td>
           <td data-label="الوحدة">${esc(unit||'—')}</td>
           <td data-label="الرصيد"><strong title="${esc(stock.original)}">${esc(stock.text)}</strong></td>
-          <td data-label="آخر سعر شراء">${price!=null?money(price,'SYP'):'—'}</td>
+          <td data-label="آخر سعر شراء">${displayKnownMaterialPriceV120(price)}</td>
           <td data-label="سعر بالدولار">${formatUsdPriceV113(r.price_usd_v110)}</td>
           <td data-label="السعر المرجعي بالليرة">${r.price_syp_v110!=null?money(r.price_syp_v110,'SYP'):'—'}</td>
           <td data-label="إجراء"><div class="material-actions"><button class="mini-btn" type="button" data-material-detail-button="${esc(r.id)}">التفاصيل</button><button class="mini-btn" type="button" data-material-edit="${esc(r.id)}">تعديل</button></div></td>
@@ -220,7 +222,7 @@ function showMaterialDetailsV113(root,material,units,materialLinks,categoryMap,i
     ['التصنيف',categoryMap.get(String(material.category_id_v023))||'—'],
     ['الكود',materialCode(material)],['وحدة المخزون',u||'—'],
     ['الرصيد الحالي',stock.original],['الحد الأدنى قبل التنبيه',target==null?'—':formatSmartStock(material,units,materialLinks,target).original],
-    ['آخر سعر شراء معروف',price==null?'—':money(price,'SYP')],
+    ['آخر سعر شراء معروف',displayKnownMaterialPriceV120(price)],
     ['تاريخ آخر شراء معروف',formatMaterialLastPurchaseDate(material.last_purchase_at)],
     ['سعر المادة بالدولار',formatUsdPriceV113(material.price_usd_v110)+' / '+(u||'وحدة')],
     ['السعر المرجعي المعتمد بالليرة',material.price_syp_v110==null?'—':money(material.price_syp_v110,'SYP')],
@@ -257,7 +259,7 @@ function addMaterial(root, units, rows,categories=[]) {
           <input name="material_code" placeholder="يُنشأ تلقائيًا إذا تركته فارغًا" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false">
         </div>
 
-        <div class="field full"><label>التصنيف</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field full"><label>التصنيف</label><div class="select-action-row"><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select><button class="mini-action material-new-category-v120" type="button">+ تصنيف جديد</button></div></div>
         <div class="field full">
           <label>وحدة المخزون الأساسية</label>
           <input name="base_unit_text" list="${listId}" placeholder="ابحث أو اكتب وحدة جديدة" required autocomplete="off">
@@ -345,7 +347,7 @@ function addMaterial(root, units, rows,categories=[]) {
           await api.saveMaterialInitialState({
             materialId: created.id,
             openingQuantity: qtyRaw === '' ? null : Number(qtyRaw),
-            referenceUnitCost: priceRaw === '' ? null : Number(priceRaw),
+            referenceUnitCost: priceRaw === '' ? null : editedKnownMaterialPriceV120(priceRaw),
           });
         }
 
@@ -359,6 +361,7 @@ function addMaterial(root, units, rows,categories=[]) {
     },
   });
 
+  wireMaterialCategoryQuickAddV120(m,categories);
   const unitInput=m.form.querySelector('[name="base_unit_text"]');
   const priceSuffix=m.form.querySelector('[data-price-unit]');
   const baseSuffixes=[...m.form.querySelectorAll('[data-base-unit-label]')];
@@ -378,7 +381,8 @@ function editMaterial(root, units, material,categories=[]) {
   const unit = materialUnit(material, units) || 'الوحدة';
   const currentCode=materialCode(material)==='—' ? '' : materialCode(material);
 
-  modal({
+  let referencePriceEdited=false;
+  const editor=modal({
     title: `تعديل ${material.name || 'المادة'}`,
     wide:true,
     body: `
@@ -393,7 +397,7 @@ function editMaterial(root, units, material,categories=[]) {
           <label>الكود</label>
           <input name="code" value="${esc(currentCode)}" autocomplete="off">
         </div>
-        <div class="field"><label>التصنيف</label><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}" ${c.id===material.category_id_v023?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>التصنيف</label><div class="select-action-row"><select name="category"><option value="">بلا تصنيف</option>${categories.map(c=>`<option value="${esc(c.id)}" ${String(c.id)===String(material.category_id_v023)?'selected':''}>${esc(c.name)}</option>`).join('')}</select><button class="mini-action material-new-category-v120" type="button">+ تصنيف جديد</button></div></div>
         <div class="field">
           <label>وحدة المخزون</label>
           <input value="${esc(unit)}" disabled>
@@ -419,7 +423,7 @@ function editMaterial(root, units, material,categories=[]) {
         <div class="field">
           <label>آخر سعر معروف للوحدة <span class="optional-badge">اختياري</span></label>
           <div class="input-with-suffix">
-            <input name="reference_price" type="number" min="0" step="any" value="${currentPrice == null ? '' : esc(currentPrice)}" autocomplete="off">
+            <input name="reference_price" type="number" min="0" step="any" value="${currentPrice == null ? '' : esc(roundUpKnownMaterialPriceV120(currentPrice))}" autocomplete="off">
             <span class="input-suffix">ل.س / ${esc(unit)}</span>
           </div>
         </div>
@@ -460,17 +464,19 @@ function editMaterial(root, units, material,categories=[]) {
               materialId: material.id,
               quantityDelta: delta,
               movementType,
-              unitCost: delta > 0 && priceRaw !== '' ? Number(priceRaw) : null,
+              unitCost: delta > 0 && referencePriceEdited && priceRaw !== '' ? editedKnownMaterialPriceV120(priceRaw) : null,
               note: current === 0 ? 'رصيد افتتاحي من صفحة المواد' : 'تسوية رصيد من صفحة المواد',
             });
           }
         }
 
-        if (priceRaw !== '') {
-          await api.setMaterialReferencePrice(material.id, Number(priceRaw));
+        if (referencePriceEdited && priceRaw !== '') {
+          const newPrice=editedKnownMaterialPriceV120(priceRaw);
+          if(newPrice===null)throw new Error('MATERIAL_REFERENCE_PRICE_INVALID');
+          await api.setMaterialReferencePrice(material.id,newPrice);
         }
 
-        toast('تم تحديث المادة.', 'success');
+        toast('تم تحديث المادة والتصنيف.', 'success');
         await renderMaterials(root);
         return true;
       } catch (e) {
@@ -479,27 +485,64 @@ function editMaterial(root, units, material,categories=[]) {
       }
     },
   });
+  editor.form.querySelector('[name="reference_price"]')?.addEventListener('input',()=>{referencePriceEdited=true;});
+  wireMaterialCategoryQuickAddV120(editor,categories);
 }
 
-function priceAllMaterialsUSD(root,rows){
+// The live database currently has no material categories. Create and assign
+// a category directly while editing, without leaving the material form.
+function wireMaterialCategoryQuickAddV120(dialog,categories){
+  const button=dialog.form.querySelector('.material-new-category-v120');
+  const select=dialog.form.querySelector('[name="category"]');
+  if(!button||!select)return;
+  button.onclick=()=>modal({
+    title:'إضافة تصنيف مواد',
+    body:'<div class="field"><label>اسم التصنيف</label><input name="category_name" required maxlength="120" placeholder="مثال: خضروات أو مواد جافة"></div>',
+    submitText:'إنشاء واختيار التصنيف',
+    onSubmit:async fd=>{
+      const name=String(fd.get('category_name')||'').trim();
+      if(!name){toast('اكتب اسم التصنيف.','error');return false;}
+      const existing=[...select.options].find(o=>o.value&&o.textContent.trim().toLocaleLowerCase('ar')===name.toLocaleLowerCase('ar'));
+      if(existing){select.value=existing.value;toast('تم اختيار التصنيف الموجود.','success');return true;}
+      try{
+        const created=await api.createCatalogCategoryV023('material',name);
+        if(!created?.id)throw Error('CATEGORY_CREATE_NOT_CONFIRMED');
+        select.add(new Option(created.name||name,String(created.id)));
+        select.value=String(created.id);
+        if(Array.isArray(categories))categories.push(created);
+        toast('أُنشئ التصنيف. احفظ المادة لإسنادها إليه.','success');
+        return true;
+      }catch(error){toast(friendlyError(error,'تعذر إنشاء التصنيف.'),'error');return false;}
+    },
+  });
+}
+
+async function priceAllMaterialsUSD(root,rows){
+  let savedRate=null;
+  try{const settings=await api.list('app_settings',{limit:1});
+    savedRate=Number(settings?.[0]?.usd_to_base_rate??0);
+    if(!validateNewSypRateV120(savedRate)) throw new Error('FX_NEW_SYP_RATE_REVIEW_REQUIRED');
+  }catch(e){toast(friendlyError(e,'تعذر تحميل سعر الدولار المعتمد بالليرة الجديدة.'),'error');return;}
   // Preview the complete currently loaded catalog, never silently price a
   // material whose SYP reference cost is unknown/zero.
   const dialog=modal({
     title:'تسعير المواد بالدولار',wide:true,submitText:'اعتماد تسعير المواد',
     subtitle:'الأسعار المجهولة أو الصفرية تبقى بلا سعر بالدولار.',
     body:`<div class="notice">سيُستبدل السعر المرجعي بالدولار للمواد ذات السعر المعروف في هذه العملية بعد تأكيدك، دون تغيير آخر فواتير الشراء أو المخزون أو القيود السابقة.</div>
-      <div class="form-grid"><div class="field"><label>كم ليرة سورية يساوي الدولار الآن؟</label>
-        <input name="rate" type="number" min="0.000001" step="any" required placeholder="مثال: 15000" autocomplete="off"></div>
+      <div class="form-grid"><div class="field"><label>سعر الدولار بالليرة السورية الجديدة (المعتمد حاليًا)</label>
+        <input name="rate" type="number" min="0.000001" max="1000" step="any" required value="${esc(savedRate)}" placeholder="مثال: 149.5" autocomplete="off"></div>
         <div class="field"><label>المواد التي يمكن تسعيرها</label><div class="pricing-preview-v110" data-pricing-preview>أدخل سعر الصرف لعرض المعاينة.</div></div></div>
       <p class="metric-note">تُسجّل أسعار الصرف الجديدة في الإعدادات. المواد ذات السعر الصفري أو غير المعروف تبقى بلا تسعير، ولا نستخدم صفرًا بدل السعر المجهول.</p>
+      <label class="notice" style="display:flex;align-items:center;gap:10px"><input type="checkbox" name="confirm_overwrite_usd" required style="width:20px;height:20px;flex:none"> <span>أؤكد إعادة احتساب كل أسعار الدولار المرجعية من أسعار الليرة المعروفة؛ لن تتغير فواتير الشراء التاريخية.</span></label>
       <div class="notice rose pricing-error-v112" data-pricing-error hidden role="alert"></div>`,
     onSubmit:async fd=>{
       const rate=Number(fd.get('rate'));
-      if(!(Number.isFinite(rate)&&rate>0&&rate<=1e10)){toast('أدخل سعر دولار موجبًا وصحيحًا.','error');return false;}
+      if(!validateNewSypRateV120(rate)){toast('السعر يجب أن يكون بالليرة الجديدة (مثال 149.5)، وليس بالليرة القديمة.','error');return false;}
       const stats=pricingPreviewV110(rows,rate);
       if(!stats.priced){toast('لا توجد مواد بأسعار ليرة معروفة لتحويلها إلى الدولار.','error');return false;}
       const errorBox=dialog.form.querySelector('[data-pricing-error]');
       if(errorBox){errorBox.hidden=true;errorBox.textContent='';}
+      if(!fd.get('confirm_overwrite_usd')){toast('يرجى تأكيد رغبتك بإعادة تسعير جميع المواد.','error');return false;}
       try{
         const result=await api.materialPriceInitializeUsdV110(rate);
         if(!result||!Number.isFinite(Number(result.priced)))throw new Error('PRICING_RESULT_NOT_CONFIRMED');
@@ -520,6 +563,7 @@ function priceAllMaterialsUSD(root,rows){
     const counts=pricingPreviewV110(rows,rate);
     preview.textContent=`${counts.priced} مادة بسعر معروف · ${counts.unpriced} بلا سعر · ${counts.overridden} بسعر دولار موجود سيُعاد احتسابه`;
   });
+  input.dispatchEvent(new Event('input',{bubbles:true}));
 }
 
 async function manageMaterialUnits(root, units, material){
