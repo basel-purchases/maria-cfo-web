@@ -1,12 +1,12 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.20';
+import * as api from './api.js?v=1.0.21';
 import { esc } from './utils.js?v=1.0';
-import { toast, friendlyError, modal } from './ui.js?v=1.0.20';
+import { toast, friendlyError, modal } from './ui.js?v=1.0.21';
 import { renderDashboard } from './pages/dashboard.js?v=1.0';
 import { renderHub } from './pages/hubs.js?v=1.0';
-import { renderMaterials } from './pages/materials.js?v=1.0.20';
-import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.20';
-import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.20';
+import { renderMaterials } from './pages/materials.js?v=1.0.21';
+import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.21';
+import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.21';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
   renderInventory,
@@ -22,7 +22,7 @@ import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.18';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.20';
+import { renderSettings } from './pages/settings.js?v=1.0.21';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
@@ -30,8 +30,8 @@ import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
 import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
-import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.20';
-import {marketNewSypPerUsdV120,rateApprovalStateV120} from './fx-rate-v120.js?v=1.0.20';
+import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.21';
+import {marketNewSypPerUsdV120,rateApprovalStateV120} from './fx-rate-v120.js?v=1.0.21';
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
 import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.16';
 
@@ -120,7 +120,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.20</div>
+        <div class="sidebar-foot">Web v1.0.21</div>
       </aside>
 
       <main class="main">

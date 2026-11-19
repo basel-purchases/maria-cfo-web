@@ -1,4 +1,4 @@
-import {purchaseTotalsV119} from './purchase-workflow-v119.js?v=1.0.20';
+import {purchaseTotalsV119} from './purchase-workflow-v119.js?v=1.0.21';
 // Keep validation independent of the UI and of the server transaction.
 export function validatePurchaseRevisionLinesV120(lines,{posted=false}={}){
   if(!Array.isArray(lines)||lines.length>500)return {valid:false,code:'PURCHASE_REVISION_BAD_ITEMS'};

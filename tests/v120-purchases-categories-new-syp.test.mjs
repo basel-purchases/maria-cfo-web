@@ -120,10 +120,10 @@ test('v120 UI supplier row includes edit, delete and direct invoice, with locked
  assert.match(supplier,/supplier-delete-v120/);
  assert.match(supplier,/supplier-new-invoice-v119/);
  assert.match(supplier,/supplierDeleteIfUnusedV120/);
- assert.match(supplier,/newPurchase\(\{supplier:entry,openCatalog:true\}\)/);
+ assert.match(supplier,/startSupplierInvoiceV121\(\{supplier:entry\}\)/);
  assert.match(purchase,/supplierId:supplier\?\.id\|\|null/);
  assert.match(purchase,/maria_open_supplier_catalog_v119/);
- assert.match(purchase,/purchase-open-bulk-v120/);
+ assert.match(purchase,/purchase-new-for-supplier-v121/);
  assert.match(purchase,/openInvoiceLineEditorV120/);
  assert.match(purchase,/saveInvoiceRevisionV120/);
  assert.match(purchase,/updatedAt:invoice\.updated_at\|\|null/);
@@ -133,10 +133,10 @@ test('v120 material classification can be created, edited, persisted and used in
  const material=source('js/pages/materials.js');
  const api=source('js/api.js');
  assert.match(material,/category_id_v023/);
- assert.match(material,/\[name="category"\]/);
- assert.match(material,/wireMaterialCategoryQuickAddV120/);
+ assert.match(material,/<select name="category"/);
+ assert.match(material,/materialCategoryChoicesV121/);
  assert.match(material,/createCatalogCategoryV023\('material',name\)/);
- assert.match(material,/fd\.get\('category'\)\|\|null/);
+ assert.match(material,/resolveMaterialCategoryChoiceV121\(fd\.get\('category'\)/);
  assert.match(api,/materialIdentityUpdatePricedV110/);
  assert.match(material,/displayKnownMaterialPriceV120\(price\)/);
  assert.match(material,/referencePriceEdited/);
@@ -153,9 +153,9 @@ test('v120 settings show only new SYP, launch checks USD material revalue and ve
  assert.match(app,/materialPriceSyncCurrentFxV120\(\)/);
  assert.match(app,/marketNewSypPerUsdV120\(q,side\)/);
  for(const mod of ['pages/materials.js','pages/settings.js','pages/purchases.js','pages/suppliers.js']){
-  assert.ok(app.includes("./"+mod+'?v=1.0.20'),mod);
+  assert.ok(app.includes("./"+mod+'?v=1.0.21'),mod);
  }
- assert.match(index,/Web v1\.0\.20/);
- assert.equal(source('VERSION').trim(),'1.0.20');
+ assert.match(index,/Web v1\.0\.21/);
+ assert.equal(source('VERSION').trim(),'1.0.21');
  assert.equal(existsSync(path.join(root,'config.js')),false);
 });

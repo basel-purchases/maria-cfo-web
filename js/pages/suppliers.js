@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=1.0.20';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.20';
+import * as api from '../api.js?v=1.0.21';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.21';
 import {esc,money,dateOnly,unitLabel} from '../utils.js?v=1.0';
-import {newPurchase} from './purchases.js?v=1.0.20';
-import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.20';
+import {startSupplierInvoiceV121} from './purchases.js?v=1.0.21';
+import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.21';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=1.0';
 
@@ -206,7 +206,7 @@ export async function renderSuppliersWithAmeen(root){
    });
    root.querySelectorAll('.supplier-new-invoice-v119').forEach(b=>b.onclick=()=>{
      const entry=filtered[Number(b.dataset.supplierIndex)];
-     if(entry)newPurchase({supplier:entry,openCatalog:true});
+     if(entry)void startSupplierInvoiceV121({supplier:entry});
    });
    root.querySelectorAll('.view-supplier-ledger').forEach(b=>b.onclick=()=>{
     const a=accounts.find(x=>String(x.external_account)===b.dataset.code);
@@ -278,7 +278,7 @@ export async function renderSupplierDetail(root,id){
        <input type="search" class="supplier-detail-search-v119" placeholder="ابحث داخل التبويب حسب المادة أو رقم الفاتورة أو التاريخ"></div>
        <span class="list-count supplier-detail-count-v119"></span></div>
      <div class="supplier-tab-content-v119"></div></div>`;
-  root.querySelector('.supplier-create-purchase-v119').onclick=()=>newPurchase({supplier,openCatalog:true});
+  root.querySelector('.supplier-create-purchase-v119').onclick=()=>{void startSupplierInvoiceV121({supplier});};
   root.querySelector('.supplier-imported-ledger-v119')?.addEventListener('click',()=>showLedger(account));
   let selected='invoices',query='';
   const host=root.querySelector('.supplier-tab-content-v119');

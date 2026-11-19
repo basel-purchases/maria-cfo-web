@@ -1,12 +1,13 @@
 import {materialExactV106,materialMatchesV106,materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.20';
-import {validatePurchaseRevisionLinesV120} from '../purchase-bulk-editor-v120.js?v=1.0.20';
+import * as api from '../api.js?v=1.0.21';
+import {createSupplierInvoiceDraftV121} from '../purchase-supplier-shortcut-v121.js?v=1.0.21';
+import {validatePurchaseRevisionLinesV120} from '../purchase-bulk-editor-v120.js?v=1.0.21';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.20';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.21';
 import {currencyLabel, esc,money,dateOnly,statusBadge,unitLabel,unitDisplay,todayISO } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
-import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.20';
-import {supplierFieldV119,attachSupplierSuggestV119} from '../supplier-suggest-v119.js?v=1.0.20';
+import {purchaseLineTotalV119,purchaseTotalsV119,revisionLinesV119} from '../purchase-workflow-v119.js?v=1.0.21';
+import {supplierFieldV119,attachSupplierSuggestV119} from '../supplier-suggest-v119.js?v=1.0.21';
 
 function isDirectSupplier(supplier){
   return !supplier || supplier?.code==='AMEEN_LEGACY_UNKNOWN_SOURCE_V029' || supplier?.notes==='SYSTEM_DIRECT_PURCHASE' || normalizeName(supplier?.name)==='شراء مباشر';
@@ -47,7 +48,7 @@ export async function renderPurchases(root){
                 <td>${money(r.is_voided ? (r.voided_original_total||0) : (r.total_original||0),r.currency_code||'SYP')}</td>
                 <td class="row-actions">
                   <button type="button" class="mini-action open-invoice" data-open="${esc(r.id)}">فتح</button>
-                  ${['draft','posted'].includes(r.status)&&!r.is_voided&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action purchase-open-bulk-v120" data-edit-lines="${esc(r.id)}">تعديل البنود</button>`:''}
+                  ${supplierMap[String(r.supplier_id||'')]&&!isDirectSupplier(supplierMap[String(r.supplier_id||'')])&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action purchase-new-for-supplier-v121" data-new-from-invoice="${esc(r.id)}">+ إضافة فاتورة</button>`:''}
                   ${r.status==='draft'?`<button type="button" class="mini-action danger delete-draft" data-delete="${esc(r.id)}">حذف</button>`:''}
                   ${r.status==='posted'&&!r.is_voided&&!r.is_ameen_legacy_v029?`<button type="button" class="mini-action danger void-posted" data-void="${esc(r.id)}">إلغاء</button>`:''}
                 </td>
@@ -61,9 +62,11 @@ export async function renderPurchases(root){
       location.hash='#/purchase/'+tr.dataset.id;
     });
     root.querySelectorAll('[data-open]').forEach(b=>b.onclick=e=>{e.stopPropagation();location.hash='#/purchase/'+b.dataset.open;});
-    root.querySelectorAll('[data-edit-lines]').forEach(b=>b.onclick=e=>{
-      e.stopPropagation();sessionStorage.setItem('maria_open_invoice_line_editor_v120',String(b.dataset.editLines));
-      location.hash='#/purchase/'+b.dataset.editLines;
+    root.querySelectorAll('[data-new-from-invoice]').forEach(b=>b.onclick=e=>{
+      e.stopPropagation();
+      const from=rows.find(row=>String(row.id)===String(b.dataset.newFromInvoice));
+      const supplier=supplierMap[String(from?.supplier_id||'')];
+      if(supplier&&!isDirectSupplier(supplier)) void startSupplierInvoiceV121({supplier,currency:from.currency_code});
     });
     root.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async e=>{
       e.stopPropagation();
@@ -78,6 +81,29 @@ export async function renderPurchases(root){
   }catch(e){
     root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
   }
+}
+
+// Dedicated shortcut: one click creates a brand-new draft for this supplier,
+// preserving the original invoice (including all its items and payments).
+let supplierInvoiceCreationPendingV121=false;
+export async function startSupplierInvoiceV121({supplier,currency=''}={}){
+  if(supplierInvoiceCreationPendingV121)return null;
+  supplierInvoiceCreationPendingV121=true;
+  try{
+    const id=await createSupplierInvoiceDraftV121({
+      supplier,currency,date:todayISO(),createPurchase:api.createPurchase,
+      prepareCatalog:id=>{
+        try{sessionStorage.setItem('maria_open_supplier_catalog_v119',id);}
+        catch(error){console.warn('Cannot remember supplier catalog to auto-open',error);}
+      },
+      navigate:hash=>{location.hash=hash;},
+    });
+    toast('تم إنشاء فاتورة جديدة للمورد. أضف البنود أو اختر من مواد مشترياته السابقة.','success');
+    return id;
+  }catch(error){
+    toast(friendlyError(error,'تعذر إنشاء فاتورة جديدة للمورد.'),'error');
+    return null;
+  }finally{supplierInvoiceCreationPendingV121=false;}
 }
 
 export async function newPurchase({supplier=null,suppliers=null,openCatalog=false}={}){
@@ -165,7 +191,8 @@ export async function renderPurchaseDetail(root,id){
         </div>
         <div class="page-head-actions">
           <a class="btn secondary purchase-to-images-v108" href="#/images">الإدخال بالصور</a>
-          ${editable?'<button class="btn secondary edit-invoice-v119">تعديل بيانات الفاتورة</button><button class="btn edit-lines-v120" type="button">تعديل بنود الفاتورة</button>':''}
+          ${editable?'<button class="btn secondary edit-invoice-v119">تعديل بيانات الفاتورة</button>':''}
+          ${supplier&&!direct&&!invoice.is_ameen_legacy_v029?'<button class="btn new-supplier-invoice-v121" type="button">+ إضافة فاتورة لهذا المورد</button>':''}
           ${draft?'<button class="btn secondary delete-draft-detail">حذف المسودة</button>':''}
           ${posted&&!invoice.is_ameen_legacy_v029?'<button class="btn danger-btn void-posted-detail">إلغاء الفاتورة</button>':''}
         </div>
@@ -226,11 +253,9 @@ export async function renderPurchaseDetail(root,id){
     root.querySelector('.add')?.addEventListener('click',()=>addItem(root,id,mats,units,invoice.currency_code||'SYP',{invoice,items}));
     root.querySelector('.reuse')?.addEventListener('click',()=>openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier}));
     root.querySelector('.edit-invoice-v119')?.addEventListener('click',()=>editInvoiceHeaderV119(root,{invoice,items,allSup}));
-    root.querySelector('.edit-lines-v120')?.addEventListener('click',()=>openInvoiceLineEditorV120(root,{invoice,items,mats,units}));
-    if(editable&&sessionStorage.getItem('maria_open_invoice_line_editor_v120')===String(id)){
-      sessionStorage.removeItem('maria_open_invoice_line_editor_v120');
-      setTimeout(()=>openInvoiceLineEditorV120(root,{invoice,items,mats,units}),0);
-    }
+    root.querySelector('.new-supplier-invoice-v121')?.addEventListener('click',()=>{
+      void startSupplierInvoiceV121({supplier,currency:invoice.currency_code});
+    });
     if(draft&&!direct&&sessionStorage.getItem('maria_open_supplier_catalog_v119')===String(id)){
       sessionStorage.removeItem('maria_open_supplier_catalog_v119');
       setTimeout(()=>openSupplierCatalogDialog(root,{invoice,items,mats,units,supplier}),0);

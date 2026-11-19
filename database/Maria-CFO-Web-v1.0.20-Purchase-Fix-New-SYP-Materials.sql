@@ -353,7 +353,7 @@ BEGIN
       v_alloc_count,v_alloc_total,nullif(btrim(coalesce(p_reason,'')),''));
   RETURN v_new_id;
 END;
-$function$
+$function$;
 
 
 -- Optimistic concurrency: reject an out-of-date browser tab instead of
