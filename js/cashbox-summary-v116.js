@@ -1,6 +1,7 @@
 // v1.0.16: the top navigation and cashboxes page share the same displayed balance.
 // An absent balance must never be presented as a real zero.
 const BALANCE_FIELDS_V116 = [
+  'live_balance_base_v124', // persistent balance across business days
   'expected_balance_base', 'expected_base', 'expected_closing_base',
   'expected_closing_balance_base', 'current_balance_base', 'balance_base',
   'net_base', 'expected_balance', 'balance', '_computed_balance_base',

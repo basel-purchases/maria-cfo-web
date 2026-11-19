@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=1.0.22';
+import * as api from '../api.js?v=1.0.24';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.22';
 import {esc,money,dateOnly,unitLabel} from '../utils.js?v=1.0';
 import {startSupplierInvoiceV121} from './purchases.js?v=1.0.22';
 import {purchaseLineTotalV119,supplierPurchaseSummaryV119} from '../purchase-workflow-v119.js?v=1.0.22';
+import {supplierPriceTrendsV124} from '../supplier-price-trends-v124.js?v=1.0.24';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {PAGE_SIZES,paginateArray,mergeSupplierRecords,supplierBalanceState,suppliersFilter,numericValue,pageInfo} from '../table-presenter-v025.js?v=1.0';
 
@@ -136,8 +137,8 @@ export async function renderSuppliersWithAmeen(root){
   const unpaid=all.filter(s=>supplierBalanceState(s.account)==='unpaid');
   const outstanding=unpaid.reduce((total,s)=>total+Number(s.account?.current_balance||0),0);
   root.innerHTML=`<div class="page-head">
-    <div><h2>الموردون وكشوف الحساب</h2>
-      <p>اختر «الملف والإحصائيات» لمراجعة فواتير المورد وبنودها ومدفوعاتها وحركة مخزون مواده. الأرصدة المستوردة مرجعية منفصلة.</p></div>
+    <div><h2>الموردون وإحصائيات المشتريات</h2>
+      <p>افتح «الملف والإحصائيات» بجانب كل مورد لمشاهدة عدد فواتيره وبنودها والدفعات وآخر أسعار مواده ونسب تغيّرها. كشوف الحساب المستوردة بيانات مرجعية منفصلة.</p></div>
     <div class="page-head-actions"><a class="btn secondary" href="#/quick-imports">رفع كشف حساب</a><button class="btn add">إضافة مورد</button></div>
   </div>
   <div class="grid cols-3 finance-summary-grid">
@@ -232,6 +233,8 @@ export async function renderSupplierDetail(root,id){
   ]);
   if(!supplier)throw Error('SUPPLIER_NOT_FOUND');
   const summary=supplierPurchaseSummaryV119(activity);
+  const priceTrends=supplierPriceTrendsV124(activity);
+  const risingPrices=priceTrends.filter(p=>p.percentChange!==null&&p.percentChange>0.001).length;
   const invoices=(activity.invoices||[]).filter(inv=>!inv.archived_at_v122);
   const items=activity.items||[];
   const payments=activity.payments||[];
@@ -255,10 +258,11 @@ export async function renderSupplierDetail(root,id){
        <a class="btn secondary" href="#/suppliers">جميع الموردين</a>
        <button type="button" class="btn supplier-create-purchase-v119">+ فاتورة لهذا المورد</button>
      </div></div>
-   <div class="grid cols-3 supplier-kpis-v119">
+   <div class="grid cols-4 supplier-kpis-v119">
      <div class="card"><strong>${summary.liveCount}</strong><div class="metric-note">فواتير مشتريات منشورة وسارية</div></div>
      <div class="card"><strong>${summary.materials.length}</strong><div class="metric-note">مادة/وحدة اشتريت من المورد</div></div>
      <div class="card"><strong>${summary.draftCount}</strong><div class="metric-note">مسودات · ${summary.voidedCount} نسخة ملغاة/مصححة</div></div>
+     <div class="card"><strong class="${risingPrices?'staff-v123-negative':''}">${risingPrices}</strong><div class="metric-note">مواد ارتفع سعرها منذ الشراء السابق</div></div>
    </div>
    <div class="grid cols-2 supplier-money-kpis-v119">
      ${grouped.map(([code,v])=>`<div class="card"><h3>${esc(code==='SYP'?'ل.س':code)}</h3>
@@ -267,10 +271,11 @@ export async function renderSupplierDetail(root,id){
        <div class="k">الرصيد المتبقي</div><div><strong>${money(v.outstanding,code)}</strong></div></div></div>`).join('')||'<div class="card"><p>لا توجد فواتير منشورة لهذا المورد.</p></div>'}
    </div>
    ${account?`<div class="notice">كشف الحساب المستورد منفصل عن الفواتير الفعلية: الرصيد المرجعي ${reportValue(account.current_balance)}. <button type="button" class="mini-btn supplier-imported-ledger-v119">الحركات المرجعية</button></div>`:''}
-   <div class="notice">حركة مخزون مواد المورد تشمل أيضًا الاستهلاك والتسويات ومشتريات الموردين الآخرين لتلك المواد؛ لا تُنسب كلها لهذا المورد. تجمع الإحصائيات المالية كل عملة على حدة، ولا تحتسب المسودات أو الفواتير الملغاة أو الفواتير التاريخية المرجعية ضمن قيمة الشراء.</div>
+   <div class="notice">حركة مخزون مواد المورد تشمل أيضًا الاستهلاك والتسويات ومشتريات الموردين الآخرين لهذه المواد، ولا تُنسب كلها للمورد. تُقارن أسعار المشتريات الصافية بعد خصم البند داخل العملة نفسها ووحدة الشراء نفسها، دون خلط العملات أو احتساب المسودات والملغاة. النسبة تقديرية مقارنة بآخر سعر شراء سابق وليست تغيرًا في قيمة المخزون.</div>
    <div class="supplier-tabs-v119" role="tablist" aria-label="تفاصيل المورد">
      <button type="button" class="active" data-supplier-tab="invoices">الفواتير والبنود</button>
      <button type="button" data-supplier-tab="materials">إحصائيات المواد</button>
+     <button type="button" data-supplier-tab="prices">تغيّر أسعار المواد</button>
      <button type="button" data-supplier-tab="movements">حركة مخزون المواد</button>
      <button type="button" data-supplier-tab="payments">الدفعات والتخصيصات</button>
    </div>
@@ -317,6 +322,18 @@ export async function renderSupplierDetail(root,id){
     registerTableExport(host.querySelector('table'),()=>({title:`مواد المورد ${supplier.name}`,
       headers:['المادة','وحدة الشراء','الكمية','عدد الفواتير','عدد البنود','القيمة حسب العملة'],
       rows:subset.map(x=>[x.materialName,x.unitName,x.quantity,x.invoiceCount,x.lineCount,moneyByCurrency(x.amounts)])}));
+   }else if(selected==='prices'){
+    const subset=priceTrends.filter(x=>fits(x.materialName,x.unitName,x.currency,x.lastInvoiceNumber));count=subset.length;
+    const percentLabel=x=>x.percentChange===null?'غير متاح':`${x.percentChange>0?'+':''}${x.percentChange.toFixed(1)}%`;
+    const percentClass=x=>x.percentChange===null?'':x.percentChange>0.001?'staff-v123-negative':x.percentChange< -0.001?'staff-v123-positive':'';
+    host.innerHTML=`<div class="supplier-v124-price-intro">نقارن <strong>آخر عملية شراء</strong> بالعملية السابقة للمادة نفسها، وبالوحدة والعملة نفسيهما. إذا لم توجد عمليتان فلا تظهر نسبة مفترضة.</div>
+     <div class="table-wrap"><table class="table supplier-price-trends-v124"><thead><tr><th>المادة</th><th>الوحدة</th><th>العملة</th><th>السعر السابق</th><th>السعر الأخير</th><th>نسبة التغيّر</th><th>عدد مرات الشراء</th><th>تاريخ آخر سعر</th><th>الفاتورة</th></tr></thead>
+      <tbody>${subset.map(x=>`<tr><td><strong>${esc(x.materialName)}</strong></td><td>${esc(unitLabel(x.unitName))}</td><td>${esc(x.currency)}</td>
+        <td>${x.previousPrice===null?'—':money(x.previousPrice,x.currency)}</td><td><strong>${money(x.lastPrice,x.currency)}</strong></td>
+        <td><span class="supplier-v124-change ${percentClass(x)}">${esc(percentLabel(x))}</span></td><td>${x.sampleCount}</td><td>${dateOnly(x.lastDate)}</td><td>${esc(x.lastInvoiceNumber)}</td></tr>`).join('')||'<tr><td colspan="9">لا توجد بيانات أسعار مطابقة</td></tr>'}</tbody></table></div>`;
+    registerTableExport(host.querySelector('table'),()=>({title:`تغير أسعار مشتريات ${supplier.name}`,
+      headers:['المادة','الوحدة','العملة','السعر السابق','السعر الأخير','التغير %','مرات الشراء','تاريخ آخر سعر','الفاتورة'],
+      rows:subset.map(x=>[x.materialName,x.unitName,x.currency,x.previousPrice??'',x.lastPrice,x.percentChange===null?'':Number(x.percentChange.toFixed(2)),x.sampleCount,x.lastDate,x.lastInvoiceNumber])}));
    }else if(selected==='movements'){
     const subset=movements.filter(x=>fits(x.material_name,x.occurred_at,x.movement_type,x.reference_type,x.note));count=subset.length;
     host.innerHTML=`<div class="table-wrap"><table class="table supplier-movement-table-v119">

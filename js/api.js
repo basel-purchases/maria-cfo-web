@@ -702,20 +702,14 @@ async function enrichCashboxOverview(entries){
   });
 }
 
-export async function cashboxOverview(date=todayISO()){
-  try{
-    await rpc('ensure_cashbox_day_v013',{p_business_date:date});
-    const data=await rpc('get_cashbox_overview_v013',{p_business_date:date});
-    return enrichCashboxOverview(Array.isArray(data)?data:[]);
-  }catch(e){
-    console.warn('v0.13 cashbox overview fallback',e);
-    const [boxes,sessions]=await Promise.all([cashboxes(),cashboxSessions()]);
-    const entries=boxes.map(box=>{
-      const session=sessions.find(x=>String(x.cashbox_id||'')===String(box.id) && String(x.business_date||'').slice(0,10)===String(date));
-      return {cashbox:box,session:session||null,summary:session||{}};
-    });
-    return enrichCashboxOverview(entries);
-  }
+export async function cashboxOverview(date=null){
+  const effectiveDate=date||await rpc('cashbox_business_today_v124');
+  // v1.0.24: fail closed if SQL has not been installed. Falling back to
+  // a newly opened session's zero would misstate the real cash balance.
+  await rpc('ensure_cashbox_day_v013',{p_business_date:effectiveDate});
+  const data=await rpc('get_cashbox_overview_v124',{p_business_date:effectiveDate});
+  const {validateCashboxOverviewV124}=await import('./cashbox-continuity-v124.js?v=1.0.24');
+  return validateCashboxOverviewV124(data);
 }
 
 // Manual ledger only: purchases, sales, salaries and expenses are deliberately excluded.

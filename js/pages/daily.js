@@ -1,5 +1,5 @@
-import * as api from '../api.js?v=1.0.10';
-import { expectedCashboxBalanceV116 } from '../cashbox-summary-v116.js?v=1.0.16';
+import * as api from '../api.js?v=1.0.24';
+import { expectedCashboxBalanceV116 } from '../cashbox-summary-v116.js?v=1.0.24';
 import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
 import {currencyLabel, esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=1.0';
 import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=1.0';
@@ -89,7 +89,7 @@ export async function renderInventory(root){
 export async function renderCashboxes(root){
   root.innerHTML=loader();
   try{
-    const overview=await api.cashboxOverview(todayISO());
+    const overview=await api.cashboxOverview();
     const boxes=overview.map(x=>x.cashbox).filter(Boolean);
     // Send the same server result to the persistent header after each reload or adjustment.
     document.dispatchEvent(new CustomEvent('maria:cashboxes-updated', { detail: overview }));
@@ -97,7 +97,7 @@ export async function renderCashboxes(root){
       <div class="page-head">
         <div>
           <h2>الصناديق</h2>
-          <p>كل صندوق يمثل النقد الفعلي الموجود فيه. المبيعات تزيده تلقائيًا، والمصروفات والدفعات تخفضه تلقائيًا.</p>
+          <p>الرصيد مستمر من يوم لآخر، ولا يصبح صفرًا عند تغير التاريخ. لا يتغير إلا بحركة نقدية فعلية أو إغلاق معتمد.</p>
         </div>
       </div>
       <div class="notice sage cashbox-help">
@@ -119,19 +119,19 @@ export async function renderCashboxes(root){
                 </div>
                 ${session?statusBadge(session.status||'open'):'<span class="badge">اليوم جاهز</span>'}
               </div>
-              <div class="cashbox-balance-label">الرصيد المتوقع الآن</div>
+              <div class="cashbox-balance-label">الرصيد المستمر حتى الآن</div>
               <div class="cashbox-balance">${bal===null?'—':money(bal,'SYP')}</div>
-              <div class="metric-note">${session?`جلسة ${dateOnly(session.business_date||todayISO())}`:'سيتم فتح جلسة اليوم تلقائيًا'}</div>
+              <div class="metric-note">${session?`حركة يوم ${dateOnly(session.business_date||todayISO())} منفصلة عن رصيد الصندوق`:'سيتم فتح جلسة اليوم تلقائيًا'}</div>
               <div class="cashbox-actions"><button class="btn secondary adjust-box" data-id="${esc(b.id)}" data-name="${esc(b.name||'صندوق')}">إضافة / سحب</button>${b.is_general?'':`<button type="button" class="btn secondary zero-box" data-id="${esc(b.id)}">\u062a\u0635\u0641\u064a\u0631</button>`}</div>
             </div>`;
         }).join('')}
       </div>
       <div style="height:16px"></div>
       <div class="card">
-        <div class="section-head-inline"><div><h3>جلسات اليوم</h3><p>الجلسة هي سجل يومي للصندوق، وليست مبلغًا منفصلًا.</p></div></div>
+        <div class="section-head-inline"><div><h3>ملخص الصناديق اليوم</h3><p>الرصيد في الجدول مستمر من الأيام السابقة؛ لا يُعرض فقط صافي حركة اليوم.</p></div></div>
         <div class="table-wrap table-fit">
           <table class="table">
-            <thead><tr><th>الصندوق</th><th>اليوم</th><th>الحالة</th><th>الرصيد المتوقع</th></tr></thead>
+            <thead><tr><th>الصندوق</th><th>اليوم</th><th>الحالة</th><th>الرصيد المستمر</th></tr></thead>
             <tbody>${overview.map(entry=>{
               const b=entry.cashbox||{}; const se=entry.session||{}; const bal=expectedCashboxBalanceV116(entry.summary||{});
               return `<tr><td><strong>${esc(b.name||'صندوق')}</strong></td><td>${dateOnly(se.business_date||todayISO())}</td><td>${statusBadge(se.status||'open')}</td><td>${bal===null?'—':money(bal,'SYP')}</td></tr>`;
@@ -185,7 +185,7 @@ export async function renderCashboxes(root){
     }));
     await renderCashboxManualLedger(root.querySelector('#cashbox-ledger-host'),boxes);
   }catch(e){
-    root.innerHTML=`<div class="notice">${friendlyError(e)}</div>`;
+    root.innerHTML=`<div class="notice rose">تعذر التحقق من رصيد الصناديق المستمر: ${esc(friendlyError(e))}. تأكد من تطبيق ترحيل SQL v1.0.24؛ لن نعرض مبلغ صفر عند فشل التحقق.</div>`;
   }
 }
 

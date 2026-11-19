@@ -1,15 +1,16 @@
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.24';
 import { loader, friendlyError } from '../ui.js?v=1.0';
 import { money, pick, esc, dateOnly, todayISO } from '../utils.js?v=1.0';
 import { financialCard, qualityMessages, financialRowTable, finalProfitValue } from '../finance-ui.js?v=1.0';
+import {expectedCashboxBalanceV116} from '../cashbox-summary-v116.js?v=1.0.24';
 
 const ok=(r,fallback)=>r.status==='fulfilled'?r.value:fallback;
 function setupStep(title,subtitle,ready,href,optional=false){return `<a class="setup-row ${ready?'ready':''}" href="${href}"><div class="setup-status">${ready?'✓':'!'}</div><div><strong>${esc(title)}${optional?' — اختياري':''}</strong><small>${esc(subtitle)}</small></div></a>`;}
 export async function renderDashboard(root){
   root.innerHTML=loader();
   const monthStart=`${todayISO().slice(0,7)}-01`;
-  const [dashResult,monthResult,notesResult,matsResult,menuResult,employeesResult,boxesResult,eventsResult,duesResult,balancesResult]=await Promise.allSettled([
-    api.dashboard(),api.statistics(monthStart,todayISO()),api.notifications(),api.materials(),api.menuItems(),api.employees(),api.cashboxes(),api.events(),api.dailyWageDues(),api.approvedSalaryBalances(),
+  const [dashResult,monthResult,notesResult,matsResult,menuResult,employeesResult,boxesResult,eventsResult,duesResult,balancesResult,cashOverviewResult]=await Promise.allSettled([
+    api.dashboard(),api.statistics(monthStart,todayISO()),api.notifications(),api.materials(),api.menuItems(),api.employees(),api.cashboxes(),api.events(),api.dailyWageDues(),api.approvedSalaryBalances(),api.cashboxOverview(),
   ]);
   if(dashResult.status==='rejected'&&monthResult.status==='rejected'){
     root.innerHTML=`<div class="notice">تعذّر تحميل البيانات المالية من قاعدة البيانات: ${esc(friendlyError(dashResult.reason))}</div>`;
@@ -18,6 +19,9 @@ export async function renderDashboard(root){
   const dash=ok(dashResult,{}),month=ok(monthResult,{}),m=month.kpis||{};
   const today=dash.today||{},notes=ok(notesResult,[]),mats=ok(matsResult,[]),menu=ok(menuResult,[]),emps=ok(employeesResult,[]),boxes=ok(boxesResult,[]),evts=ok(eventsResult,[]);
   const dailyDues=ok(duesResult,[]).filter(x=>Number(x.estimated_due_original)>0.001),approvedBalances=ok(balancesResult,[]);
+  const cashOverview=ok(cashOverviewResult,[]);
+  const cashOverviewRows=cashOverview.map(entry=>({cashbox_name:entry.cashbox.name,
+    live_balance:expectedCashboxBalanceV116(entry.summary)}));
   const noticeSummary=dash.notifications||{};
   const unread=Number(noticeSummary.unread_count??notes.filter(n=>!n.read_at&&!n.is_read).length);
   const significant=notes.filter(n=>!n.read_at&&!n.is_read).slice(0,5);
@@ -27,7 +31,7 @@ export async function renderDashboard(root){
   const monthlyProfit=finalProfitValue(month);
   root.innerHTML=`
     <div class="page-head"><div><h2>لوحة المدير</h2><p>حالة Maria CFO المالية والتشغيلية في مكان واحد · اليوم ${dateOnly(dash.business_date||todayISO())}</p></div><a href="#/reports" class="btn secondary">التقرير المالي الكامل</a></div>
-    <div class="quick-actions dashboard-actions"><a class="btn" href="#/orders">أوردر جديد</a><a class="btn secondary" href="#/purchases">فاتورة شراء</a><a class="btn secondary" href="#/expenses">مصروف</a><a class="btn soft" href="#/attendance">تسجيل الدوام</a><a class="btn soft" href="#/assistant">اسأل المساعد</a></div>
+    <div class="quick-actions dashboard-actions"><a class="btn" href="#/orders">أوردر جديد</a><a class="btn secondary" href="#/purchases">فاتورة شراء</a><a class="btn secondary" href="#/expenses">مصروف</a><a class="btn soft" href="#/suppliers">الموردون</a><a class="btn soft" href="#/assistant">اسأل المساعد</a></div>
     ${dashResult.status==='rejected'?`<div class="notice">تعذر عرض أرقام اليوم: ${esc(friendlyError(dashResult.reason))}</div>`:''}
     ${monthResult.status==='rejected'?`<div class="notice">تعذر عرض مقارنة الشهر: ${esc(friendlyError(monthResult.reason))}</div>`:''}
     <div class="finance-label">مؤشرات اليوم</div>
@@ -45,7 +49,7 @@ export async function renderDashboard(root){
       ${financialCard(m.profit_is_final===false?'النتيجة المؤقتة للشهر':'نتيجة الشهر',monthResult.status==='fulfilled'?monthlyProfit:null,{foot:m.profit_is_final===false?'النتيجة غير نهائية':'بعد التكاليف'})}
     </div>
     <div class="grid cols-2 finance-blocks">
-      <section class="card finance-section"><div class="finance-section-head"><h3>المستحقات والدوام</h3><a href="#/payroll" class="text-link">الرواتب ←</a></div>
+      <section class="card finance-section"><div class="finance-section-head"><h3>مستحقات الموظفين</h3><a href="#/payroll" class="text-link">الرواتب ←</a></div>
         ${duesResult.status==='rejected'?'<p class="metric-note">تفعيل عرض الأجور اليومية يتطلب تحديث قاعدة البيانات v0.14.</p>':`<div class="finance-info-row"><span>أيام أجور يومية وساعية بانتظار الدفع</span><strong>${dailyDues.length}</strong></div>`}
         ${balancesResult.status==='fulfilled'?`<div class="finance-info-row"><span>أرصدة رواتب معتمدة لم تُدفع بالكامل</span><strong>${approvedBalances.length}</strong></div>`:''}
         <div class="finance-info-row"><span>عدد الموظفين</span><strong>${emps.length}</strong></div>
@@ -62,11 +66,10 @@ export async function renderDashboard(root){
       <section class="card finance-section"><div class="finance-section-head"><h3>الصناديق والنقد</h3><a href="#/cashboxes" class="text-link">عرض الصناديق ←</a></div>
         <div class="finance-info-row"><span>عدد الصناديق المعرفة</span><strong>${boxes.length}</strong></div>
         ${monthResult.status==='fulfilled'?`<div class="finance-info-row"><span>نقد داخل هذا الشهر</span><strong>${money(month.cashflow?.cash_in_base||0)}</strong></div><div class="finance-info-row"><span>نقد خارج هذا الشهر</span><strong>${money(month.cashflow?.cash_out_base||0)}</strong></div>`:''}
-        ${Array.isArray(dash.cashboxes)&&dash.cashboxes.length?financialRowTable(dash.cashboxes,[
+        ${cashOverviewResult.status==='fulfilled'?financialRowTable(cashOverviewRows,[
           {key:'cashbox_name',label:'الصندوق'},
-          {key:'status',label:'الحالة',format:x=>esc(x==='open'?'مفتوح':x==='closed'?'مغلق':x)},
-          {key:'expected_balance_base',label:'النظري',format:x=>x==null?'—':money(x)},
-        ]):'<div class="metric-note">لا توجد جلسات صندوق لليوم بعد.</div>'}
+          {key:'live_balance',label:'الرصيد المستمر',format:x=>x==null?'—':money(x)},
+        ]):'<div class="notice rose">تعذر تأكيد رصيد الصناديق المستمر. تحقق من SQL v1.0.24؛ لن نعرض صفرًا بدل الرصيد الحقيقي.</div>'}
       </section>
       <section class="card finance-section"><div class="finance-section-head"><h3>الحفلات القادمة</h3><a href="#/events" class="text-link">كل الحفلات ←</a></div>
         <div class="finance-info-row"><span>عدد الحفلات القادمة خلال أسبوع</span><strong>${dash.upcoming_event_count??'—'}</strong></div>
@@ -83,7 +86,7 @@ export async function renderDashboard(root){
         ${setupStep('المواد','قاعدة المخزون',mats.length>0,'#/materials')}
         ${setupStep('الأصناف والوصفات','تحديد التكلفة والسعر',menu.length>0,'#/menu')}
         ${setupStep('الصناديق','تعريف الصناديق',boxes.length>0,'#/cashboxes')}
-        ${setupStep('الموظفون','لمن يريد الدوام والرواتب',emps.length>0,'#/employees-list',true)}
+        ${setupStep('الموظفون','الرواتب والسلف والتسويات',emps.length>0,'#/employees-list',true)}
       </div></section>
     </div>
     <div class="finance-note">المصدر: PostgreSQL عبر Supabase. النتائج غير المكتملة لا تُقدَّم كأرباح نهائية. المشتريات والرواتب النقدية لا تُحتسب مرتين في النتيجة المحاسبية.</div>`;

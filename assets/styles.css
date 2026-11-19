@@ -2059,3 +2059,33 @@ select option{background:#fff;color:var(--text);padding:8px}
 .staff-v123-daily-wages .staff-v123-pay-day{white-space:nowrap}
 @media(max-width:850px){.staff-v123-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.staff-v123-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-v123-actions .btn{flex:1 1 130px}.staff-v123-impact{min-width:0;flex-direction:column;align-items:start;gap:2px}}
+
+/* v1.0.24: employee financial profile has a full-width summary and one history table.
+   Prior display:grid created THREE narrow columns and a huge blank area. */
+.staff-profile-insights[data-employee-insights]{display:flex;flex-direction:column;gap:16px;min-width:0;width:100%;}
+.staff-profile-insights[data-employee-insights] .staff-v123-profile-stats{width:100%;margin:0;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.staff-profile-insights[data-employee-insights] .staff-insight{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px;border-radius:14px;min-width:0;}
+.staff-profile-insights[data-employee-insights] .staff-insight span{font-size:12px;line-height:1.5;margin:0;}
+.staff-profile-insights[data-employee-insights] .staff-insight strong{font-size:clamp(13px,1.2vw,17px);line-height:1.5;overflow-wrap:break-word;}
+.staff-v124-activity-heading{display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--line);}
+.staff-v124-activity-heading h4{font-size:15px;margin:0 0 6px;color:var(--plum-dark);}
+.staff-v124-activity-heading p{font-size:12px;line-height:1.6;color:var(--muted);margin:0;}
+.staff-v124-history-wrap{width:100%;min-width:0;max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:14px;}
+.staff-v124-history-wrap table{margin:0;width:100%;min-width:720px;}
+.staff-v124-history-wrap thead th{position:sticky;top:0;z-index:1;background:var(--surface-2);}
+.staff-v123-actions{padding:12px 0 6px;gap:9px;}
+.staff-v123-actions .btn{min-height:38px;}
+@media(max-width:850px){.staff-profile-insights[data-employee-insights] .staff-v123-profile-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:480px){.staff-profile-insights[data-employee-insights] .staff-v123-profile-stats{grid-template-columns:1fr 1fr;gap:7px;}
+ .staff-profile-insights[data-employee-insights] .staff-insight{padding:10px;}
+ .staff-v124-history-wrap table{min-width:660px;}
+ .staff-v123-actions .btn{flex:1 1 125px;}}
+
+/* v1.0.24: supplier cost history */
+.supplier-kpis-v119{margin-bottom:15px;}
+.supplier-kpis-v119 .card{min-width:0;}
+.supplier-v124-price-intro{border-inline-start:3px solid var(--plum);background:var(--surface-2);padding:11px 15px;margin:9px 0 14px;font-size:12px;line-height:1.8;border-radius:9px;}
+.supplier-price-trends-v124{min-width:1000px;font-size:12px;}
+.supplier-v124-change{display:inline-flex;padding:4px 8px;border-radius:8px;font-weight:750;white-space:nowrap;}
+@media(max-width:850px){.supplier-kpis-v119{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+@media(max-width:480px){.supplier-kpis-v119{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}

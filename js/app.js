@@ -1,11 +1,11 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.23';
+import * as api from './api.js?v=1.0.24';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
-import { renderDashboard } from './pages/dashboard.js?v=1.0';
-import { renderHub } from './pages/hubs.js?v=1.0.23';
+import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
+import { renderHub } from './pages/hubs.js?v=1.0.24';
 import { renderMaterials } from './pages/materials.js?v=1.0.22';
-import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.22';
+import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.24';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
@@ -14,8 +14,8 @@ import {
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=1.0.16';
-import { renderEmployees } from './pages/employees.js?v=1.0.23';
+} from './pages/daily.js?v=1.0.24';
+import { renderEmployees } from './pages/employees.js?v=1.0.24';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.13';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.23';
@@ -33,7 +33,7 @@ import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from '.
 import {fetchParallelUsdViaSupabaseV115,marketValueV115,marketProxyErrorTextV115,readMarketSideV115,setMarketSideV115} from './market-usd-v115.js?v=1.0.22';
 import {marketNewSypPerUsdV120,rateApprovalStateV120} from './fx-rate-v120.js?v=1.0.22';
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
-import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.16';
+import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.24';
 
 const app = document.querySelector('#app');
 installSearchableSelectsV033();
@@ -45,6 +45,7 @@ const aiJobState = new Map();
 const nav = [
   ['#/dashboard', 'الرئيسية'],
   ['#/basic', 'الإدخالات الأساسية'],
+  ['#/suppliers', 'الموردون وإحصائياتهم'],
   ['#/daily', 'التشغيل اليومي'],
   ['#/employees', 'الموظفون والرواتب'],
   ['#/events', 'الحفلات'],
@@ -120,7 +121,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.23</div>
+        <div class="sidebar-foot">Web v1.0.24</div>
       </aside>
 
       <main class="main">
@@ -558,7 +559,7 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'basic', supplier: 'basic', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'suppliers', supplier: 'suppliers', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
     'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
@@ -599,7 +600,7 @@ async function route() {
     assets: '\u0627\u0644\u0623\u0633\u0627\u0633\u064a\u0627\u062a',
     advances: '\u0633\u0644\u0641 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646',
     bonuses: 'مكافآت الموظفين',
-    suppliers: 'الموردون',
+    suppliers: 'الموردون وإحصائياتهم',
     supplier: 'ملف المورد والإحصائيات',
     purchases: 'فواتير الشراء',
     purchase: 'تفاصيل الفاتورة',

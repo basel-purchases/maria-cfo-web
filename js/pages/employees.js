@@ -231,8 +231,9 @@ async function loadEmployeeInsights(m, employee){
       <div class="staff-insight"><span>\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062a\u0020\u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a</span><strong class="staff-v123-positive">+ ${money(current.additions+current.bonuses,employee.wage_currency_code||'SYP')}</strong></div>
       <div class="staff-insight"><span>\u0627\u0644\u062d\u0633\u0645\u064a\u0627\u062a</span><strong class="staff-v123-negative">- ${money(current.deductions,employee.wage_currency_code||'SYP')}</strong></div>
     </div>
-    <h4>\u062a\u0641\u0627\u0635\u064a\u0644\u0020\u0627\u0644\u062d\u0631\u0643\u0627\u062a\u0020\u0648\u062a\u0648\u0627\u0631\u064a\u062e\u0647\u0627</h4>
-    <div class="table-wrap"><table class="table staff-v123-detail-table"><thead><tr><th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u0646\u0648\u0639</th><th>\u0627\u0644\u0645\u0628\u0644\u063a</th><th>\u0627\u0644\u0633\u0628\u0628</th><th>\u0627\u0644\u062d\u0627\u0644\u0629</th><th>\u0625\u062c\u0631\u0627\u0621</th></tr></thead>
+    <div class="staff-v124-activity-heading"><div><h4>تفاصيل الحركات وتواريخها</h4>
+      <p>السلف والحسميات والمكافآت والإجازات، مرتّبة من الأحدث إلى الأقدم.</p></div></div>
+    <div class="table-wrap staff-v124-history-wrap" tabindex="0" aria-label="سجل حركات الموظف"><table class="table staff-v123-detail-table"><thead><tr><th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u0646\u0648\u0639</th><th>\u0627\u0644\u0645\u0628\u0644\u063a</th><th>\u0627\u0644\u0633\u0628\u0628</th><th>\u0627\u0644\u062d\u0627\u0644\u0629</th><th>\u0625\u062c\u0631\u0627\u0621</th></tr></thead>
     <tbody>${[
       ...adjustments.map(a=>({id:a.id,date:a.effective_date,kind:adjustmentLabelV123(a),amount:Number(a.amount_original||0),currency:a.currency_code,positive:adjustmentKindV123(a)!=='deduction',reason:adjustmentReasonV123(a),status:a.status,note:a.note,action:a.status==='pending'?'adjustment':null})),
       ...leaves.map(l=>({id:l.id,date:l.work_date,kind:employeeLeaveNameV123(l.status),amount:0,currency:employee.wage_currency_code,positive:false,reason:String(l.note||'').replace(/^MARIA_LEAVE_V123:\S*\s*/,'')||'\u2014',status:'recorded',action:String(l.note||'').startsWith('MARIA_LEAVE_V123:')?'leave':null})),
