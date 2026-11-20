@@ -1,0 +1,143 @@
+{
+  "from_release": "1.0.24",
+  "to_release": "1.0.25",
+  "removed": [],
+  "modified": [
+    {
+      "path": "CHANGELOG_AR.md",
+      "before_sha256": "613637527451f128d3be1d2d075b0a251ea374af4e00311350ac83a38e96b637",
+      "after_sha256": "3d48d07006cd4edc1df34e28f25f1887afb56ed06dd0056928e164393cacd20b"
+    },
+    {
+      "path": "index.html",
+      "before_sha256": "b5c00c47eb87ce00d1b61c84ae1edf2a0c70487d3fde681af505365eedec2f39",
+      "after_sha256": "19a1309fdb73f002fbe036e288f7f864d6aaf4589ce14c9b3b6f3ef0fd8c3406"
+    },
+    {
+      "path": "README_AR.md",
+      "before_sha256": "e3fb0144d80aabe03af9580107a05955a06d5ad0a2a53869f47a2fdd09210564",
+      "after_sha256": "1968e5ae18e775b934346bccaf75ee33e4429e385b0e09a92a06f825a52d3911"
+    },
+    {
+      "path": "VERSION",
+      "before_sha256": "5bc492603bd0397497c6e6471fed4bff5fb6542fce5e1a8683133a9a825cdea7",
+      "after_sha256": "79c1c2fe97b71ef1d5c5dd85eb7af3711a1a74dc05c1ca3aeb63dcc6c8d440d6"
+    },
+    {
+      "path": "assets/styles.css",
+      "before_sha256": "85dc560f74bafb52bcd916b660dcb75db4e939a8e44ca0fb8e44416bf564aefe",
+      "after_sha256": "d5d2a65d0d538b744e5ea05c409166a8ab14a32379fb30c9cd8de59d123d24f2"
+    },
+    {
+      "path": "js/api.js",
+      "before_sha256": "23cf6c2a35242359db4d4ab02de9df76d28026744997472046bbd71bff4b4f12",
+      "after_sha256": "abc4a7b2b7a9b4791e69ed14cb4956f229b86cafaf8fb64d6cb26f19833d25a3"
+    },
+    {
+      "path": "js/app.js",
+      "before_sha256": "b5487cb4cafa34263de2d970a2d0d9772307f8b6eed1e0ddb5fbf0ce5aae8e5b",
+      "after_sha256": "bfda9c78f7cf5b529a7115b932143f07e7755f9d0fe8a999a69878d42c2269fe"
+    },
+    {
+      "path": "js/pages/events-v034.js",
+      "before_sha256": "aeb497ec3700b1374c30ce9633567263079bbb87fc4bcd36b3f31044c131596a",
+      "after_sha256": "e44f4c1ef0a42d4e1571912ddb34a05f7097aced7b64c0791564cbbe9483570c"
+    },
+    {
+      "path": "tests/v038-bookings-external.test.mjs",
+      "before_sha256": "f33ad131e72bf8169904f42a0d1f4056c0a17fed6cfcc4bb687a2331b95c72f5",
+      "after_sha256": "d17e363f03252f77bb6c727727aaf7371a7bb7a41ac4a5b86c86f40b8d5e6b38"
+    },
+    {
+      "path": "tests/v100-release.test.mjs",
+      "before_sha256": "12864250a260a859c503cf133a6a96b81f79aa672d3c0ba65273a84625b604d3",
+      "after_sha256": "fba5918596ef20ce8ca70d28a59324fca7532e7ce414ff239c0ea92c3545b7c9"
+    },
+    {
+      "path": "tests/v103-material-last-purchase-date.test.mjs",
+      "before_sha256": "a9df6313ca7a594ff2c40b4d1067440f94d04889dcaa3cee8a81f7ede0b8e9ba",
+      "after_sha256": "09b0deecce20b56fd4d1f155778e2d150aa4b2dd7f92e435ede3414291dd366e"
+    },
+    {
+      "path": "tests/v105-cashier-reconciliation.test.mjs",
+      "before_sha256": "c6621de50e62949e81141cfaad0bc1465b21bbaee9866bb8f79cbf3b284650d1",
+      "after_sha256": "ec186d260200be31745ebfc40272556f893f1ef36371303949af912eae8895d6"
+    },
+    {
+      "path": "tests/v107-ocr-markdown-arabic.test.mjs",
+      "before_sha256": "c085ad8d2b8bb27791d2ae22e08462eaae87dfdcf166d3e62d32ef7c87035d08",
+      "after_sha256": "d5bcffd71c5065e2655494f51e06912b259642b6e38d277cef1ed282c94c6129"
+    },
+    {
+      "path": "tests/v108-ocr-digit-layout-select.test.mjs",
+      "before_sha256": "8dbfbb1017d413380669d0c3eb9f76260c9ef0232ce379e124421933e9a5c915",
+      "after_sha256": "aa1a46242965c89a9f90d9e1d1a9b36d29a3503790ec0c8889e97a9d61e8193b"
+    },
+    {
+      "path": "tests/v110-ocr-usd-pricing.test.mjs",
+      "before_sha256": "3d43a7029881a9a39980fee37a5893cd70e102452f04bf989b74a88f029c4d4e",
+      "after_sha256": "cb0dc5fb435e45b25630f5c18996db2b972e357515b0c3766154424a6074abb8"
+    },
+    {
+      "path": "tests/v112-invoice-navigation-pricing.test.mjs",
+      "before_sha256": "2f65825035885b9c445bf6cdc64810b0f70c5b7edd2fa844eac41df494983e87",
+      "after_sha256": "c7c368005df07705abb6f29f8609addfab734243a05fb9cfe311442b04dc1706"
+    },
+    {
+      "path": "tests/v114-parallel-usd-header.test.mjs",
+      "before_sha256": "09867b84a76b4b1f19955d0cd42cb46367523d38502543b787fd524e0b86c607",
+      "after_sha256": "f7897be859dab1fcc33db4b81562cde116e8d1622dd1aa1b94aa16696796cbb0"
+    },
+    {
+      "path": "tests/v115-market-usd-proxy-compact.test.mjs",
+      "before_sha256": "64f5d72aa806f0c1df385e4503eaf311ba09cd81db93c959eaa79e2a6c3bc7b3",
+      "after_sha256": "fc402f1712e0f922803dfa6982faa38fa1b20c510b297fc92a0871c773f77259"
+    },
+    {
+      "path": "tests/v116-cashbox-header.test.mjs",
+      "before_sha256": "35e39ab281e11f5d9a817b7ae465a00f83bc2e83b7b76f0b898edd0d8542a5f4",
+      "after_sha256": "31b58bffcca5194529b2a5a354a8585041ad66bd1667a643ea4d766dfcd1ef6b"
+    },
+    {
+      "path": "tests/v119-purchases-supplier-activity.test.mjs",
+      "before_sha256": "2ff20a5d6075e9f015583bc961697de5fbf7c2c17f1b4dc284b6405d60dc9b5f",
+      "after_sha256": "d5b9451cab46c0c94ecfbd38ef6e766c1dd261b3e67d2205caeb9093e0d7d53b"
+    },
+    {
+      "path": "tests/v120-purchases-categories-new-syp.test.mjs",
+      "before_sha256": "5479958a996535e233e366c0f02450b8c3a658f4c3bbc71f3defad3b2213a3e4",
+      "after_sha256": "541bc43ff27585ae76c9add6051dfae6f26fe790cc8b48e31b21a62ebd0836bd"
+    },
+    {
+      "path": "tests/v121-settings-categories-and-new-supplier-invoice.test.mjs",
+      "before_sha256": "39ddf04e5b73e3684c27e440b3e956fdad7ba54c9c1f07d2d53c56d7d8d09f41",
+      "after_sha256": "9ca5a9de9377735b95e50a0ea105311dc9892dd0e8baf05889f4904066f25bdf"
+    },
+    {
+      "path": "tests/v124-cashboxes-supplier-ux.test.mjs",
+      "before_sha256": "3c20258de3202359914702b2bda65ae444c8fa233574c85d7d65a9ff84506945",
+      "after_sha256": "0d6889dffa6111a70f4f2412a8b745ce9260bdeaf52c57c85e9164bc4f1a5b01"
+    }
+  ],
+  "added": [
+    "01_START_NEW_CHAT_MARIA_CFO_v1.0.25_COMPLETE_AR.txt",
+    "README_MARIA_CFO_HANDOFF_v1.0.25_AR.txt",
+    "README_v1.0.25_EVENT_ORDERS_HOSPITALITY_PROFIT_AR.md",
+    "database/Maria-CFO-Web-v1.0.25-Event-Orders-Hospitality-Profit.sql",
+    "database/Maria-CFO-Web-v1.0.25-VERIFY-READONLY.sql",
+    "js/event-finance-v125.js",
+    "qa/v1.0.25/README_AR.md",
+    "qa/v1.0.25/browser-results.json",
+    "qa/v1.0.25/external-form-desktop.png",
+    "qa/v1.0.25/internal-form-mobile.png",
+    "qa/v1.0.25/node-tests.tap.txt",
+    "qa/v1.0.25/orders-desktop.png",
+    "qa/v1.0.25/report-desktop.png",
+    "qa/v1.0.25/test-summary.json",
+    "tests/V125_STAGING_ACCEPTANCE_AR.md",
+    "tests/browser/run-v125-browser.py",
+    "tests/browser/v125-api-mock.js",
+    "tests/v125-event-orders-hospitality-profit.test.mjs"
+  ],
+  "note": "Manifest excludes its own checksum. Original upload and database export are not distributed."
+}

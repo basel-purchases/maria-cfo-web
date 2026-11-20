@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.24';
+import * as api from './api.js?v=1.0.25';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
 import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
@@ -17,7 +17,7 @@ import {
 } from './pages/daily.js?v=1.0.24';
 import { renderEmployees } from './pages/employees.js?v=1.0.24';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.13';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.25';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.23';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
@@ -121,7 +121,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.24</div>
+        <div class="sidebar-foot">Web v1.0.25</div>
       </aside>
 
       <main class="main">

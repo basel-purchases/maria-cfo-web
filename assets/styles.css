@@ -2089,3 +2089,19 @@ select option{background:#fff;color:var(--text);padding:8px}
 .supplier-v124-change{display:inline-flex;padding:4px 8px;border-radius:8px;font-weight:750;white-space:nowrap;}
 @media(max-width:850px){.supplier-kpis-v119{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
 @media(max-width:480px){.supplier-kpis-v119{grid-template-columns:repeat(2,minmax(0,1fr))!important;}}
+
+
+/* v1.0.25 - event order profitability; preserve full-width RTL tables. */
+.event-finance-kpis-v125{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+.event-finance-kpis-v125>div{display:flex;flex-direction:column;gap:7px;padding:16px;border:1px solid var(--border,#e7dfe4);border-radius:14px;background:var(--card,#fff);min-width:0}
+.event-finance-kpis-v125 span,.event-finance-kpis-v125 small{font-size:12px;color:var(--muted,#756972);line-height:1.7}
+.event-finance-kpis-v125 strong{font-size:20px;line-height:1.5;overflow-wrap:anywhere}
+.event-orders-table-v125{min-width:1080px}
+.event-orders-table-v125 td{vertical-align:top}
+.event-orders-table-v125 td small{display:block;max-width:260px;white-space:normal;line-height:1.8}
+.event-orders-table-v125 .event-row-actions-v036{min-width:130px}
+.event-orders-table-v125+.notice{margin-top:12px}
+.event-finance-kpis-v125~.table-wrap{max-width:100%;overflow:auto}
+[data-external-profit-field-v125][hidden],[data-internal-price-v125][hidden],.event-extra-manual-cost-v034[hidden]{display:none!important}
+@media(max-width:1000px){.event-finance-kpis-v125{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.event-finance-kpis-v125{grid-template-columns:1fr}.event-finance-kpis-v125 strong{font-size:19px}.event-tabs-v034{max-width:100%;overflow-x:auto}.finance-section-head .quick-actions{width:100%;flex-wrap:wrap}}

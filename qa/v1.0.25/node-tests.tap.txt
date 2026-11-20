@@ -1,0 +1,2698 @@
+TAP version 13
+# Subtest: Arabic + Persian numerals converted correctly
+ok 1 - Arabic + Persian numerals converted correctly
+  ---
+  duration_ms: 1.372694
+  type: 'test'
+  ...
+# Subtest: two clearly requested employees extracted without guessing
+ok 2 - two clearly requested employees extracted without guessing
+  ---
+  duration_ms: 3.173812
+  type: 'test'
+  ...
+# Subtest: colon after employees in the UI example is accepted without contaminating names
+ok 3 - colon after employees in the UI example is accepted without contaminating names
+  ---
+  duration_ms: 0.436146
+  type: 'test'
+  ...
+# Subtest: read-only question must not be interpreted as employee insertion
+ok 4 - read-only question must not be interpreted as employee insertion
+  ---
+  duration_ms: 0.145408
+  type: 'test'
+  ...
+# Subtest: incomplete multi-employee command is NOT partially saved by deterministic parser
+ok 5 - incomplete multi-employee command is NOT partially saved by deterministic parser
+  ---
+  duration_ms: 0.253622
+  type: 'test'
+  ...
+# Subtest: ambiguous joined conjunction prompts Gemini instead of corrupting a name
+ok 6 - ambiguous joined conjunction prompts Gemini instead of corrupting a name
+  ---
+  duration_ms: 0.292419
+  type: 'test'
+  ...
+# Subtest: employee required fields are always validated
+ok 7 - employee required fields are always validated
+  ---
+  duration_ms: 0.375294
+  type: 'test'
+  ...
+# Subtest: each pay type is persisted to its actual database wage column
+ok 8 - each pay type is persisted to its actual database wage column
+  ---
+  duration_ms: 0.426522
+  type: 'test'
+  ...
+# Subtest: duplicate requested employee names are rejected before bulk insert
+ok 9 - duplicate requested employee names are rejected before bulk insert
+  ---
+  duration_ms: 0.616887
+  type: 'test'
+  ...
+# Subtest: daily zero worked hours is zero due unless paid_leave explicit
+ok 10 - daily zero worked hours is zero due unless paid_leave explicit
+  ---
+  duration_ms: 0.61167
+  type: 'test'
+  ...
+# Subtest: part-day daily wage proportional when calculated shortage applies
+ok 11 - part-day daily wage proportional when calculated shortage applies
+  ---
+  duration_ms: 0.205559
+  type: 'test'
+  ...
+# Subtest: hourly wage counts actual hours and paid leave only
+ok 12 - hourly wage counts actual hours and paid leave only
+  ---
+  duration_ms: 0.122444
+  type: 'test'
+  ...
+# Subtest: images with incomplete prices never proceed directly
+ok 13 - images with incomplete prices never proceed directly
+  ---
+  duration_ms: 0.387283
+  type: 'test'
+  ...
+# Subtest: image review only allows recognized types and positive quantities
+ok 14 - image review only allows recognized types and positive quantities
+  ---
+  duration_ms: 0.196265
+  type: 'test'
+  ...
+# Subtest: only allowed local navigation links may pass model output
+ok 15 - only allowed local navigation links may pass model output
+  ---
+  duration_ms: 1.11768
+  type: 'test'
+  ...
+# Subtest: model-proposed unknown actions are silently dropped, not executed
+ok 16 - model-proposed unknown actions are silently dropped, not executed
+  ---
+  duration_ms: 0.264638
+  type: 'test'
+  ...
+# Subtest: payment and posting always require human confirmation
+ok 17 - payment and posting always require human confirmation
+  ---
+  duration_ms: 0.155704
+  type: 'test'
+  ...
+# Subtest: server runs all database calls as logged-in user, not service role
+ok 18 - server runs all database calls as logged-in user, not service role
+  ---
+  duration_ms: 0.274793
+  type: 'test'
+  ...
+# Subtest: financial posting only uses protected RPCs
+ok 19 - financial posting only uses protected RPCs
+  ---
+  duration_ms: 0.142594
+  type: 'test'
+  ...
+# Subtest: confirmation proposals use one-time pending CAS and expire
+ok 20 - confirmation proposals use one-time pending CAS and expire
+  ---
+  duration_ms: 0.209505
+  type: 'test'
+  ...
+# Subtest: zero-hour guard checks before legacy payroll RPC
+ok 21 - zero-hour guard checks before legacy payroll RPC
+  ---
+  duration_ms: 0.143105
+  type: 'test'
+  ...
+# Subtest: assistant widget includes image review, confirmation and links
+ok 22 - assistant widget includes image review, confirmation and links
+  ---
+  duration_ms: 0.170196
+  type: 'test'
+  ...
+# Subtest: Edge Function deployment is distinct from GitHub Pages static hosting
+ok 23 - Edge Function deployment is distinct from GitHub Pages static hosting
+  ---
+  duration_ms: 0.184417
+  type: 'test'
+  ...
+# Subtest: client will not automatically retry writes on 502
+ok 24 - client will not automatically retry writes on 502
+  ---
+  duration_ms: 0.201322
+  type: 'test'
+  ...
+# Subtest: unjustified attendance zero is never silently recorded
+ok 25 - unjustified attendance zero is never silently recorded
+  ---
+  duration_ms: 0.107371
+  type: 'test'
+  ...
+# Subtest: OCR discount and low confidence must be visible in preview
+ok 26 - OCR discount and low confidence must be visible in preview
+  ---
+  duration_ms: 0.229826
+  type: 'test'
+  ...
+# Subtest: explicit Gemini probe checks actual model reply and logs 429 without a hidden retry of writes
+ok 27 - explicit Gemini probe checks actual model reply and logs 429 without a hidden retry of writes
+  ---
+  duration_ms: 0.144998
+  type: 'test'
+  ...
+# Subtest: Exact type matching for the three original reports
+ok 28 - Exact type matching for the three original reports # SKIP Private original Al-Ameen XLSX fixtures not distributed with public release
+  ---
+  duration_ms: 0.847314
+  type: 'test'
+  ...
+# Subtest: Inventory types, categories, warehouse totals, exact kilogram conversions
+ok 29 - Inventory types, categories, warehouse totals, exact kilogram conversions # SKIP Private original Al-Ameen XLSX fixtures not distributed with public release
+  ---
+  duration_ms: 0.120241
+  type: 'test'
+  ...
+# Subtest: Order groups preserve duplicate legitimate item lines and source net vs sum
+ok 30 - Order groups preserve duplicate legitimate item lines and source net vs sum # SKIP Private original Al-Ameen XLSX fixtures not distributed with public release
+  ---
+  duration_ms: 0.140702
+  type: 'test'
+  ...
+# Subtest: Supplier debit/credit picks movement columns (not repeated summary)
+ok 31 - Supplier debit/credit picks movement columns (not repeated summary) # SKIP Private original Al-Ameen XLSX fixtures not distributed with public release
+  ---
+  duration_ms: 0.101452
+  type: 'test'
+  ...
+# Subtest: xlsx sha256 is stable
+ok 32 - xlsx sha256 is stable # SKIP Private original Al-Ameen XLSX fixtures not distributed with public release
+  ---
+  duration_ms: 0.113441
+  type: 'test'
+  ...
+# Subtest: Excel numeric serial resolves to a valid date
+ok 33 - Excel numeric serial resolves to a valid date
+  ---
+  duration_ms: 0.682186
+  type: 'test'
+  ...
+# Subtest: V024 database migration is a single owner-guarded transaction
+ok 34 - V024 database migration is a single owner-guarded transaction
+  ---
+  duration_ms: 0.952402
+  type: 'test'
+  ...
+# Subtest: Imported files are auditable and cannot directly write staging tables from browser
+ok 35 - Imported files are auditable and cannot directly write staging tables from browser
+  ---
+  duration_ms: 0.1728
+  type: 'test'
+  ...
+# Subtest: Menu quantities never turn into inventory transactions, supplier statements never turn into payments
+ok 36 - Menu quantities never turn into inventory transactions, supplier statements never turn into payments
+  ---
+  duration_ms: 0.387562
+  type: 'test'
+  ...
+# Subtest: No imported order can post without total match, selected cashbox, approved item fingerprint
+ok 37 - No imported order can post without total match, selected cashbox, approved item fingerprint
+  ---
+  duration_ms: 0.141623
+  type: 'test'
+  ...
+# Subtest: Folder sync obtains permission explicitly and manual import requires a type
+ok 38 - Folder sync obtains permission explicitly and manual import requires a type
+  ---
+  duration_ms: 0.114472
+  type: 'test'
+  ...
+# Subtest: Filename selection is exact-report-header validated, not blindly trusted
+ok 39 - Filename selection is exact-report-header validated, not blindly trusted
+  ---
+  duration_ms: 0.133992
+  type: 'test'
+  ...
+# Subtest: ZIP application uses local vendored JSZip and retains old routes
+ok 40 - ZIP application uses local vendored JSZip and retains old routes
+  ---
+  duration_ms: 1.521337
+  type: 'test'
+  ...
+# Subtest: multi-unit stock splits kg and gram with no rounding loss
+ok 41 - multi-unit stock splits kg and gram with no rounding loss
+  ---
+  duration_ms: 1.009537
+  type: 'test'
+  ...
+# Subtest: carton/sachet split tracks conversion of 24 units
+ok 42 - carton/sachet split tracks conversion of 24 units
+  ---
+  duration_ms: 0.376616
+  type: 'test'
+  ...
+# Subtest: hospitality consumes stock but has no sale value and taxes are separate
+ok 43 - hospitality consumes stock but has no sale value and taxes are separate
+  ---
+  duration_ms: 0.268244
+  type: 'test'
+  ...
+# Subtest: date filtering applies to day, month, year correctly
+ok 44 - date filtering applies to day, month, year correctly
+  ---
+  duration_ms: 0.895696
+  type: 'test'
+  ...
+# Subtest: manual transfers appear in both in/out cashbox history
+ok 45 - manual transfers appear in both in/out cashbox history
+  ---
+  duration_ms: 0.432871
+  type: 'test'
+  ...
+# Subtest: Excel output is an OOXML ZIP with no network reference
+ok 46 - Excel output is an OOXML ZIP with no network reference
+  ---
+  duration_ms: 2.816354
+  type: 'test'
+  ...
+# Subtest: dismissed confirmations resolve false and block backdrop during submission
+ok 47 - dismissed confirmations resolve false and block backdrop during submission
+  ---
+  duration_ms: 0.699602
+  type: 'test'
+  ...
+# Subtest: financial migration uses ledger RPCs not direct client updates
+ok 48 - financial migration uses ledger RPCs not direct client updates
+  ---
+  duration_ms: 0.542265
+  type: 'test'
+  ...
+# Subtest: working pages remain and day-hub image duplicate removed
+ok 49 - working pages remain and day-hub image duplicate removed
+  ---
+  duration_ms: 0.77858
+  type: 'test'
+  ...
+# Subtest: employee monthly sends only monthly_salary_original, never missing rate
+ok 50 - employee monthly sends only monthly_salary_original, never missing rate
+  ---
+  duration_ms: 2.121219
+  type: 'test'
+  ...
+# Subtest: employee daily sends only daily_rate_original, never missing rate
+ok 51 - employee daily sends only daily_rate_original, never missing rate
+  ---
+  duration_ms: 0.285659
+  type: 'test'
+  ...
+# Subtest: employee hourly sends only hourly_rate_original, never missing rate
+ok 52 - employee hourly sends only hourly_rate_original, never missing rate
+  ---
+  duration_ms: 0.084667
+  type: 'test'
+  ...
+# Subtest: employee rejects empty, zero, negative and invalid wage; never retries with blank data
+ok 53 - employee rejects empty, zero, negative and invalid wage; never retries with blank data
+  ---
+  duration_ms: 0.405349
+  type: 'test'
+  ...
+# Subtest: normal 8/8 attendance supports zero applied shortage
+ok 54 - normal 8/8 attendance supports zero applied shortage
+  ---
+  duration_ms: 0.353261
+  type: 'test'
+  ...
+# Subtest: normal 8/8 attendance rejects manual shortage 5, with actionable Arabic message
+ok 55 - normal 8/8 attendance rejects manual shortage 5, with actionable Arabic message
+  ---
+  duration_ms: 0.181002
+  type: 'test'
+  ...
+# Subtest: partial 8/3 attendance allows up to 5 shortage hours and rejects 6
+ok 56 - partial 8/3 attendance allows up to 5 shortage hours and rejects 6
+  ---
+  duration_ms: 0.190876
+  type: 'test'
+  ...
+# Subtest: attendance status-based shortage matches database trigger
+ok 57 - attendance status-based shortage matches database trigger
+  ---
+  duration_ms: 0.121813
+  type: 'test'
+  ...
+# Subtest: create_event arguments match all 12 live RPC names
+ok 58 - create_event arguments match all 12 live RPC names
+  ---
+  duration_ms: 0.357818
+  type: 'test'
+  ...
+# Subtest: event guest count is optional, otherwise a nonnegative integer
+ok 59 - event guest count is optional, otherwise a nonnegative integer
+  ---
+  duration_ms: 0.589156
+  type: 'test'
+  ...
+# Subtest: column-aligned OCR finds names, values and preserves source total
+ok 60 - column-aligned OCR finds names, values and preserves source total
+  ---
+  duration_ms: 2.077704
+  type: 'test'
+  ...
+# Subtest: derived unit price is flagged as requiring human review
+ok 61 - derived unit price is flagged as requiring human review
+  ---
+  duration_ms: 2.245967
+  type: 'test'
+  ...
+# Subtest: inconsistent OCR amount group count is rejected, no shifted prices
+ok 62 - inconsistent OCR amount group count is rejected, no shifted prices
+  ---
+  duration_ms: 1.130009
+  type: 'test'
+  ...
+# Subtest: OCR text without verified item table is not guessed
+ok 63 - OCR text without verified item table is not guessed
+  ---
+  duration_ms: 0.734755
+  type: 'test'
+  ...
+# Subtest: ambiguous comma decimals are rejected rather than misread as 100x
+ok 64 - ambiguous comma decimals are rejected rather than misread as 100x
+  ---
+  duration_ms: 0.134061
+  type: 'test'
+  ...
+# Subtest: OCR generates editable review rows without triggering financial calls automatically
+ok 65 - OCR generates editable review rows without triggering financial calls automatically
+  ---
+  duration_ms: 0.579611
+  type: 'test'
+  ...
+# Subtest: fast engine uses documented Arabic code and maps E201 to useful notice
+ok 66 - fast engine uses documented Arabic code and maps E201 to useful notice
+  ---
+  duration_ms: 0.143997
+  type: 'test'
+  ...
+# Subtest: gram display for sugar recipe with kilogram inventory base is exactly converted
+ok 67 - gram display for sugar recipe with kilogram inventory base is exactly converted
+  ---
+  duration_ms: 13.621581
+  type: 'test'
+  ...
+# Subtest: switching between grams and kilograms never mutates the stored base quantity
+ok 68 - switching between grams and kilograms never mutates the stored base quantity
+  ---
+  duration_ms: 0.192069
+  type: 'test'
+  ...
+# Subtest: Arabic and eastern Arabic digits are parsed without inventing missing quantity
+ok 69 - Arabic and eastern Arabic digits are parsed without inventing missing quantity
+  ---
+  duration_ms: 3.11946
+  type: 'test'
+  ...
+# Subtest: OCR exact match is unambiguous; fuzzy names are not silently mapped
+ok 70 - OCR exact match is unambiguous; fuzzy names are not silently mapped
+  ---
+  duration_ms: 0.942797
+  type: 'test'
+  ...
+# Subtest: a complete order is ready, wrong cashbox or missing price prevents posting
+ok 71 - a complete order is ready, wrong cashbox or missing price prevents posting
+  ---
+  duration_ms: 0.771881
+  type: 'test'
+  ...
+# Subtest: purchase requires mapped unit and discount within item total
+ok 72 - purchase requires mapped unit and discount within item total
+  ---
+  duration_ms: 0.474363
+  type: 'test'
+  ...
+# Subtest: an unprocessed image remains visible while incomplete; a published image remains labelled published
+ok 73 - an unprocessed image remains visible while incomplete; a published image remains labelled published
+  ---
+  duration_ms: 0.143185
+  type: 'test'
+  ...
+# Subtest: cashbox adjustment migration uses valid type per direction; no constraint weakening
+ok 74 - cashbox adjustment migration uses valid type per direction; no constraint weakening
+  ---
+  duration_ms: 0.185579
+  type: 'test'
+  ...
+# Subtest: local pictures are not sent to Supabase; saving drafts uses existing protected API functions
+ok 75 - local pictures are not sent to Supabase; saving drafts uses existing protected API functions
+  ---
+  duration_ms: 0.533081
+  type: 'test'
+  ...
+# Subtest: two OCR modes available, both default to Arabic and English
+ok 76 - two OCR modes available, both default to Arabic and English
+  ---
+  duration_ms: 1.806286
+  type: 'test'
+  ...
+# Subtest: new images route and styles integrated without changing config.js
+ok 77 - new images route and styles integrated without changing config.js
+  ---
+  duration_ms: 0.204558
+  type: 'test'
+  ...
+# Subtest: OCR engines have correct free monthly announced limits, not fake live balances
+ok 78 - OCR engines have correct free monthly announced limits, not fake live balances
+  ---
+  duration_ms: 1.227876
+  type: 'test'
+  ...
+# Subtest: engine 1 uses Arabic and engine 3 uses automatic language, no engine 2 for Arabic
+ok 79 - engine 1 uses Arabic and engine 3 uses automatic language, no engine 2 for Arabic
+  ---
+  duration_ms: 0.407212
+  type: 'test'
+  ...
+# Subtest: images never go directly from client to OCR.space; server checks owner
+ok 80 - images never go directly from client to OCR.space; server checks owner
+  ---
+  duration_ms: 0.185699
+  type: 'test'
+  ...
+# Subtest: app-wide usage counters are not displayed as official OCR.space quota
+ok 81 - app-wide usage counters are not displayed as official OCR.space quota
+  ---
+  duration_ms: 0.164628
+  type: 'test'
+  ...
+# Subtest: normal crop never crops invalid area
+ok 82 - normal crop never crops invalid area
+  ---
+  duration_ms: 1.321997
+  type: 'test'
+  ...
+# Subtest: new purchase material requires a selected valid base unit, not an invented default
+ok 83 - new purchase material requires a selected valid base unit, not an invented default
+  ---
+  duration_ms: 1.248788
+  type: 'test'
+  ...
+# Subtest: legacy order records remain protected and invoice OCR cannot create an order
+ok 84 - legacy order records remain protected and invoice OCR cannot create an order
+  ---
+  duration_ms: 0.341073
+  type: 'test'
+  ...
+# Subtest: document detail is full width, gallery is horizontal and cashbox belongs in publish panel
+ok 85 - document detail is full width, gallery is horizontal and cashbox belongs in publish panel
+  ---
+  duration_ms: 0.149154
+  type: 'test'
+  ...
+# Subtest: financial transactions remain on existing validated RPC and confirmation paths
+ok 86 - financial transactions remain on existing validated RPC and confirmation paths
+  ---
+  duration_ms: 0.481454
+  type: 'test'
+  ...
+# Subtest: 34.583333 cartons with 24 sachets per carton shows 34 cartons and 14 sachets, NOT 20
+ok 87 - 34.583333 cartons with 24 sachets per carton shows 34 cartons and 14 sachets, NOT 20
+  ---
+  duration_ms: 16.087009
+  type: 'test'
+  ...
+# Subtest: inverse packaging works when sachet is the base stock unit
+ok 88 - inverse packaging works when sachet is the base stock unit
+  ---
+  duration_ms: 0.576597
+  type: 'test'
+  ...
+# Subtest: change display direction without mutating stored quantity
+ok 89 - change display direction without mutating stored quantity
+  ---
+  duration_ms: 0.381063
+  type: 'test'
+  ...
+# Subtest: unmapped units remain as original stock: no invented conversions
+ok 90 - unmapped units remain as original stock: no invented conversions
+  ---
+  duration_ms: 0.181783
+  type: 'test'
+  ...
+# Subtest: printed Arabic item with valid quantity and price may be promoted only on explicit action
+ok 91 - printed Arabic item with valid quantity and price may be promoted only on explicit action
+  ---
+  duration_ms: 4.337181
+  type: 'test'
+  ...
+# Subtest: gibberish from the uploaded handwritten invoice does not become 15 arbitrary purchase lines
+ok 92 - gibberish from the uploaded handwritten invoice does not become 15 arbitrary purchase lines
+  ---
+  duration_ms: 0.753824
+  type: 'test'
+  ...
+# Subtest: image crop validates bounds and does not modify image blob
+ok 93 - image crop validates bounds and does not modify image blob
+  ---
+  duration_ms: 0.216906
+  type: 'test'
+  ...
+# Subtest: weak OCR is marked uncertain; confidence is an estimate, not posting permission
+ok 94 - weak OCR is marked uncertain; confidence is an estimate, not posting permission
+  ---
+  duration_ms: 0.15288
+  type: 'test'
+  ...
+# Subtest: OCR generates editable invoice lines but never posts to Supabase on extraction
+ok 95 - OCR generates editable invoice lines but never posts to Supabase on extraction
+  ---
+  duration_ms: 1.179604
+  type: 'test'
+  ...
+# Subtest: editing an existing legacy sachet named ظرف is allowed; creating another ambiguous name is not
+ok 96 - editing an existing legacy sachet named ظرف is allowed; creating another ambiguous name is not
+  ---
+  duration_ms: 0.641745
+  type: 'test'
+  ...
+# Subtest: sugar and ghee tablespoons appear only once with independent named definitions
+ok 97 - sugar and ghee tablespoons appear only once with independent named definitions
+  ---
+  duration_ms: 1.001886
+  type: 'test'
+  ...
+# Subtest: names are normalized for whitespace, case, diacritics and Arabic alefs
+ok 98 - names are normalized for whitespace, case, diacritics and Arabic alefs
+  ---
+  duration_ms: 0.186601
+  type: 'test'
+  ...
+# Subtest: duplicate unit name rejected globally, not just within same material
+ok 99 - duplicate unit name rejected globally, not just within same material
+  ---
+  duration_ms: 1.309399
+  type: 'test'
+  ...
+# Subtest: generic contextual unit names are refused for new material-specific definitions
+ok 100 - generic contextual unit names are refused for new material-specific definitions
+  ---
+  duration_ms: 0.118668
+  type: 'test'
+  ...
+# Subtest: a dedicated spoon cannot be reassigned from sugar to ghee
+ok 101 - a dedicated spoon cannot be reassigned from sugar to ghee
+  ---
+  duration_ms: 0.307011
+  type: 'test'
+  ...
+# Subtest: invalid factors, missing relation and missing material are rejected
+ok 102 - invalid factors, missing relation and missing material are rejected
+  ---
+  duration_ms: 0.262845
+  type: 'test'
+  ...
+# Subtest: legacy shared spoon is shown as ambiguous instead of silently merged or removed
+ok 103 - legacy shared spoon is shown as ambiguous instead of silently merged or removed
+  ---
+  duration_ms: 0.813934
+  type: 'test'
+  ...
+# Subtest: canonical standard units are protected and their global conversion is shown
+ok 104 - canonical standard units are protected and their global conversion is shown
+  ---
+  duration_ms: 0.295814
+  type: 'test'
+  ...
+# Subtest: a custom legacy name is preferred to a generic SPOON code display
+ok 105 - a custom legacy name is preferred to a generic SPOON code display
+  ---
+  duration_ms: 0.364478
+  type: 'test'
+  ...
+# Subtest: units editor and material conversion flow call the new atomic RPC
+ok 106 - units editor and material conversion flow call the new atomic RPC
+  ---
+  duration_ms: 0.350798
+  type: 'test'
+  ...
+# Subtest: migration enforces name, ownership, authorization and prevents destructive history rewrites
+ok 107 - migration enforces name, ownership, authorization and prevents destructive history rewrites
+  ---
+  duration_ms: 0.27328
+  type: 'test'
+  ...
+# Subtest: numbers format for relationships preserves small decimal amounts
+ok 108 - numbers format for relationships preserves small decimal amounts
+  ---
+  duration_ms: 0.155824
+  type: 'test'
+  ...
+# Subtest: flat wage maps to its own database column and never requires attendance
+ok 109 - flat wage maps to its own database column and never requires attendance
+  ---
+  duration_ms: 1.08444
+  type: 'test'
+  ...
+# Subtest: salary period year/month/day are exact including leap February
+ok 110 - salary period year/month/day are exact including leap February
+  ---
+  duration_ms: 0.993714
+  type: 'test'
+  ...
+# Subtest: advance installment suggestions respect balance and salary cap
+ok 111 - advance installment suggestions respect balance and salary cap
+  ---
+  duration_ms: 6.664821
+  type: 'test'
+  ...
+# Subtest: daily payroll migration permits separate employees while preserving per-employee note uniqueness
+ok 112 - daily payroll migration permits separate employees while preserving per-employee note uniqueness
+  ---
+  duration_ms: 0.329636
+  type: 'test'
+  ...
+# Subtest: staff settings and paid leave status store real payroll policy
+ok 113 - staff settings and paid leave status store real payroll policy
+  ---
+  duration_ms: 1.245573
+  type: 'test'
+  ...
+# Subtest: fixed payout stays atomic and never writes directly to salary ledger from browser
+ok 114 - fixed payout stays atomic and never writes directly to salary ledger from browser
+  ---
+  duration_ms: 0.304658
+  type: 'test'
+  ...
+# Subtest: fixed wage advances also recorded and displayed
+ok 115 - fixed wage advances also recorded and displayed
+  ---
+  duration_ms: 0.256316
+  type: 'test'
+  ...
+# Subtest: salary history is paginated at server with day month and year
+ok 116 - salary history is paginated at server with day month and year
+  ---
+  duration_ms: 0.315595
+  type: 'test'
+  ...
+# Subtest: catalog and basic assets pages use distinct categories and owner RLS
+ok 117 - catalog and basic assets pages use distinct categories and owner RLS
+  ---
+  duration_ms: 0.949888
+  type: 'test'
+  ...
+# Subtest: single transaction, dependant functions created after their backing table
+ok 118 - single transaction, dependant functions created after their backing table
+  ---
+  duration_ms: 0.438028
+  type: 'test'
+  ...
+# Subtest: old functional routes remain present
+ok 119 - old functional routes remain present
+  ---
+  duration_ms: 0.374333
+  type: 'test'
+  ...
+# Subtest: Pagination handles zero rows, last page, invalid page, large catalogs
+ok 120 - Pagination handles zero rows, last page, invalid page, large catalogs
+  ---
+  duration_ms: 1.648228
+  type: 'test'
+  ...
+# Subtest: Supplier zero, unpaid and credit balances use the imported balance, not transaction sums
+ok 121 - Supplier zero, unpaid and credit balances use the imported balance, not transaction sums
+  ---
+  duration_ms: 0.152028
+  type: 'test'
+  ...
+# Subtest: Imported supplier accounts join by stable ID or external account without duplicates
+ok 122 - Imported supplier accounts join by stable ID or external account without duplicates
+  ---
+  duration_ms: 6.97653
+  type: 'test'
+  ...
+# Subtest: Imported warehouse snapshot lookup does not merge different item kinds or mislabel base stock
+ok 123 - Imported warehouse snapshot lookup does not merge different item kinds or mislabel base stock
+  ---
+  duration_ms: 0.2329
+  type: 'test'
+  ...
+# Subtest: Actual pages request server-side order and recipe paging; there are no unbounded card renders
+ok 124 - Actual pages request server-side order and recipe paging; there are no unbounded card renders
+  ---
+  duration_ms: 0.901145
+  type: 'test'
+  ...
+# Subtest: CSS protects visible controls from one-letter-per-line materials table breakage and styles all RTL dropdowns
+ok 125 - CSS protects visible controls from one-letter-per-line materials table breakage and styles all RTL dropdowns
+  ---
+  duration_ms: 0.8911
+  type: 'test'
+  ...
+# Subtest: SQL stores Excel negotiable-paper balance without changing historical paid transactions
+ok 126 - SQL stores Excel negotiable-paper balance without changing historical paid transactions
+  ---
+  duration_ms: 1.275167
+  type: 'test'
+  ...
+# Subtest: v0.25 keeps the Al-Ameen import, OCR and legacy routes intact
+ok 127 - v0.25 keeps the Al-Ameen import, OCR and legacy routes intact
+  ---
+  duration_ms: 0.816328
+  type: 'test'
+  ...
+# Subtest: v0.25 real Al-Ameen supplier report captures all statement columns and flags only positive balances
+ok 128 - v0.25 real Al-Ameen supplier report captures all statement columns and flags only positive balances # SKIP Original private report not distributed with public release
+  ---
+  duration_ms: 0.516366
+  type: 'test'
+  ...
+# Subtest: the extracted real workbook rows load in the same validated import parser and contains precisely 75 recipes
+ok 129 - the extracted real workbook rows load in the same validated import parser and contains precisely 75 recipes
+  ---
+  duration_ms: 8.282674
+  type: 'test'
+  ...
+# Subtest: no duplicate same raw material within a recipe; all lines belong to existing recipe key
+ok 130 - no duplicate same raw material within a recipe; all lines belong to existing recipe key
+  ---
+  duration_ms: 4.338723
+  type: 'test'
+  ...
+# Subtest: rejects missing ingredient quantities, wrong menu count and orphan lines
+ok 131 - rejects missing ingredient quantities, wrong menu count and orphan lines
+  ---
+  duration_ms: 8.507311
+  type: 'test'
+  ...
+# Subtest: server import is atomic, owner-only and reuses historical recipe-safe writer
+ok 132 - server import is atomic, owner-only and reuses historical recipe-safe writer
+  ---
+  duration_ms: 0.711009
+  type: 'test'
+  ...
+# Subtest: all table exports appear globally, and server-paged filtering is exported across pages
+ok 133 - all table exports appear globally, and server-paged filtering is exported across pages
+  ---
+  duration_ms: 0.988186
+  type: 'test'
+  ...
+# Subtest: release branches from v0.25 only; rejected v0.26 is absent
+ok 134 - release branches from v0.25 only; rejected v0.26 is absent
+  ---
+  duration_ms: 0.280662
+  type: 'test'
+  ...
+# Subtest: Arabic and technical equivalents work, while physical conversions remain forbidden
+ok 135 - Arabic and technical equivalents work, while physical conversions remain forbidden
+  ---
+  duration_ms: 0.710688
+  type: 'test'
+  ...
+# Subtest: specific materials in the real Excel get canonical base units with no quantity edits
+ok 136 - specific materials in the real Excel get canonical base units with no quantity edits
+  ---
+  duration_ms: 4.894119
+  type: 'test'
+  ...
+# Subtest: full 75/729 approved workbook can be matched when catalog uses normal v0.24 unit codes
+ok 137 - full 75/729 approved workbook can be matched when catalog uses normal v0.24 unit codes
+  ---
+  duration_ms: 6.516568
+  type: 'test'
+  ...
+# Subtest: unknown and ambiguous units still block; existing stock cannot be modified
+ok 138 - unknown and ambiguous units still block; existing stock cannot be modified
+  ---
+  duration_ms: 0.294162
+  type: 'test'
+  ...
+# Subtest: browser workflow always sends canonical payload to existing RPC
+ok 139 - browser workflow always sends canonical payload to existing RPC
+  ---
+  duration_ms: 0.734435
+  type: 'test'
+  ...
+# Subtest: approval workbook is still parsed without changing amounts
+ok 140 - approval workbook is still parsed without changing amounts
+  ---
+  duration_ms: 17.099591
+  type: 'test'
+  ...
+# Subtest: known catalog prices are used and Excel prices are NEVER trusted
+ok 141 - known catalog prices are used and Excel prices are NEVER trusted
+  ---
+  duration_ms: 0.237947
+  type: 'test'
+  ...
+# Subtest: missing catalog price is NOT incorrectly converted to free/zero
+ok 142 - missing catalog price is NOT incorrectly converted to free/zero
+  ---
+  duration_ms: 0.188874
+  type: 'test'
+  ...
+# Subtest: v0.28 page calls new reimport RPC and displays incomplete pricing
+ok 143 - v0.28 page calls new reimport RPC and displays incomplete pricing
+  ---
+  duration_ms: 1.02428
+  type: 'test'
+  ...
+# Subtest: legacy kitchen purchase postings are canonical, atomic, and do not invent cash payments
+ok 144 - legacy kitchen purchase postings are canonical, atomic, and do not invent cash payments
+  ---
+  duration_ms: 0.99734
+  type: 'test'
+  ...
+# Subtest: balance reconciliation prevents treating gross historical purchases as on-hand
+ok 145 - balance reconciliation prevents treating gross historical purchases as on-hand
+  ---
+  duration_ms: 0.297998
+  type: 'test'
+  ...
+# Subtest: reset cannot be triggered by an accidental paste
+ok 146 - reset cannot be triggered by an accidental paste
+  ---
+  duration_ms: 0.263586
+  type: 'test'
+  ...
+# Subtest: source movements are parsed without importing sales as purchases
+ok 147 - source movements are parsed without importing sales as purchases # SKIP Historical 44,657-row external fixture is not bundled with the website release
+  ---
+  duration_ms: 0.616357
+  type: 'test'
+  ...
+# Subtest: does not silently permit unknown material codes
+ok 148 - does not silently permit unknown material codes
+  ---
+  duration_ms: 0.519822
+  type: 'test'
+  ...
+# Subtest: material requires warehouse, positive balance AND a confirmed price
+ok 149 - material requires warehouse, positive balance AND a confirmed price
+  ---
+  duration_ms: 0.873863
+  type: 'test'
+  ...
+# Subtest: menu needs positive selling price; assets are based on physical quantity/warehouse
+ok 150 - menu needs positive selling price; assets are based on physical quantity/warehouse
+  ---
+  duration_ms: 1.333685
+  type: 'test'
+  ...
+# Subtest: recipe must match every material, priced, positive stock and a real warehouse
+ok 151 - recipe must match every material, priced, positive stock and a real warehouse
+  ---
+  duration_ms: 0.273831
+  type: 'test'
+  ...
+# Subtest: the legacy 75-recipe workbook remains readable; new importer rejects unsupported data
+ok 152 - the legacy 75-recipe workbook remains readable; new importer rejects unsupported data
+  ---
+  duration_ms: 6.33204
+  type: 'test'
+  ...
+# Subtest: new SQL guards price and stock server-side, no unknown material auto-create
+ok 153 - new SQL guards price and stock server-side, no unknown material auto-create
+  ---
+  duration_ms: 0.842257
+  type: 'test'
+  ...
+# Subtest: reset safe-default not confirmed and new schemas included
+ok 154 - reset safe-default not confirmed and new schemas included
+  ---
+  duration_ms: 0.304949
+  type: 'test'
+  ...
+# Subtest: four types and master data parse without inventing prices or recipes
+ok 155 - four types and master data parse without inventing prices or recipes
+  ---
+  duration_ms: 1.854749
+  type: 'test'
+  ...
+# Subtest: hidden source material code resolves formula cells not cached
+ok 156 - hidden source material code resolves formula cells not cached
+  ---
+  duration_ms: 0.208504
+  type: 'test'
+  ...
+# Subtest: invalid workbook structures or inventory numbers are rejected
+ok 157 - invalid workbook structures or inventory numbers are rejected
+  ---
+  duration_ms: 0.506391
+  type: 'test'
+  ...
+# Subtest: one central sidebar link immediately before settings and no recipes-import button
+ok 158 - one central sidebar link immediately before settings and no recipes-import button
+  ---
+  duration_ms: 1.222178
+  type: 'test'
+  ...
+# Subtest: server migration has atomic ingestion, owner check, source types, history, and guarded 24h undo
+ok 159 - server migration has atomic ingestion, owner check, source types, history, and guarded 24h undo
+  ---
+  duration_ms: 0.555406
+  type: 'test'
+  ...
+# Subtest: front-end uses one RPC per file and does not publish financial transactions
+ok 160 - front-end uses one RPC per file and does not publish financial transactions
+  ---
+  duration_ms: 0.207963
+  type: 'test'
+  ...
+# Subtest: real legacy Ameen report parsers still handle orders, inventory and suppliers
+ok 161 - real legacy Ameen report parsers still handle orders, inventory and suppliers
+  ---
+  duration_ms: 1.181106
+  type: 'test'
+  ...
+# Subtest: type five appears after the previous four without changing their order
+ok 162 - type five appears after the previous four without changing their order
+  ---
+  duration_ms: 1.168717
+  type: 'test'
+  ...
+# Subtest: employee parser maps the five columns and all wages are monthly SYP
+ok 163 - employee parser maps the five columns and all wages are monthly SYP
+  ---
+  duration_ms: 13.489292
+  type: 'test'
+  ...
+# Subtest: mismatched/duplicated/missing/nonpositive salary employee files are rejected
+ok 164 - mismatched/duplicated/missing/nonpositive salary employee files are rejected
+  ---
+  duration_ms: 0.943509
+  type: 'test'
+  ...
+# Subtest: trims extra spaces, handles Arabic digits and phone as string and detects column synonyms
+ok 165 - trims extra spaces, handles Arabic digits and phone as string and detects column synonyms
+  ---
+  duration_ms: 0.329295
+  type: 'test'
+  ...
+# Subtest: UI fifth type has preview, routing to employee RPC, history and employee detail display
+ok 166 - UI fifth type has preview, routing to employee RPC, history and employee detail display
+  ---
+  duration_ms: 1.311021
+  type: 'test'
+  ...
+# Subtest: safe atomic backend migration keeps prior four paths and protects salary financial ledger
+ok 167 - safe atomic backend migration keeps prior four paths and protects salary financial ledger
+  ---
+  duration_ms: 0.314873
+  type: 'test'
+  ...
+# Subtest: monthly employee editor accepts real fields and normalizes name and dates
+ok 168 - monthly employee editor accepts real fields and normalizes name and dates
+  ---
+  duration_ms: 1.288097
+  type: 'test'
+  ...
+# Subtest: profile rejects missing, invalid, impossible or reversed dates and suspicious wage
+ok 169 - profile rejects missing, invalid, impossible or reversed dates and suspicious wage
+  ---
+  duration_ms: 0.419631
+  type: 'test'
+  ...
+# Subtest: bonus uses employee currency and valid reason and cannot belong to fixed or inactive employee
+ok 170 - bonus uses employee currency and valid reason and cannot belong to fixed or inactive employee
+  ---
+  duration_ms: 0.558871
+  type: 'test'
+  ...
+# Subtest: pending totals exclude approved and voided bonuses and do not mix currencies
+ok 171 - pending totals exclude approved and voided bonuses and do not mix currencies
+  ---
+  duration_ms: 0.164908
+  type: 'test'
+  ...
+# Subtest: quick import uses only the custom modal, for confirmation AND undo; no browser confirm
+ok 172 - quick import uses only the custom modal, for confirmation AND undo; no browser confirm
+  ---
+  duration_ms: 0.369716
+  type: 'test'
+  ...
+# Subtest: employee rows open accessible dialogs and show payroll, leaves, and advances
+ok 173 - employee rows open accessible dialogs and show payroll, leaves, and advances
+  ---
+  duration_ms: 0.296886
+  type: 'test'
+  ...
+# Subtest: bonus management is wired through the existing payroll adjustment engine
+ok 174 - bonus management is wired through the existing payroll adjustment engine
+  ---
+  duration_ms: 1.48314
+  type: 'test'
+  ...
+# Subtest: search ignores Arabic vowel marks, hamza variants, and different Arabic digits
+ok 175 - search ignores Arabic vowel marks, hamza variants, and different Arabic digits
+  ---
+  duration_ms: 3.130827
+  type: 'test'
+  ...
+# Subtest: employee search ranks the exact employee name and does not match unrelated table badges
+ok 176 - employee search ranks the exact employee name and does not match unrelated table badges
+  ---
+  duration_ms: 0.580133
+  type: 'test'
+  ...
+# Subtest: real shortage shows warning, effective shortage and difference
+ok 177 - real shortage shows warning, effective shortage and difference
+  ---
+  duration_ms: 0.346922
+  type: 'test'
+  ...
+# Subtest: waived shortage is visible as an exception but is not counted as a payroll deduction
+ok 178 - waived shortage is visible as an exception but is not counted as a payroll deduction
+  ---
+  duration_ms: 0.164848
+  type: 'test'
+  ...
+# Subtest: extra hours retain the difference between actual hours and approved overtime
+ok 179 - extra hours retain the difference between actual hours and approved overtime
+  ---
+  duration_ms: 0.363706
+  type: 'test'
+  ...
+# Subtest: paid leave, holidays and day off are excused; not marked as shortages
+ok 180 - paid leave, holidays and day off are excused; not marked as shortages
+  ---
+  duration_ms: 0.155253
+  type: 'test'
+  ...
+# Subtest: filters cover all, exceptions, shortage and extra, including absences
+ok 181 - filters cover all, exceptions, shortage and extra, including absences
+  ---
+  duration_ms: 0.395044
+  type: 'test'
+  ...
+# Subtest: attendance screen is retired; direct employee actions and dated exceptions replace it
+ok 182 - attendance screen is retired; direct employee actions and dated exceptions replace it
+  ---
+  duration_ms: 1.769862
+  type: 'test'
+  ...
+# Subtest: bonus employee filter is one search input and dialog selection uses shared combobox
+ok 183 - bonus employee filter is one search input and dialog selection uses shared combobox
+  ---
+  duration_ms: 1.019102
+  type: 'test'
+  ...
+# Subtest: backdrop dismissal respects only the topmost dialog and the busy state
+ok 184 - backdrop dismissal respects only the topmost dialog and the busy state
+  ---
+  duration_ms: 0.976067
+  type: 'test'
+  ...
+# Subtest: selected payroll period is a validated first-of-month date
+ok 185 - selected payroll period is a validated first-of-month date
+  ---
+  duration_ms: 1.167646
+  type: 'test'
+  ...
+# Subtest: payroll amounts never silently merge different currencies
+ok 186 - payroll amounts never silently merge different currencies
+  ---
+  duration_ms: 0.633002
+  type: 'test'
+  ...
+# Subtest: only approved payroll with remaining balance is payable
+ok 187 - only approved payroll with remaining balance is payable
+  ---
+  duration_ms: 0.496406
+  type: 'test'
+  ...
+# Subtest: payroll search tolerates Arabic hamza and diacritics
+ok 188 - payroll search tolerates Arabic hamza and diacritics
+  ---
+  duration_ms: 0.158277
+  type: 'test'
+  ...
+# Subtest: table-based menu rules never use incorrect global ceil total
+ok 189 - table-based menu rules never use incorrect global ceil total
+  ---
+  duration_ms: 0.336816
+  type: 'test'
+  ...
+# Subtest: per-person, per-table and fixed rules all produce correct quantities
+ok 190 - per-person, per-table and fixed rules all produce correct quantities
+  ---
+  duration_ms: 0.102774
+  type: 'test'
+  ...
+# Subtest: recipe without known cost invalidates projected profit
+ok 191 - recipe without known cost invalidates projected profit
+  ---
+  duration_ms: 0.098448
+  type: 'test'
+  ...
+# Subtest: planned event correctly separates food, music, labor, waste reserve and margin
+ok 192 - planned event correctly separates food, music, labor, waste reserve and margin
+  ---
+  duration_ms: 0.128964
+  type: 'test'
+  ...
+# Subtest: pending extra tab bills accrue revenue/cost but never count as cash received
+ok 193 - pending extra tab bills accrue revenue/cost but never count as cash received
+  ---
+  duration_ms: 0.494603
+  type: 'test'
+  ...
+# Subtest: settled extra gets actual cashbox FX snapshot and contributes its product cost
+ok 194 - settled extra gets actual cashbox FX snapshot and contributes its product cost
+  ---
+  duration_ms: 0.361693
+  type: 'test'
+  ...
+# Subtest: cancelled extras vanish from revenue/cost; refunded extras keep consumed cost
+ok 195 - cancelled extras vanish from revenue/cost; refunded extras keep consumed cost
+  ---
+  duration_ms: 0.201934
+  type: 'test'
+  ...
+# Subtest: cash payments are protected RPC calls, never direct writes from browser
+ok 196 - cash payments are protected RPC calls, never direct writes from browser
+  ---
+  duration_ms: 0.299931
+  type: 'test'
+  ...
+# Subtest: cash-sensitive event rules prevent unpaid exits, missing recipes and unknown guests
+ok 197 - cash-sensitive event rules prevent unpaid exits, missing recipes and unknown guests
+  ---
+  duration_ms: 0.121112
+  type: 'test'
+  ...
+# Subtest: SQL event extras snapshot food COGS, currency FX, payment and refund
+ok 198 - SQL event extras snapshot food COGS, currency FX, payment and refund
+  ---
+  duration_ms: 0.090807
+  type: 'test'
+  ...
+# Subtest: user-facing v0.34 routes contain salary desk, event map, activity log, receipt and tab exports
+ok 199 - user-facing v0.34 routes contain salary desk, event map, activity log, receipt and tab exports
+  ---
+  duration_ms: 0.2791
+  type: 'test'
+  ...
+# Subtest: release preserves all old functionality and omits config from editable project tree
+ok 200 - release preserves all old functionality and omits config from editable project tree
+  ---
+  duration_ms: 0.16613
+  type: 'test'
+  ...
+# Subtest: group booking fills first table and immediate right neighbour
+ok 201 - group booking fills first table and immediate right neighbour
+  ---
+  duration_ms: 2.38123
+  type: 'test'
+  ...
+# Subtest: booked neighbour cannot be crossed to reach distant empty table
+ok 202 - booked neighbour cannot be crossed to reach distant empty table
+  ---
+  duration_ms: 0.227102
+  type: 'test'
+  ...
+# Subtest: left neighbour can be used when right neighbour is reserved
+ok 203 - left neighbour can be used when right neighbour is reserved
+  ---
+  duration_ms: 0.253441
+  type: 'test'
+  ...
+# Subtest: guest display fills unnamed attendees with owner name
+ok 204 - guest display fills unnamed attendees with owner name
+  ---
+  duration_ms: 0.164187
+  type: 'test'
+  ...
+# Subtest: v035 SQL keeps batch and group changes atomic and owner-only
+ok 205 - v035 SQL keeps batch and group changes atomic and owner-only
+  ---
+  duration_ms: 0.3329
+  type: 'test'
+  ...
+# Subtest: v1.0.13 UI reserves seats without exposing legacy physical table assignments
+ok 206 - v1.0.13 UI reserves seats without exposing legacy physical table assignments
+  ---
+  duration_ms: 1.128887
+  type: 'test'
+  ...
+# Subtest: two skewers per guest from a 10-skewer kilogram use .2 KG and 16 KG for 80
+ok 207 - two skewers per guest from a 10-skewer kilogram use .2 KG and 16 KG for 80
+  ---
+  duration_ms: 1.93561
+  type: 'test'
+  ...
+# Subtest: a multi-person plate is rounded separately at each table
+ok 208 - a multi-person plate is rounded separately at each table
+  ---
+  duration_ms: 0.283646
+  type: 'test'
+  ...
+# Subtest: do not count cancelled tables in shared-bowl demand
+ok 209 - do not count cancelled tables in shared-bowl demand
+  ---
+  duration_ms: 0.170687
+  type: 'test'
+  ...
+# Subtest: a menu unit can be a fractional serving without altering the recipe
+ok 210 - a menu unit can be a fractional serving without altering the recipe
+  ---
+  duration_ms: 0.144317
+  type: 'test'
+  ...
+# Subtest: unknown and excessive conversions fail instead of creating fake food costs
+ok 211 - unknown and excessive conversions fail instead of creating fake food costs
+  ---
+  duration_ms: 0.649747
+  type: 'test'
+  ...
+# Subtest: plate combines multiple recipes once at the correct fraction per person
+ok 212 - plate combines multiple recipes once at the correct fraction per person
+  ---
+  duration_ms: 0.283256
+  type: 'test'
+  ...
+# Subtest: missing recipe costs remain missing rather than being counted as zero
+ok 213 - missing recipe costs remain missing rather than being counted as zero
+  ---
+  duration_ms: 0.237277
+  type: 'test'
+  ...
+# Subtest: existing global KG to skewer conversion can be suggested, not guessed
+ok 214 - existing global KG to skewer conversion can be suggested, not guessed
+  ---
+  duration_ms: 0.693082
+  type: 'test'
+  ...
+# Subtest: reversed global conversion is used in the right direction
+ok 215 - reversed global conversion is used in the right direction
+  ---
+  duration_ms: 0.430267
+  type: 'test'
+  ...
+# Subtest: material-specific named units are suggestions only for a recipe ingredient with matching base KG
+ok 216 - material-specific named units are suggestions only for a recipe ingredient with matching base KG
+  ---
+  duration_ms: 0.62534
+  type: 'test'
+  ...
+# Subtest: conflicting material conversions do not silently choose a weight
+ok 217 - conflicting material conversions do not silently choose a weight
+  ---
+  duration_ms: 0.298809
+  type: 'test'
+  ...
+# Subtest: migration uses canonical event rule for recipe pricing and inventory and protects owner
+ok 218 - migration uses canonical event rule for recipe pricing and inventory and protects owner
+  ---
+  duration_ms: 0.574994
+  type: 'test'
+  ...
+# Subtest: legacy main plate is preserved and becomes one of multiple named groups
+ok 219 - legacy main plate is preserved and becomes one of multiple named groups
+  ---
+  duration_ms: 1.391562
+  type: 'test'
+  ...
+# Subtest: validates per-menu conversion independent of raw material conversion
+ok 220 - validates per-menu conversion independent of raw material conversion
+  ---
+  duration_ms: 1.886106
+  type: 'test'
+  ...
+# Subtest: prevents duplicate serving names even if Arabic spelling differs
+ok 221 - prevents duplicate serving names even if Arabic spelling differs
+  ---
+  duration_ms: 0.271167
+  type: 'test'
+  ...
+# Subtest: rejects raw material relation if material is outside the selected menu recipe
+ok 222 - rejects raw material relation if material is outside the selected menu recipe
+  ---
+  duration_ms: 0.343727
+  type: 'test'
+  ...
+# Subtest: migration preserves previous groups and uses existing canonical recipe and inventory rules
+ok 223 - migration preserves previous groups and uses existing canonical recipe and inventory rules
+  ---
+  duration_ms: 0.712411
+  type: 'test'
+  ...
+# Subtest: event UI offers unlimited groups, assignment/moving and in-context new unit without replacing the form
+ok 224 - event UI offers unlimited groups, assignment/moving and in-context new unit without replacing the form
+  ---
+  duration_ms: 1.932726
+  type: 'test'
+  ...
+# Subtest: grouping preserves the exact total cost and allocates shared dishes only once
+ok 225 - grouping preserves the exact total cost and allocates shared dishes only once
+  ---
+  duration_ms: 7.512675
+  type: 'test'
+  ...
+# Subtest: missing recipe costs remain flagged in their group and not valued as zero
+ok 226 - missing recipe costs remain flagged in their group and not valued as zero
+  ---
+  duration_ms: 0.218819
+  type: 'test'
+  ...
+# Subtest: v0.38 rounds planned ticket UP to the next 100 SYP and displays costs without long fractions
+ok 227 - v0.38 rounds planned ticket UP to the next 100 SYP and displays costs without long fractions
+  ---
+  duration_ms: 17.490559
+  type: 'test'
+  ...
+# Subtest: v0.38 booking guest price is multiplied exactly once
+ok 228 - v0.38 booking guest price is multiplied exactly once
+  ---
+  duration_ms: 0.495855
+  type: 'test'
+  ...
+# Subtest: v0.38 groups unnamed guests into one readable label without erasing their actual seat entries
+ok 229 - v0.38 groups unnamed guests into one readable label without erasing their actual seat entries
+  ---
+  duration_ms: 0.474313
+  type: 'test'
+  ...
+# Subtest: v0.38 table selection supports Arabic-Indic numerals and any free table, without overfilling
+ok 230 - v0.38 table selection supports Arabic-Indic numerals and any free table, without overfilling
+  ---
+  duration_ms: 0.744379
+  type: 'test'
+  ...
+# Subtest: v0.38 externally purchased dishes are counted per table for group portions
+ok 231 - v0.38 externally purchased dishes are counted per table for group portions
+  ---
+  duration_ms: 0.209205
+  type: 'test'
+  ...
+# Subtest: v0.38 planned external servings differ from actual external purchase cost, without double charging for payment
+ok 232 - v0.38 planned external servings differ from actual external purchase cost, without double charging for payment
+  ---
+  duration_ms: 0.471569
+  type: 'test'
+  ...
+# Subtest: v0.38 database migration protects all payments, keeps paid bookings immutable, and uses owner-only RPC
+ok 233 - v0.38 database migration protects all payments, keeps paid bookings immutable, and uses owner-only RPC
+  ---
+  duration_ms: 0.528034
+  type: 'test'
+  ...
+# Subtest: current UI has seat-only booking prices, external purchases and Arabic booking states
+ok 234 - current UI has seat-only booking prices, external purchases and Arabic booking states
+  ---
+  duration_ms: 1.603471
+  type: 'test'
+  ...
+# Subtest: v0.39: 200 planned guests stay 200 when 9 seats are booked (not 191)
+ok 235 - v0.39: 200 planned guests stay 200 when 9 seats are booked (not 191)
+  ---
+  duration_ms: 1.045822
+  type: 'test'
+  ...
+# Subtest: v0.39: more bookings do not alter the base food budget or per-person quantity
+ok 236 - v0.39: more bookings do not alter the base food budget or per-person quantity
+  ---
+  duration_ms: 0.300342
+  type: 'test'
+  ...
+# Subtest: v0.39: external cake purchased for 100,000 yields 200 pieces, one per guest = exactly ONE cake
+ok 237 - v0.39: external cake purchased for 100,000 yields 200 pieces, one per guest = exactly ONE cake
+  ---
+  duration_ms: 0.510007
+  type: 'test'
+  ...
+# Subtest: v0.39: any external dish can yield non-integer purchase units with fractional costs
+ok 238 - v0.39: any external dish can yield non-integer purchase units with fractional costs
+  ---
+  duration_ms: 0.215324
+  type: 'test'
+  ...
+# Subtest: v0.39: estimate is reusable for future events, but flagged and does not override complete recipes
+ok 239 - v0.39: estimate is reusable for future events, but flagged and does not override complete recipes
+  ---
+  duration_ms: 0.484318
+  type: 'test'
+  ...
+# Subtest: v0.39: unknown menu cost remains unknown when no estimate is entered
+ok 240 - v0.39: unknown menu cost remains unknown when no estimate is entered
+  ---
+  duration_ms: 0.129745
+  type: 'test'
+  ...
+# Subtest: v0.39: table grouping sums ONLY unpaid orders and retains paid/refunded/void items as details
+ok 241 - v0.39: table grouping sums ONLY unpaid orders and retains paid/refunded/void items as details
+  ---
+  duration_ms: 8.171527
+  type: 'test'
+  ...
+# Subtest: v0.39: SQL applies one atomic owner-only group payment, preserving each invoice and its original refund
+ok 242 - v0.39: SQL applies one atomic owner-only group payment, preserving each invoice and its original refund
+  ---
+  duration_ms: 0.964149
+  type: 'test'
+  ...
+# Subtest: v0.39: global provisional estimate is protected and never updates canonical recipes/materials
+ok 243 - v0.39: global provisional estimate is protected and never updates canonical recipes/materials
+  ---
+  duration_ms: 0.612491
+  type: 'test'
+  ...
+# Subtest: current UI preserves event external conversion, estimates and total costs without table checkout
+ok 244 - current UI preserves event external conversion, estimates and total costs without table checkout
+  ---
+  duration_ms: 3.265039
+  type: 'test'
+  ...
+# Subtest: v0.40: planned 200 remains unchanged after 7 reservations; available bookable seats exclude group-owned vacancies
+ok 245 - v0.40: planned 200 remains unchanged after 7 reservations; available bookable seats exclude group-owned vacancies
+  ---
+  duration_ms: 1.12423
+  type: 'test'
+  ...
+# Subtest: v0.40: collecting one booking immediately does not change event cost projections
+ok 246 - v0.40: collecting one booking immediately does not change event cost projections
+  ---
+  duration_ms: 0.347011
+  type: 'test'
+  ...
+# Subtest: v0.40: plan 100 hookahs but serve only 23, leaving 77 available and costing only 23 in consumed view
+ok 247 - v0.40: plan 100 hookahs but serve only 23, leaving 77 available and costing only 23 in consumed view
+  ---
+  duration_ms: 0.367573
+  type: 'test'
+  ...
+# Subtest: v0.40: an externally purchased platter yields many portions and never creates an extra purchase
+ok 248 - v0.40: an externally purchased platter yields many portions and never creates an extra purchase
+  ---
+  duration_ms: 0.185719
+  type: 'test'
+  ...
+# Subtest: v0.40: optional provisional cost is explicit, and absent estimates do not become zero-cost food
+ok 249 - v0.40: optional provisional cost is explicit, and absent estimates do not become zero-cost food
+  ---
+  duration_ms: 0.156715
+  type: 'test'
+  ...
+# Subtest: v0.40: zero currency outputs have no minus symbol
+ok 250 - v0.40: zero currency outputs have no minus symbol
+  ---
+  duration_ms: 11.560843
+  type: 'test'
+  ...
+# Subtest: v0.40: SQL reservation transaction either books AND collects or rolls back both
+ok 251 - v0.40: SQL reservation transaction either books AND collects or rolls back both
+  ---
+  duration_ms: 0.602195
+  type: 'test'
+  ...
+# Subtest: v0.40: SQL only posts actually delivered menu units at closing, never stock for unserved external purchases
+ok 252 - v0.40: SQL only posts actually delivered menu units at closing, never stock for unserved external purchases
+  ---
+  duration_ms: 0.462115
+  type: 'test'
+  ...
+# Subtest: current pages separate planning from seat booking, pay instantly and issue on-demand items
+ok 253 - current pages separate planning from seat booking, pay instantly and issue on-demand items
+  ---
+  duration_ms: 2.436153
+  type: 'test'
+  ...
+# Subtest: v0.40.1: every JavaScript module is fully parsed, including function bodies
+ok 254 - v0.40.1: every JavaScript module is fully parsed, including function bodies
+  ---
+  duration_ms: 84.037436
+  type: 'test'
+  ...
+# Subtest: v0.40.1: app module import graph links without missing exports or files
+ok 255 - v0.40.1: app module import graph links without missing exports or files
+  ---
+  duration_ms: 65.121785
+  type: 'test'
+  ...
+# Subtest: v0.40.1: corrected error message is quoted and cache bust forces new app/modules
+ok 256 - v0.40.1: corrected error message is quoted and cache bust forces new app/modules
+  ---
+  duration_ms: 1.199754
+  type: 'test'
+  ...
+# Subtest: v0.41: eight cashier orders are eight records; 89 item lines stay distinct
+ok 257 - v0.41: eight cashier orders are eight records; 89 item lines stay distinct
+  ---
+  duration_ms: 11.507593
+  type: 'test'
+  ...
+# Subtest: v0.41: unknown costs never become zero or fake full-day profit
+ok 258 - v0.41: unknown costs never become zero or fake full-day profit
+  ---
+  duration_ms: 0.428955
+  type: 'test'
+  ...
+# Subtest: v0.41: optional menu estimate contributes without pretending to be actual recipe
+ok 259 - v0.41: optional menu estimate contributes without pretending to be actual recipe
+  ---
+  duration_ms: 0.225749
+  type: 'test'
+  ...
+# Subtest: v0.41: source price differences are informational and NOT added twice
+ok 260 - v0.41: source price differences are informational and NOT added twice
+  ---
+  duration_ms: 0.253341
+  type: 'test'
+  ...
+# Subtest: v0.41: negative unit price difference is distinguished from order-level net discount
+ok 261 - v0.41: negative unit price difference is distinguished from order-level net discount
+  ---
+  duration_ms: 0.207813
+  type: 'test'
+  ...
+# Subtest: v0.41: cashier grouping never claims unknown cashbox to be the general box
+ok 262 - v0.41: cashier grouping never claims unknown cashbox to be the general box
+  ---
+  duration_ms: 0.25894
+  type: 'test'
+  ...
+# Subtest: v0.41: protected importer is atomic, idempotent, and does not post cash twice
+ok 263 - v0.41: protected importer is atomic, idempotent, and does not post cash twice
+  ---
+  duration_ms: 0.916107
+  type: 'test'
+  ...
+# Subtest: v0.41: independent sidebar, daily preview, order audit and menu missing-cost route are wired
+ok 264 - v0.41: independent sidebar, daily preview, order audit and menu missing-cost route are wired
+  ---
+  duration_ms: 1.994919
+  type: 'test'
+  ...
+# Subtest: v1.0: display Syrian currency after amount without changing persisted currency codes
+ok 265 - v1.0: display Syrian currency after amount without changing persisted currency codes
+  ---
+  duration_ms: 15.584212
+  type: 'test'
+  ...
+# Subtest: v1.0: inconsistent prices sort before new items, and exact matches last, with stable RPC indices
+ok 266 - v1.0: inconsistent prices sort before new items, and exact matches last, with stable RPC indices
+  ---
+  duration_ms: 1.135407
+  type: 'test'
+  ...
+# Subtest: v1.0: sidebar, page heading, import action and report use neutral product names
+ok 267 - v1.0: sidebar, page heading, import action and report use neutral product names
+  ---
+  duration_ms: 11.661744
+  type: 'test'
+  ...
+# Subtest: v1.0: review states are readable and color coded without changing the backend price decision
+ok 268 - v1.0: review states are readable and color coded without changing the backend price decision
+  ---
+  duration_ms: 0.994125
+  type: 'test'
+  ...
+# Subtest: unknown last purchase price allowed ONLY for zero-opening-stock materials
+ok 269 - unknown last purchase price allowed ONLY for zero-opening-stock materials
+  ---
+  duration_ms: 1.513485
+  type: 'test'
+  ...
+# Subtest: setting a real purchase cost makes a complete recipe publishable
+ok 270 - setting a real purchase cost makes a complete recipe publishable
+  ---
+  duration_ms: 0.25961
+  type: 'test'
+  ...
+# Subtest: central SQL import does not treat unknown purchase cost as a free component
+ok 271 - central SQL import does not treat unknown purchase cost as a free component
+  ---
+  duration_ms: 0.300022
+  type: 'test'
+  ...
+# Subtest: master workbook has separate materials and dishes and confirmation uses their combined count
+ok 272 - master workbook has separate materials and dishes and confirmation uses their combined count
+  ---
+  duration_ms: 1.491433
+  type: 'test'
+  ...
+# Subtest: confirmation uses guarded exception path before starting the Supabase write
+ok 273 - confirmation uses guarded exception path before starting the Supabase write
+  ---
+  duration_ms: 0.300692
+  type: 'test'
+  ...
+# Subtest: consistent import page width and 4-up stats at desktop, 2-up stats at tablet
+ok 274 - consistent import page width and 4-up stats at desktop, 2-up stats at tablet
+  ---
+  duration_ms: 0.703117
+  type: 'test'
+  ...
+# Subtest: SQL original importer remains atomic and hash idempotent; no data migration required
+ok 275 - SQL original importer remains atomic and hash idempotent; no data migration required
+  ---
+  duration_ms: 0.384128
+  type: 'test'
+  ...
+# Subtest: last purchase shows the imported business calendar date, not the local timezone date
+ok 276 - last purchase shows the imported business calendar date, not the local timezone date
+  ---
+  duration_ms: 0.973033
+  type: 'test'
+  ...
+# Subtest: last purchase is unknown, not today or zero, when there is no date
+ok 277 - last purchase is unknown, not today or zero, when there is no date
+  ---
+  duration_ms: 0.161283
+  type: 'test'
+  ...
+# Subtest: materials screen retains purchase date in details and all-filtered-rows export
+ok 278 - materials screen retains purchase date in details and all-filtered-rows export
+  ---
+  duration_ms: 1.099513
+  type: 'test'
+  ...
+# Subtest: new version invalidates cached materials module and stylesheet while preserving config reference
+ok 279 - new version invalidates cached materials module and stylesheet while preserving config reference
+  ---
+  duration_ms: 0.496998
+  type: 'test'
+  ...
+# Subtest: v1.0.4: Excel order day stays unchanged unless owner selects another date
+ok 280 - v1.0.4: Excel order day stays unchanged unless owner selects another date
+  ---
+  duration_ms: 1.055357
+  type: 'test'
+  ...
+# Subtest: v1.0.4: reject invalid day and accidental merging of multi-day workbook
+ok 281 - v1.0.4: reject invalid day and accidental merging of multi-day workbook
+  ---
+  duration_ms: 1.339684
+  type: 'test'
+  ...
+# Subtest: v1.0.4: alias persistence is transactional, unique and owner-guarded in SQL
+ok 282 - v1.0.4: alias persistence is transactional, unique and owner-guarded in SQL
+  ---
+  duration_ms: 0.704109
+  type: 'test'
+  ...
+# Subtest: v1.0.4: preview and import call the same alias/unit resolver; no silent new items
+ok 283 - v1.0.4: preview and import call the same alias/unit resolver; no silent new items
+  ---
+  duration_ms: 0.305188
+  type: 'test'
+  ...
+# Subtest: v1.0.4: UI offers explicit alias/new choice, menu dropdown and date selection
+ok 284 - v1.0.4: UI offers explicit alias/new choice, menu dropdown and date selection
+  ---
+  duration_ms: 1.020765
+  type: 'test'
+  ...
+# Subtest: cashier source report reconciles 8 orders and retains exact monetary amounts
+ok 285 - cashier source report reconciles 8 orders and retains exact monetary amounts
+  ---
+  duration_ms: 14.318228
+  type: 'test'
+  ...
+# Subtest: 10.5% is a hypothetical model, never treated as source-proven tax
+ok 286 - 10.5% is a hypothetical model, never treated as source-proven tax
+  ---
+  duration_ms: 0.337007
+  type: 'test'
+  ...
+# Subtest: the actual parser treats original order net as income, not line sums or SYP cashbox column
+ok 287 - the actual parser treats original order net as income, not line sums or SYP cashbox column
+  ---
+  duration_ms: 1.312284
+  type: 'test'
+  ...
+# Subtest: 1 kilogram is not compared directly with 200g portion price
+ok 288 - 1 kilogram is not compared directly with 200g portion price
+  ---
+  duration_ms: 0.416887
+  type: 'test'
+  ...
+# Subtest: date conflict is exposed to user without silently changing business day
+ok 289 - date conflict is exposed to user without silently changing business day
+  ---
+  duration_ms: 0.849177
+  type: 'test'
+  ...
+# Subtest: alternative menu picks show exact price matches first, not forced or silently selected
+ok 290 - alternative menu picks show exact price matches first, not forced or silently selected
+  ---
+  duration_ms: 1.051461
+  type: 'test'
+  ...
+# Subtest: new backend posts only newly imported orders into cashier transaction exactly once
+ok 291 - new backend posts only newly imported orders into cashier transaction exactly once
+  ---
+  duration_ms: 1.528779
+  type: 'test'
+  ...
+# Subtest: daily import UI keeps file prices, shows cashbox, monetary warnings and exact preview
+ok 292 - daily import UI keeps file prices, shows cashbox, monetary warnings and exact preview
+  ---
+  duration_ms: 1.384512
+  type: 'test'
+  ...
+# Subtest: material alias normalization, exact and partial search include all approved names
+ok 293 - material alias normalization, exact and partial search include all approved names
+  ---
+  duration_ms: 1.290671
+  type: 'test'
+  ...
+# Subtest: material suggestions can prefer supplier history without treating fuzzy names as safe stock IDs
+ok 294 - material suggestions can prefer supplier history without treating fuzzy names as safe stock IDs
+  ---
+  duration_ms: 0.313181
+  type: 'test'
+  ...
+# Subtest: OCR header uses dedicated supplier/number areas and extracts the printed invoice total
+ok 295 - OCR header uses dedicated supplier/number areas and extracts the printed invoice total
+  ---
+  duration_ms: 1.182799
+  type: 'test'
+  ...
+# Subtest: OCR imports only mathematically verified item amounts and exact alias matches
+ok 296 - OCR imports only mathematically verified item amounts and exact alias matches
+  ---
+  duration_ms: 6.600614
+  type: 'test'
+  ...
+# Subtest: OCR does not fabricate qty/price from ambiguous text
+ok 297 - OCR does not fabricate qty/price from ambiguous text
+  ---
+  duration_ms: 0.686842
+  type: 'test'
+  ...
+# Subtest: explicit unresolved OCR materials block invoice posting; manual new or mapped need valid units and price
+ok 298 - explicit unresolved OCR materials block invoice posting; manual new or mapped need valid units and price
+  ---
+  duration_ms: 1.304161
+  type: 'test'
+  ...
+# Subtest: photo route remains purchase-only, engine 3 one-click with optional items crop and final review
+ok 299 - photo route remains purchase-only, engine 3 one-click with optional items crop and final review
+  ---
+  duration_ms: 1.387897
+  type: 'test'
+  ...
+# Subtest: SQL migration only adds aliases, enforces collisions, uses RLS and owner-only RPCs
+ok 300 - SQL migration only adds aliases, enforces collisions, uses RLS and owner-only RPCs
+  ---
+  duration_ms: 0.268644
+  type: 'test'
+  ...
+# Subtest: Arabic, Persian and Western digits; decimal comma and thousands grouping are parsed distinctly
+ok 301 - Arabic, Persian and Western digits; decimal comma and thousands grouping are parsed distinctly
+  ---
+  duration_ms: 1.25709
+  type: 'test'
+  ...
+# Subtest: Real supplied OCR markdown table yields exactly 15 item rows, no header/footer ghosts
+ok 302 - Real supplied OCR markdown table yields exactly 15 item rows, no header/footer ghosts
+  ---
+  duration_ms: 7.011803
+  type: 'test'
+  ...
+# Subtest: Printed totals stay visible; arithmetic conflicts are labelled instead of zeroing OCR amounts
+ok 303 - Printed totals stay visible; arithmetic conflicts are labelled instead of zeroing OCR amounts
+  ---
+  duration_ms: 3.187563
+  type: 'test'
+  ...
+# Subtest: A flagged OCR mismatch remains visible while saving relies on the final invoice dialog, not an extra checkbox
+ok 304 - A flagged OCR mismatch remains visible while saving relies on the final invoice dialog, not an extra checkbox
+  ---
+  duration_ms: 1.706105
+  type: 'test'
+  ...
+# Subtest: UI supports Arabic numeric keyboard entry, preserves original OCR sources and improves region clear
+ok 305 - UI supports Arabic numeric keyboard entry, preserves original OCR sources and improves region clear
+  ---
+  duration_ms: 1.089599
+  type: 'test'
+  ...
+# Subtest: Arabic-Indic zero (٠) and five (٥) are never interchanged with Western zero
+ok 306 - Arabic-Indic zero (٠) and five (٥) are never interchanged with Western zero
+  ---
+  duration_ms: 1.316119
+  type: 'test'
+  ...
+# Subtest: New three-column layout reads the item name embedded under quantity heading
+ok 307 - New three-column layout reads the item name embedded under quantity heading
+  ---
+  duration_ms: 5.64026
+  type: 'test'
+  ...
+# Subtest: Number containing an underscore survives the invoice header parser
+ok 308 - Number containing an underscore survives the invoice header parser
+  ---
+  duration_ms: 1.524132
+  type: 'test'
+  ...
+# Subtest: A derived quantity needs a valid unit but no extra review checkbox after the final invoice preview
+ok 309 - A derived quantity needs a valid unit but no extra review checkbox after the final invoice preview
+  ---
+  duration_ms: 1.531262
+  type: 'test'
+  ...
+# Subtest: UI keeps OCR text editable and links purchase manual / photos screens
+ok 310 - UI keeps OCR text editable and links purchase manual / photos screens
+  ---
+  duration_ms: 1.438353
+  type: 'test'
+  ...
+# Subtest: Unheaded three-column handwriting keeps numeric glyphs and descriptions without inventing qty/price
+ok 311 - Unheaded three-column handwriting keeps numeric glyphs and descriptions without inventing qty/price
+  ---
+  duration_ms: 6.63777
+  type: 'test'
+  ...
+# Subtest: Unknown unlabelled numbers are preserved, not relabelled using math or handwritten glyph folklore
+ok 312 - Unknown unlabelled numbers are preserved, not relabelled using math or handwritten glyph folklore
+  ---
+  duration_ms: 0.57222
+  type: 'test'
+  ...
+# Subtest: Digit reread surfaces alternatives but does not silently rewrite accounting amounts
+ok 313 - Digit reread surfaces alternatives but does not silently rewrite accounting amounts
+  ---
+  duration_ms: 0.985932
+  type: 'test'
+  ...
+# Subtest: Audit supports cropped one-column digits, but no fake alignment on extra totals
+ok 314 - Audit supports cropped one-column digits, but no fake alignment on extra totals
+  ---
+  duration_ms: 0.529366
+  type: 'test'
+  ...
+# Subtest: Gentle handwriting enhancement preserves small dark dots (Arabic zero) and brightens paper
+ok 315 - Gentle handwriting enhancement preserves small dark dots (Arabic zero) and brightens paper
+  ---
+  duration_ms: 0.641004
+  type: 'test'
+  ...
+# Subtest: OCR UI v1.0.10 uses only Engine 3 through a single extract action
+ok 316 - OCR UI v1.0.10 uses only Engine 3 through a single extract action
+  ---
+  duration_ms: 1.076919
+  type: 'test'
+  ...
+# Subtest: Dot at the end of Arabic-Indic amount may represent a handwritten zero, never alter valid decimals
+ok 317 - Dot at the end of Arabic-Indic amount may represent a handwritten zero, never alter valid decimals
+  ---
+  duration_ms: 1.930903
+  type: 'test'
+  ...
+# Subtest: First-pass unlabelled OCR retains original string and zero-dot candidate but does not invent qty or price
+ok 318 - First-pass unlabelled OCR retains original string and zero-dot candidate but does not invent qty or price
+  ---
+  duration_ms: 5.438347
+  type: 'test'
+  ...
+# Subtest: Labelled columns accept zero-dot suggestions without replacing printed invoice rows
+ok 319 - Labelled columns accept zero-dot suggestions without replacing printed invoice rows
+  ---
+  duration_ms: 1.218271
+  type: 'test'
+  ...
+# Subtest: Full vs selected items crop compares parsed rows rather than always trusting image enhancement
+ok 320 - Full vs selected items crop compares parsed rows rather than always trusting image enhancement
+  ---
+  duration_ms: 0.250857
+  type: 'test'
+  ...
+# Subtest: Supplier-aware OCR prioritizes known supplier material but never assigns a fuzzy material automatically
+ok 321 - Supplier-aware OCR prioritizes known supplier material but never assigns a fuzzy material automatically
+  ---
+  duration_ms: 2.01498
+  type: 'test'
+  ...
+# Subtest: USD material pricing never prices unknown costs and does not alter ledger history via currency math
+ok 322 - USD material pricing never prices unknown costs and does not alter ledger history via currency math
+  ---
+  duration_ms: 0.648114
+  type: 'test'
+  ...
+# Subtest: SQL pricing migration is additive and has atomic owner-checks and an audit trail
+ok 323 - SQL pricing migration is additive and has atomic owner-checks and an audit trail
+  ---
+  duration_ms: 1.184141
+  type: 'test'
+  ...
+# Subtest: New UI is a single extraction control without separate magnifier or reread
+ok 324 - New UI is a single extraction control without separate magnifier or reread
+  ---
+  duration_ms: 0.579291
+  type: 'test'
+  ...
+# Subtest: Zero or unknown price remains without a USD anchor, including when exchange rate changes
+ok 325 - Zero or unknown price remains without a USD anchor, including when exchange rate changes
+  ---
+  duration_ms: 1.705714
+  type: 'test'
+  ...
+# Subtest: Pricing errors explain SQL or permissions failures rather than hiding the cause
+ok 326 - Pricing errors explain SQL or permissions failures rather than hiding the cause
+  ---
+  duration_ms: 0.363066
+  type: 'test'
+  ...
+# Subtest: Purchase OCR flags remain visible without a checkbox gate; valid quantities and units are still required
+ok 327 - Purchase OCR flags remain visible without a checkbox gate; valid quantities and units are still required
+  ---
+  duration_ms: 1.710442
+  type: 'test'
+  ...
+# Subtest: Invoice rows are nested alongside preview and scroll vertically rather than overflowing horizontally
+ok 328 - Invoice rows are nested alongside preview and scroll vertically rather than overflowing horizontally
+  ---
+  duration_ms: 2.232416
+  type: 'test'
+  ...
+# Subtest: Repair migration is independently deployable, set-based, audit-safe and skips zero prices
+ok 329 - Repair migration is independently deployable, set-based, audit-safe and skips zero prices
+  ---
+  duration_ms: 0.389576
+  type: 'test'
+  ...
+# Subtest: Row layout: quantity at right, unit in middle, unit-price at left; discount/total/delete below
+ok 330 - Row layout: quantity at right, unit in middle, unit-price at left; discount/total/delete below
+  ---
+  duration_ms: 2.980602
+  type: 'test'
+  ...
+# Subtest: Clicking numbered index navigates inside the line pane, not the whole page
+ok 331 - Clicking numbered index navigates inside the line pane, not the whole page
+  ---
+  duration_ms: 0.490989
+  type: 'test'
+  ...
+# Subtest: Editing numeric cells does not reset viewport or recreate the document
+ok 332 - Editing numeric cells does not reset viewport or recreate the document
+  ---
+  duration_ms: 0.481164
+  type: 'test'
+  ...
+# Subtest: Obsolete explanatory OCR note is not generated or shown for old drafts
+ok 333 - Obsolete explanatory OCR note is not generated or shown for old drafts
+  ---
+  duration_ms: 1.28353
+  type: 'test'
+  ...
+# Subtest: USD migration is self-contained, safe for zero prices and auditable
+ok 334 - USD migration is self-contained, safe for zero prices and auditable
+  ---
+  duration_ms: 1.375007
+  type: 'test'
+  ...
+# Subtest: Pricing approval has one modal, and inline persistent error on failures
+ok 335 - Pricing approval has one modal, and inline persistent error on failures
+  ---
+  duration_ms: 0.449206
+  type: 'test'
+  ...
+# Subtest: Typing quantity refreshes price and publish readiness without redrawing the editor
+ok 336 - Typing quantity refreshes price and publish readiness without redrawing the editor
+  ---
+  duration_ms: 0.483587
+  type: 'test'
+  ...
+# Subtest: USD display rounds upward to exactly three places; unset price remains unset
+ok 337 - USD display rounds upward to exactly three places; unset price remains unset
+  ---
+  duration_ms: 1.003238
+  type: 'test'
+  ...
+# Subtest: seat reservation availability counts people, not tables, and excludes cancelled/no-show
+ok 338 - seat reservation availability counts people, not tables, and excludes cancelled/no-show
+  ---
+  duration_ms: 0.529236
+  type: 'test'
+  ...
+# Subtest: seat cost planner uses a single synthetic group instead of real tables
+ok 339 - seat cost planner uses a single synthetic group instead of real tables
+  ---
+  duration_ms: 0.194402
+  type: 'test'
+  ...
+# Subtest: materials omit code and source report columns while keeping full details in a dialog
+ok 340 - materials omit code and source report columns while keeping full details in a dialog
+  ---
+  duration_ms: 1.647297
+  type: 'test'
+  ...
+# Subtest: event interface has only seat booking and optional seating note, no table picker
+ok 341 - event interface has only seat booking and optional seating note, no table picker
+  ---
+  duration_ms: 0.662096
+  type: 'test'
+  ...
+# Subtest: new SQL keeps historical tables and financial records, uses owner-only atomic seat booking
+ok 342 - new SQL keeps historical tables and financial records, uses owner-only atomic seat booking
+  ---
+  duration_ms: 0.628735
+  type: 'test'
+  ...
+# Subtest: selects ONLY the Syrian parallel-market sell rate; converts new SYP x100 to old SYP
+ok 343 - selects ONLY the Syrian parallel-market sell rate; converts new SYP x100 to old SYP
+  ---
+  duration_ms: 1.302819
+  type: 'test'
+  ...
+# Subtest: official-only response is rejected — no silent fallback to central bank, effective or general FX
+ok 344 - official-only response is rejected — no silent fallback to central bank, effective or general FX
+  ---
+  duration_ms: 0.475305
+  type: 'test'
+  ...
+# Subtest: invalid old-unit raw value, inverted spreads and missing timestamp are rejected
+ok 345 - invalid old-unit raw value, inverted spreads and missing timestamp are rejected
+  ---
+  duration_ms: 0.254343
+  type: 'test'
+  ...
+# Subtest: stale quote is display-only, not valid for rate approval
+ok 346 - stale quote is display-only, not valid for rate approval
+  ---
+  duration_ms: 0.187281
+  type: 'test'
+  ...
+# Subtest: loads stored quotes for display but refresh on approval; no unverified approval
+ok 347 - loads stored quotes for display but refresh on approval; no unverified approval
+  ---
+  duration_ms: 0.484599
+  type: 'test'
+  ...
+# Subtest: uses a single GET with a timeout and returns well-formed normalized quote
+ok 348 - uses a single GET with a timeout and returns well-formed normalized quote
+  ---
+  duration_ms: 0.541524
+  type: 'test'
+  ...
+# Subtest: header is adjacent to bell, has explicit approval button and no automatic writes
+ok 349 - header is adjacent to bell, has explicit approval button and no automatic writes
+  ---
+  duration_ms: 0.902357
+  type: 'test'
+  ...
+# Subtest: optional Edge Function proxies one fixed LiraScope path after owner authentication
+ok 350 - optional Edge Function proxies one fixed LiraScope path after owner authentication
+  ---
+  duration_ms: 1.358072
+  type: 'test'
+  ...
+# Subtest: compact header formats market sell or buy using old/new SYP with no unit label
+ok 351 - compact header formats market sell or buy using old/new SYP with no unit label
+  ---
+  duration_ms: 19.002181
+  type: 'test'
+  ...
+# Subtest: display denomination and buy/sell choice persist without database writes
+ok 352 - display denomination and buy/sell choice persist without database writes
+  ---
+  duration_ms: 0.435845
+  type: 'test'
+  ...
+# Subtest: proxy 404 and auth errors are actionable; no official/general-FX fallback
+ok 353 - proxy 404 and auth errors are actionable; no official/general-FX fallback
+  ---
+  duration_ms: 1.193555
+  type: 'test'
+  ...
+# Subtest: the shell uses one server-side path and a numeric-only chip with side/approve controls
+ok 354 - the shell uses one server-side path and a numeric-only chip with side/approve controls
+  ---
+  duration_ms: 0.769407
+  type: 'test'
+  ...
+# Subtest: settings offer old or new pound presentation without changing financial records
+ok 355 - settings offer old or new pound presentation without changing financial records
+  ---
+  duration_ms: 1.200285
+  type: 'test'
+  ...
+# Subtest: Edge Function checks logged-in owner, uses a fixed provider URL, responds with CORS and only market prices
+ok 356 - Edge Function checks logged-in owner, uses a fixed provider URL, responds with CORS and only market prices
+  ---
+  duration_ms: 0.326972
+  type: 'test'
+  ...
+# Subtest: header uses the same actual expected cashbox balance as the cashboxes page
+ok 357 - header uses the same actual expected cashbox balance as the cashboxes page
+  ---
+  duration_ms: 3.122134
+  type: 'test'
+  ...
+# Subtest: numbers show grouping and zeros but never invent zero for missing balances
+ok 358 - numbers show grouping and zeros but never invent zero for missing balances
+  ---
+  duration_ms: 16.504456
+  type: 'test'
+  ...
+# Subtest: three clickable cashboxes remain in the middle of the header on all app routes
+ok 359 - three clickable cashboxes remain in the middle of the header on all app routes
+  ---
+  duration_ms: 1.182187
+  type: 'test'
+  ...
+# Subtest: mobile shows all three balances without horizontal scroll; full zip excludes secrets
+ok 360 - mobile shows all three balances without horizontal scroll; full zip excludes secrets
+  ---
+  duration_ms: 1.139323
+  type: 'test'
+  ...
+# Subtest: monthly approval and payment ignore unlogged attendance but not the unapproved draft
+ok 361 - monthly approval and payment ignore unlogged attendance but not the unapproved draft
+  ---
+  duration_ms: 0.715586
+  type: 'test'
+  ...
+# Subtest: monthly salary RPCs are protected new wrappers and old daily payment path is untouched
+ok 362 - monthly salary RPCs are protected new wrappers and old daily payment path is untouched
+  ---
+  duration_ms: 0.498109
+  type: 'test'
+  ...
+# Subtest: only monthly draft missing-attendance marker may be updated by migration
+ok 363 - only monthly draft missing-attendance marker may be updated by migration
+  ---
+  duration_ms: 0.174503
+  type: 'test'
+  ...
+# Subtest: approval button remains enabled without punches; daily section and redundant hint are removed
+ok 364 - approval button remains enabled without punches; daily section and redundant hint are removed
+  ---
+  duration_ms: 0.754515
+  type: 'test'
+  ...
+# Subtest: monthly ready screen renders bonuses/advances and employee table without ReferenceError
+ok 365 - monthly ready screen renders bonuses/advances and employee table without ReferenceError
+  ---
+  duration_ms: 5.333439
+  type: 'test'
+  ...
+# Subtest: empty monthly payroll still displays its totals without crashing
+ok 366 - empty monthly payroll still displays its totals without crashing
+  ---
+  duration_ms: 3.447754
+  type: 'test'
+  ...
+# Subtest: v1.0.19 invoice total handles quantity, unit price and line discounts
+ok 367 - v1.0.19 invoice total handles quantity, unit price and line discounts
+  ---
+  duration_ms: 1.652174
+  type: 'test'
+  ...
+# Subtest: v1.0.19 posted invoice correction payload preserves all editable line attributes
+ok 368 - v1.0.19 posted invoice correction payload preserves all editable line attributes
+  ---
+  duration_ms: 0.304218
+  type: 'test'
+  ...
+# Subtest: v1.0.19 supplier suggestion matches first Arabic letter and prioritizes prefix
+ok 369 - v1.0.19 supplier suggestion matches first Arabic letter and prioritizes prefix
+  ---
+  duration_ms: 10.045785
+  type: 'test'
+  ...
+# Subtest: v1.0.19 supplier totals exclude voided/draft/historic revisions and do not mix currencies
+ok 370 - v1.0.19 supplier totals exclude voided/draft/historic revisions and do not mix currencies
+  ---
+  duration_ms: 0.814996
+  type: 'test'
+  ...
+# Subtest: v1.0.19 posted correction only happens through one server transaction; no data reset
+ok 371 - v1.0.19 posted correction only happens through one server transaction; no data reset
+  ---
+  duration_ms: 0.972752
+  type: 'test'
+  ...
+# Subtest: v1.0.19 no accidental dialog backdrop close; supplier quick invoice and detail route are wired
+ok 372 - v1.0.19 no accidental dialog backdrop close; supplier quick invoice and detail route are wired
+  ---
+  duration_ms: 2.119096
+  type: 'test'
+  ...
+# Subtest: v120 material last-known price rounds up to the next 10 without separators
+ok 373 - v120 material last-known price rounds up to the next 10 without separators
+  ---
+  duration_ms: 1.240786
+  type: 'test'
+  ...
+# Subtest: v120 approves only NEW Syrian pound market and configured rates
+ok 374 - v120 approves only NEW Syrian pound market and configured rates
+  ---
+  duration_ms: 18.109169
+  type: 'test'
+  ...
+# Subtest: v120 batch editor validates posted invoice edits before any RPC
+ok 375 - v120 batch editor validates posted invoice edits before any RPC
+  ---
+  duration_ms: 0.527272
+  type: 'test'
+  ...
+# Subtest: v120 published invoice fix matches actual inventory movement source columns
+ok 376 - v120 published invoice fix matches actual inventory movement source columns
+  ---
+  duration_ms: 1.557763
+  type: 'test'
+  ...
+# Subtest: v120 saves header taxes, discount and notes when revising a posted invoice
+ok 377 - v120 saves header taxes, discount and notes when revising a posted invoice
+  ---
+  duration_ms: 0.291358
+  type: 'test'
+  ...
+# Subtest: v120 invoice edits preserve concurrency safety and financial audit
+ok 378 - v120 invoice edits preserve concurrency safety and financial audit
+  ---
+  duration_ms: 0.18634
+  type: 'test'
+  ...
+# Subtest: v120 safe supplier deletion rejects linked financial or material history
+ok 379 - v120 safe supplier deletion rejects linked financial or material history
+  ---
+  duration_ms: 0.304778
+  type: 'test'
+  ...
+# Subtest: v120 USD price sync uses approved rate, audit and idempotent comparison, not a market fetch
+ok 380 - v120 USD price sync uses approved rate, audit and idempotent comparison, not a market fetch
+  ---
+  duration_ms: 0.291028
+  type: 'test'
+  ...
+# Subtest: v120 UI supplier row includes edit, delete and direct invoice, with locked supplier selection
+ok 381 - v120 UI supplier row includes edit, delete and direct invoice, with locked supplier selection
+  ---
+  duration_ms: 0.664269
+  type: 'test'
+  ...
+# Subtest: v120 material classification can be created, edited, persisted and used in filter
+ok 382 - v120 material classification can be created, edited, persisted and used in filter
+  ---
+  duration_ms: 0.834124
+  type: 'test'
+  ...
+# Subtest: v120 settings show only new SYP, launch checks USD material revalue and version is cache-busted
+ok 383 - v120 settings show only new SYP, launch checks USD material revalue and version is cache-busted
+  ---
+  duration_ms: 0.794484
+  type: 'test'
+  ...
+# Subtest: v121 material edit offers categories already present in Settings even if material category table is empty
+ok 384 - v121 material edit offers categories already present in Settings even if material category table is empty
+  ---
+  duration_ms: 8.696867
+  type: 'test'
+  ...
+# Subtest: v121 material categories take precedence, matching asset names appear once only
+ok 385 - v121 material categories take precedence, matching asset names appear once only
+  ---
+  duration_ms: 0.226942
+  type: 'test'
+  ...
+# Subtest: v121 resolves existing material category without any insert or SQL migration
+ok 386 - v121 resolves existing material category without any insert or SQL migration
+  ---
+  duration_ms: 0.282836
+  type: 'test'
+  ...
+# Subtest: v121 choosing a category from Settings assets resolves to valid material category ID on save
+ok 387 - v121 choosing a category from Settings assets resolves to valid material category ID on save
+  ---
+  duration_ms: 0.53222
+  type: 'test'
+  ...
+# Subtest: v121 concurrent category creation reuses matching row instead of creating a duplicate
+ok 388 - v121 concurrent category creation reuses matching row instead of creating a duplicate
+  ---
+  duration_ms: 0.255063
+  type: 'test'
+  ...
+# Subtest: v121 rejects invalid category selections before modifying the material
+ok 389 - v121 rejects invalid category selections before modifying the material
+  ---
+  duration_ms: 0.516606
+  type: 'test'
+  ...
+# Subtest: v121 new supplier invoice preselects supplier and does not copy old invoice identity or line items
+ok 390 - v121 new supplier invoice preselects supplier and does not copy old invoice identity or line items
+  ---
+  duration_ms: 0.283115
+  type: 'test'
+  ...
+# Subtest: v121 one click creates draft then schedules item choices then opens third-screen invoice details
+ok 391 - v121 one click creates draft then schedules item choices then opens third-screen invoice details
+  ---
+  duration_ms: 0.287743
+  type: 'test'
+  ...
+# Subtest: v121 failed purchase creation never navigates to a nonexistent invoice or opens stale catalog
+ok 392 - v121 failed purchase creation never navigates to a nonexistent invoice or opens stale catalog
+  ---
+  duration_ms: 0.427133
+  type: 'test'
+  ...
+# Subtest: v121 no misleading edit lines button: invoice list and detail create new supplier invoice
+ok 393 - v121 no misleading edit lines button: invoice list and detail create new supplier invoice
+  ---
+  duration_ms: 1.690822
+  type: 'test'
+  ...
+# Subtest: v121 version is fully updated and ZIP source does not contain user config
+ok 394 - v121 version is fully updated and ZIP source does not contain user config
+  ---
+  duration_ms: 0.68515
+  type: 'test'
+  ...
+# Subtest: v122 normalization and first-letter suggestions for MATERIAL categories only
+ok 395 - v122 normalization and first-letter suggestions for MATERIAL categories only
+  ---
+  duration_ms: 7.977485
+  type: 'test'
+  ...
+# Subtest: v122 existing or blank category never creates a row
+ok 396 - v122 existing or blank category never creates a row
+  ---
+  duration_ms: 0.429286
+  type: 'test'
+  ...
+# Subtest: v122 creating new category is persisted exactly once and reuses parallel duplicate
+ok 397 - v122 creating new category is persisted exactly once and reuses parallel duplicate
+  ---
+  duration_ms: 0.249215
+  type: 'test'
+  ...
+# Subtest: v122 concurrent category creation failure resolves to saved category instead of duplicate
+ok 398 - v122 concurrent category creation failure resolves to saved category instead of duplicate
+  ---
+  duration_ms: 0.245298
+  type: 'test'
+  ...
+# Subtest: v122 category name invalid or missing back-end is blocked before material write
+ok 399 - v122 category name invalid or missing back-end is blocked before material write
+  ---
+  duration_ms: 0.493592
+  type: 'test'
+  ...
+# Subtest: v122 status filter shows draft, posted, cancelled and deleted separately
+ok 400 - v122 status filter shows draft, posted, cancelled and deleted separately
+  ---
+  duration_ms: 0.349886
+  type: 'test'
+  ...
+# Subtest: v122 supplier and free-text filters combine correctly; deleted stay hidden
+ok 401 - v122 supplier and free-text filters combine correctly; deleted stay hidden
+  ---
+  duration_ms: 0.276867
+  type: 'test'
+  ...
+# Subtest: v122 archived cancelled invoices disappear from supplier displayed counts, not financial transactions
+ok 402 - v122 archived cancelled invoices disappear from supplier displayed counts, not financial transactions
+  ---
+  duration_ms: 0.310487
+  type: 'test'
+  ...
+# Subtest: v122 source includes controlled archive, material CRUD and SQL with no hard delete or reset
+ok 403 - v122 source includes controlled archive, material CRUD and SQL with no hard delete or reset
+  ---
+  duration_ms: 1.745755
+  type: 'test'
+  ...
+# Subtest: 30-day November final month uses explicit paid days, not assumed attendance
+ok 404 - 30-day November final month uses explicit paid days, not assumed attendance
+  ---
+  duration_ms: 3.249566
+  type: 'test'
+  ...
+# Subtest: February leap-year, 31-day month, and zero payable days are precise
+ok 405 - February leap-year, 31-day month, and zero payable days are precise
+  ---
+  duration_ms: 0.274382
+  type: 'test'
+  ...
+# Subtest: days cannot exceed employment interval; daily/hourly do not use monthly override
+ok 406 - days cannot exceed employment interval; daily/hourly do not use monthly override
+  ---
+  duration_ms: 0.420181
+  type: 'test'
+  ...
+# Subtest: profile validates paid days and persists explicit terms without fabricating zero
+ok 407 - profile validates paid days and persists explicit terms without fabricating zero
+  ---
+  duration_ms: 0.715896
+  type: 'test'
+  ...
+# Subtest: final month SQL is atomic, draft-only, and protects historical payouts
+ok 408 - final month SQL is atomic, draft-only, and protects historical payouts
+  ---
+  duration_ms: 0.462095
+  type: 'test'
+  ...
+# Subtest: final month preview and payroll review show same verified period without auto payment
+ok 409 - final month preview and payroll review show same verified period without auto payment
+  ---
+  duration_ms: 0.945882
+  type: 'test'
+  ...
+# Subtest: price trend shows exact same material/unit/currency net unit change only
+ok 410 - price trend shows exact same material/unit/currency net unit change only
+  ---
+  duration_ms: 7.385335
+  type: 'test'
+  ...
+# Subtest: never compare different purchase units or use cancelled/referenced invoices
+ok 411 - never compare different purchase units or use cancelled/referenced invoices
+  ---
+  duration_ms: 0.338419
+  type: 'test'
+  ...
+# Subtest: same material lines in the same invoice count as one weighted purchase
+ok 412 - same material lines in the same invoice count as one weighted purchase
+  ---
+  duration_ms: 0.276866
+  type: 'test'
+  ...
+# Subtest: new-day session with zero summary cannot hide persistent cashbox balance
+ok 413 - new-day session with zero summary cannot hide persistent cashbox balance
+  ---
+  duration_ms: 0.699622
+  type: 'test'
+  ...
+# Subtest: SQL carries unsettled open-day cash and uses business timezone without mutating historical sessions
+ok 414 - SQL carries unsettled open-day cash and uses business timezone without mutating historical sessions
+  ---
+  duration_ms: 0.470688
+  type: 'test'
+  ...
+# Subtest: all cashbox presentations use the v124 balance, and navigation exposes supplier analytics
+ok 415 - all cashbox presentations use the v124 balance, and navigation exposes supplier analytics
+  ---
+  duration_ms: 2.05519
+  type: 'test'
+  ...
+# Subtest: v125 restaurant order: 2 x cost 30 / sale 50 adds cost 60, revenue 100 and profit 40
+ok 416 - v125 restaurant order: 2 x cost 30 / sale 50 adds cost 60, revenue 100 and profit 40
+  ---
+  duration_ms: 0.868085
+  type: 'test'
+  ...
+# Subtest: v125 complimentary restaurant hospitality is cost-only even when an old price remains in a disabled input
+ok 417 - v125 complimentary restaurant hospitality is cost-only even when an old price remains in a disabled input
+  ---
+  duration_ms: 0.204217
+  type: 'test'
+  ...
+# Subtest: v125 cake purchase with 25 markup on 100 cost sells for 125 and contributes 25 profit
+ok 418 - v125 cake purchase with 25 markup on 100 cost sells for 125 and contributes 25 profit
+  ---
+  duration_ms: 0.213631
+  type: 'test'
+  ...
+# Subtest: v125 external markup is per purchase unit, not an accidental percentage or whole-order amount
+ok 419 - v125 external markup is per purchase unit, not an accidental percentage or whole-order amount
+  ---
+  duration_ms: 0.104177
+  type: 'test'
+  ...
+# Subtest: v125 external complimentary purchase has zero sale and zero markup, and keeps its incurred cost
+ok 420 - v125 external complimentary purchase has zero sale and zero markup, and keeps its incurred cost
+  ---
+  duration_ms: 0.159449
+  type: 'test'
+  ...
+# Subtest: v125 zero markup is allowed, and differs from missing markup
+ok 421 - v125 zero markup is allowed, and differs from missing markup
+  ---
+  duration_ms: 0.840164
+  type: 'test'
+  ...
+# Subtest: v125 base and event currencies are converted before adding sale revenue and profit
+ok 422 - v125 base and event currencies are converted before adding sale revenue and profit
+  ---
+  duration_ms: 0.187462
+  type: 'test'
+  ...
+# Subtest: v125 a missing or invalid manual cost is never silently zero
+ok 423 - v125 a missing or invalid manual cost is never silently zero
+  ---
+  duration_ms: 0.15929
+  type: 'test'
+  ...
+# Subtest: v125 paid revenue uses the stored sales FX rate, not cash received at a later rate
+ok 424 - v125 paid revenue uses the stored sales FX rate, not cash received at a later rate
+  ---
+  duration_ms: 0.325289
+  type: 'test'
+  ...
+# Subtest: v125 pending, paid, refunded and voided rows have distinct cost/revenue effects
+ok 425 - v125 pending, paid, refunded and voided rows have distinct cost/revenue effects
+  ---
+  duration_ms: 0.343987
+  type: 'test'
+  ...
+# Subtest: v125 purchase remains costed when its linked sales invoice is voided
+ok 426 - v125 purchase remains costed when its linked sales invoice is voided
+  ---
+  duration_ms: 0.517078
+  type: 'test'
+  ...
+# Subtest: v125 canonical summary is mandatory; a missing migration never falls back to zero
+ok 427 - v125 canonical summary is mandatory; a missing migration never falls back to zero
+  ---
+  duration_ms: 0.270717
+  type: 'test'
+  ...
+# Subtest: v125 report cost rows reconcile with the event total without adding linked external costs or hospitality twice
+ok 428 - v125 report cost rows reconcile with the event total without adding linked external costs or hospitality twice
+  ---
+  duration_ms: 0.228694
+  type: 'test'
+  ...
+# Subtest: v125 pending row count blocks closure even when a rounded monetary due would appear zero
+ok 429 - v125 pending row count blocks closure even when a rounded monetary due would appear zero
+  ---
+  duration_ms: 0.110466
+  type: 'test'
+  ...
+# Subtest: v125 hospitality selector excludes resale purchases and preserves legacy hospitality purchases
+ok 430 - v125 hospitality selector excludes resale purchases and preserves legacy hospitality purchases
+  ---
+  duration_ms: 0.090847
+  type: 'test'
+  ...
+# Subtest: v125 SQL has atomic request keys and a unique purchase-to-sales-invoice link
+ok 431 - v125 SQL has atomic request keys and a unique purchase-to-sales-invoice link
+  ---
+  duration_ms: 0.221493
+  type: 'test'
+  ...
+# Subtest: v125 SQL summary excludes linked purchase costs from extra cost and excludes hospitality from sales
+ok 432 - v125 SQL summary excludes linked purchase costs from extra cost and excludes hospitality from sales
+  ---
+  duration_ms: 0.191478
+  type: 'test'
+  ...
+# Subtest: v125 SQL has owner-only writers, an invoker view, immutable costs and no historical migration DML
+ok 433 - v125 SQL has owner-only writers, an invoker view, immutable costs and no historical migration DML
+  ---
+  duration_ms: 0.262345
+  type: 'test'
+  ...
+# Subtest: v125 SQL blocks sale purchases in hospitality and protects supplier/customer settlements on cancellation
+ok 434 - v125 SQL blocks sale purchases in hospitality and protects supplier/customer settlements on cancellation
+  ---
+  duration_ms: 0.09329
+  type: 'test'
+  ...
+# Subtest: v125 UI, API, report export and cache bust all target the new release
+ok 435 - v125 UI, API, report export and cache bust all target the new release
+  ---
+  duration_ms: 1.627097
+  type: 'test'
+  ...
+# Subtest: v125 fixed hospitality is charged even in orders-only events without double-counting closed on-demand rules
+ok 436 - v125 fixed hospitality is charged even in orders-only events without double-counting closed on-demand rules
+  ---
+  duration_ms: 0.286531
+  type: 'test'
+  ...
+# Subtest: v125 a zero-cost zero-markup external item must use hospitality rather than a zero-value sale
+ok 437 - v125 a zero-cost zero-markup external item must use hospitality rather than a zero-value sale
+  ---
+  duration_ms: 0.109134
+  type: 'test'
+  ...
+# Subtest: pay type badges use distinct and consistent labels
+ok 438 - pay type badges use distinct and consistent labels
+  ---
+  duration_ms: 0.939342
+  type: 'test'
+  ...
+# Subtest: currency due amounts are NOT summed across currencies
+ok 439 - currency due amounts are NOT summed across currencies
+  ---
+  duration_ms: 12.798013
+  type: 'test'
+  ...
+# Subtest: profit remains provisional if cost data is incomplete
+ok 440 - profit remains provisional if cost data is incomplete
+  ---
+  duration_ms: 0.250447
+  type: 'test'
+  ...
+# Subtest: quality warnings expose duplicate and incomplete orders
+ok 441 - quality warnings expose duplicate and incomplete orders
+  ---
+  duration_ms: 0.232119
+  type: 'test'
+  ...
+# Subtest: chart markup escapes server-provided labels
+ok 442 - chart markup escapes server-provided labels
+  ---
+  duration_ms: 0.326551
+  type: 'test'
+  ...
+# Subtest: statistical KPI values use numeric value or explicit missing mark
+ok 443 - statistical KPI values use numeric value or explicit missing mark
+  ---
+  duration_ms: 0.350077
+  type: 'test'
+  ...
+# Subtest: financial RPC uses exact verified parameter names
+ok 444 - financial RPC uses exact verified parameter names
+  ---
+  duration_ms: 0.23313
+  type: 'test'
+  ...
+# Subtest: all new payroll handlers use protected RPCs
+ok 445 - all new payroll handlers use protected RPCs
+  ---
+  duration_ms: 0.283035
+  type: 'test'
+  ...
+# Subtest: no direct cashbox ledger writes in migration
+ok 446 - no direct cashbox ledger writes in migration
+  ---
+  duration_ms: 1.047455
+  type: 'test'
+  ...
+# Subtest: all relative JS imports exist and are versioned
+ok 447 - all relative JS imports exist and are versioned
+  ---
+  duration_ms: 8.730597
+  type: 'test'
+  ...
+# Subtest: project ZIP contents do not need Git or config changes
+ok 448 - project ZIP contents do not need Git or config changes
+  ---
+  duration_ms: 0.181573
+  type: 'test'
+  ...
+1..448
+# tests 448
+# suites 0
+# pass 441
+# fail 0
+# cancelled 0
+# skipped 7
+# todo 0
+# duration_ms 1497.375668

@@ -71,7 +71,7 @@ test('current UI has seat-only booking prices, external purchases and Arabic boo
  assert.doesNotMatch(js,/data-picker="start"|data-picker="additional"/);
  assert.match(js,/name="unitPrice"/);assert.match(js,/name="amount"/);
  assert.match(js,/EVENT_BOOKING_STATUS_AR_V038/);assert.match(js,/data-book-amount/);
- assert.match(js,/eventExternalDishesV038/);assert.match(js,/eventSaveExternalServingV0(?:38|39|40|41)/);assert.match(js,/eventPayExternalDishV038/);
+ assert.match(js,/eventLedgerRowsV125\('event_external_dishes_v038'/);assert.match(js,/eventSaveExternalServingV0(?:38|39|40|41)/);assert.match(js,/eventPayExternalDishV038/);
  assert.match(js,/ticketFromMarginV038/);assert.match(js,/eventGuestSummaryV038/);
  assert.match(api,/eventSetBookingAmountV038/);
  assert.match(html,/app\.js\?v=1\.0/);

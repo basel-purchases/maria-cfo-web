@@ -1534,3 +1534,39 @@ export const removeEmployeeV123=employeeId=>
   rpc('remove_employee_v123',{p_employee_id:employeeId});
 export const prepareScheduledWorkdaysV123=(start,end)=>
   rpc('prepare_scheduled_workdays_v123',{p_start:start,p_end:end});
+
+
+// v1.0.25: explicit restaurant orders, external purchase markup, authoritative event result.
+export const eventSummaryV125=id=>list('event_financial_summary_v125',{eq:{id},limit:1}).then(rows=>{
+ if(!rows[0])throw Error('V125_FINANCIAL_SUMMARY_MISSING');
+ return rows[0];
+});
+export async function eventLedgerRowsV125(table,eventId){
+ const allowed=['event_extras_v034','event_external_dishes_v038','event_on_demand_issues_v040'];
+ if(!allowed.includes(table))throw Error('V125_LEDGER_TABLE_INVALID');
+ const rows=[];
+ for(let offset=0;offset<50000;offset+=500){
+  const chunk=await dataOrThrow(need().from(table).select('*').eq('event_id',eventId)
+   .order('created_at',{ascending:true}).order('id',{ascending:true}).range(offset,offset+499));
+  rows.push(...(chunk||[]));
+  if(!chunk||chunk.length<500)return rows;
+ }
+ throw Error('V125_LEDGER_TOO_LARGE');
+}
+export const eventAddInternalOrderV125=(eventId,input)=>rpc('event_add_internal_order_v125',{
+ p_event_id:eventId,p_description:input.description,p_quantity:Number(input.quantity),
+ p_unit_price:input.billingMode==='hospitality'?0:Number(input.unitPrice),
+ p_menu_item_id:input.menuItemId||null,
+ p_unit_cost_base:input.menuItemId?null:input.unitCost===''||input.unitCost==null?null:Number(input.unitCost),
+ p_billing_mode:input.billingMode,p_request_key:input.requestKey,p_note:input.note||null,
+});
+export const eventAddExternalDishV125=(eventId,input)=>rpc('event_add_external_dish_v125',{
+ p_event_id:eventId,p_name:input.name,p_unit_label:input.unit,p_quantity:Number(input.quantity),
+ p_unit_cost_base:input.unitCost===''||input.unitCost==null?null:Number(input.unitCost),
+ p_billing_mode:input.billingMode,p_unit_profit_base:input.billingMode==='hospitality'?0:
+   input.unitProfit===''||input.unitProfit==null?null:Number(input.unitProfit),
+ p_request_key:input.requestKey,p_vendor:input.vendor||null,p_notes:input.note||null,
+});
+export const eventPriceExternalDishV125=(id,profit)=>rpc('event_price_external_dish_v125',{
+ p_id:id,p_unit_profit_base:Number(profit),
+});

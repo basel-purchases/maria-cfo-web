@@ -1,0 +1,70 @@
+{
+  "tests": 15,
+  "passed": 15,
+  "failed": 0,
+  "browser": "Chromium local",
+  "backend": "mock API, NOT live Supabase",
+  "results": [
+    {
+      "test": "Event loads with the v125 authoritative summary",
+      "passed": true
+    },
+    {
+      "test": "Orders ledger shows internal, external and complimentary rows",
+      "passed": true
+    },
+    {
+      "test": "Internal recipe order previews correct profit and submits a stable request key",
+      "passed": true
+    },
+    {
+      "test": "Complimentary internal hospitality submits zero sale with explicit cost",
+      "passed": true
+    },
+    {
+      "test": "Incomplete recipe cannot be submitted as zero cost",
+      "passed": true
+    },
+    {
+      "test": "Resale purchase is excluded from free hospitality actions",
+      "passed": true
+    },
+    {
+      "test": "External cake order submits explicit per-unit markup and one request key",
+      "passed": true
+    },
+    {
+      "test": "External complimentary purchase carries no sales markup",
+      "passed": true
+    },
+    {
+      "test": "Existing unused purchase can be priced without creating a second purchase",
+      "passed": true
+    },
+    {
+      "test": "Customer collection uses the linked sales invoice, not the supplier bill",
+      "passed": true
+    },
+    {
+      "test": "Supplier settlement uses only purchase cost",
+      "passed": true
+    },
+    {
+      "test": "Report shows cost, sales and profit separately with no markup double-add",
+      "passed": true
+    },
+    {
+      "test": "390px mobile layout contains horizontal table scroll without page overflow",
+      "passed": true
+    },
+    {
+      "test": "Retry after a transport error preserves the original idempotency key",
+      "passed": true
+    },
+    {
+      "test": "Missing migration blocks financial display instead of showing zero",
+      "passed": true
+    }
+  ],
+  "pageErrors": []
+}

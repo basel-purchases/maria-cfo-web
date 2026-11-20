@@ -1,0 +1,29 @@
+{
+  "release": "1.0.25",
+  "prepared_date": "2026-11-20",
+  "source_release": "1.0.24",
+  "node": {
+    "command": "node --test tests/*.test.mjs",
+    "total": 448,
+    "passed": 441,
+    "failed": 0,
+    "skipped": 7,
+    "skip_reason": "Private historical Al-Ameen report fixtures are not bundled."
+  },
+  "chromium": {
+    "scenarios": 15,
+    "passed": 15,
+    "failed": 0,
+    "backend": "Mock API, synthetic fixtures, no Supabase connection",
+    "mobile_width_px": 390
+  },
+  "sql": {
+    "source_contract_checks": "passed via Node; signatures/columns checked against supplied diagnostic schema",
+    "executed_on_postgresql": false,
+    "executed_on_user_supabase": false,
+    "staging_required": true
+  },
+  "preserved_original_files": 333,
+  "contains_config_js": false,
+  "contains_user_database_export": false
+}

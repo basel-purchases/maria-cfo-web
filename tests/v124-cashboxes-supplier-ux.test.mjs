@@ -81,6 +81,6 @@ test('all cashbox presentations use the v124 balance, and navigation exposes sup
  assert.match(suppliers,/supplierPriceTrendsV124\(activity\)/);
  assert.match(css,/\.staff-profile-insights\[data-employee-insights\]\{display:flex;flex-direction:column/);
  assert.match(css,/\.staff-v124-history-wrap\{width:100%/);
- assert.equal(read('VERSION').trim(),'1.0.24');
- assert.match(read('index.html'),/v=1\.0\.24/);
+ assert.equal(read('VERSION').trim(),'1.0.25');
+ assert.match(read('index.html'),/v=1\.0\.25/);
 });
