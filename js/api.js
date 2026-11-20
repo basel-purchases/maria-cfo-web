@@ -135,6 +135,21 @@ export const materialPriceInitializeUsdV110=rate=>rpc('material_price_initialize
 export const materialPriceApplyExchangeV110=(rate,updateMaterials)=>
  rpc('material_price_set_exchange_rate_v110',{p_rate:rate,p_update_material_prices:Boolean(updateMaterials)});
 
+
+// v1.0.30: material pools are alternatives for stock issue, never a destructive SQL merge.
+export async function materialGroupsV130(){
+  const [groups,members]=await Promise.all([
+    list('material_groups_v130',{order:'name',ascending:true,limit:500}),
+    list('material_group_members_v130',{order:'priority',ascending:true,limit:10000})
+  ]);
+  return {groups,members};
+}
+export const materialGroupSaveV130=({id=null,name,members,accepted=false})=>
+ rpc('material_group_save_v130',{
+   p_group_id:id,p_name:name,p_members:members,p_accept_price_warning:accepted
+ });
+export const materialGroupDeleteV130=id=>rpc('material_group_delete_v130',{p_group_id:id});
+
 export async function materials(){
   let rows;
   try{rows=await list('materials',{order:'created_at',ascending:true,limit:1000});}

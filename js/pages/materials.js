@@ -1,8 +1,9 @@
-import * as api from '../api.js?v=1.0.22';
+import * as api from '../api.js?v=1.0.30';
+import {openMaterialGroupsV130} from '../material-groups-ui-v130.js?v=1.0.30';
 import {materialCategoryFieldV122,attachMaterialCategoryPickerV122} from '../material-category-picker-v122.js?v=1.0.22';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {roundUpKnownMaterialPriceV120,displayKnownMaterialPriceV120,editedKnownMaterialPriceV120} from '../material-price-rounding-v120.js?v=1.0.22';
-import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.22';
+import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.30';
 import { esc, unitDisplay, money, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
 import { isVagueContextualName } from '../unit-catalog.js?v=1.0';
@@ -98,7 +99,7 @@ export async function renderMaterials(root) {
           <h2>المواد والكميات والأسعار</h2>
           <p>عرّف المادة مرة واحدة، وحدد وحدة المخزون. أضف التحويلات فقط عندما تحتاجها في الشراء أو الوصفات.</p>
         </div>
-        <div class="page-head-actions"><a class="btn secondary" href="#/settings/material-categories">إدارة تصنيفات المواد</a><button class="btn secondary price-all-usd-v110" type="button">تسعير المواد بالدولار</button><button class="btn add">إضافة مادة</button></div>
+        <div class="page-head-actions"><button class="btn secondary" type="button" data-manage-material-groups-v130>دمج مواد للصرف</button><a class="btn secondary" href="#/settings/material-categories">إدارة تصنيفات المواد</a><button class="btn secondary price-all-usd-v110" type="button">تسعير المواد بالدولار</button><button class="btn add">إضافة مادة</button></div>
       </div>
       ${rows.length ? `
         <div class="list-toolbar">
@@ -118,6 +119,10 @@ export async function renderMaterials(root) {
         </div>`}`;
 
     root.querySelector('.price-all-usd-v110')?.addEventListener('click',()=>priceAllMaterialsUSD(root,rows));
+    root.querySelector('[data-manage-material-groups-v130]')?.addEventListener('click',async()=>{
+      try{await openMaterialGroupsV130({materials:rows,units,onChanged:()=>renderMaterials(root)});}
+      catch(e){toast(friendlyError(e),'error');}
+    });
     root.querySelectorAll('.add').forEach((b) => {
       b.onclick = () => addMaterial(root, units, rows,categories);
     });

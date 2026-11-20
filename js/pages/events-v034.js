@@ -1,6 +1,6 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
 import * as api from '../api.js?v=1.0.25';
-import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
+import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.30';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {EVENT_RULE_NAMES_V034,eventCostQuoteV034,eventActualResultV034} from '../event-cost-v034.js?v=1.0';

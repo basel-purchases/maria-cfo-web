@@ -1,6 +1,6 @@
 import * as api from '../api.js?v=1.0.24';
 import { expectedCashboxBalanceV116 } from '../cashbox-summary-v116.js?v=1.0.24';
-import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0';
+import { modal,toast,loader,friendlyError,confirmBox } from '../ui.js?v=1.0.30';
 import {currencyLabel, esc,money,dateOnly,statusBadge,todayISO,num,unitDisplay } from '../utils.js?v=1.0';
 import { chooseStockPair, splitStockQuantity, stockNumber } from '../material-stock-display.js?v=1.0';
 import { datePeriod, dateInRange, dateRangeValid } from '../date-range-batch.js?v=1.0';

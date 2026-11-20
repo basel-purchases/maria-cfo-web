@@ -9,6 +9,17 @@ export function friendlyError(error, fallback='تعذر إكمال العملي�
   if(msg.includes('failed to fetch')||msg.includes('network')||msg.includes('socket')) return 'تعذر الاتصال بالخدمة. تحقق من الإنترنت ثم حاول مرة أخرى.';
   if(msg.includes('401')||msg.includes('jwt')||msg.includes('session')) return 'انتهت جلسة الدخول. سجّل الدخول من جديد.';
   if(msg.includes('403')||msg.includes('access denied')) return 'ليست لديك صلاحية لتنفيذ هذه العملية.';
+  // v1.0.30: accountant-controlled material groups with safe stock depletion.
+  if(msg.includes('group_stock_insufficient'))return 'رصيد المواد في مجموعة الدمج غير كافٍ. لم يتم تسجيل الصرف أو خصم أي كمية؛ استكمل المخزون أو عدّل الأوردر.';
+  if(msg.includes('group_price_warning_confirmation_required'))return 'يوجد اختلاف أو نقص في أسعار المواد. راجع الأسعار وأكّد مسؤوليتك عن الدمج قبل الحفظ.';
+  if(msg.includes('group_units_must_match'))return 'لا يمكن دمج مواد بوحدات مخزون أساسية مختلفة. صحّح الوحدات أولًا.';
+  if(msg.includes('group_material_already_assigned'))return 'إحدى المواد موجودة في مجموعة دمج أخرى. أخرجها من المجموعة القديمة أولًا.';
+  if(msg.includes('group_name_already_used'))return 'يوجد دمج آخر بنفس الاسم. استخدم المجموعة الموجودة أو اختر اسمًا مختلفًا.';
+  if(msg.includes('group_members_duplicated'))return 'لا يجوز إضافة المادة نفسها أكثر من مرة إلى المجموعة.';
+  if(msg.includes('group_member_count_invalid'))return 'اختر مادتين على الأقل وبحد أقصى 100 مادة.';
+  if(msg.includes('group_material_not_active')||msg.includes('material_not_active'))return 'تضم المجموعة مادة موقوفة أو محذوفة؛ راجع المواد قبل اعتماد الدمج.';
+  if(msg.includes('group_not_found'))return 'المجموعة لم تعد موجودة. حدّث الصفحة.';
+  if(msg.includes('group_')||msg.includes('material_groups_v130')||msg.includes('material_group_members_v130')||msg.includes('material_consumption_plan_v130'))return 'راجع إعدادات مجموعة الدمج وتأكد من تطبيق تحديث SQL v1.0.30 على قاعدة البيانات.';
   if(msg.includes('ameen_order_review_required')) return 'هذا الأوردر مستورد من التقرير المستورد. راجع الصندوق والصافي واعتمد المطابقة أولًا من صفحة الإدخالات السريعة.';
   if(msg.includes('ameen_order_total_mismatch')) return 'صافي الأوردر لا يطابق صافي التقرير؛ صحح المبلغ أو اتركه للمراجعة.';
   if(msg.includes('ameen_order_items_changed_reapproval_required')) return 'تغيّرت أصناف الأوردر بعد الاعتماد. يجب إعادة مراجعتها واعتمادها قبل النشر.';

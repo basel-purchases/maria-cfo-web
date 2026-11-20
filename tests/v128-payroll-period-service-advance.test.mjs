@@ -66,7 +66,7 @@ test('SQL snapshots service boundaries and denies stale approved payroll drafts'
 test('all updated entrypoints are revisioned, and SQL migration remains separate',()=>{
  const app=read('js/app.js'),html=read('index.html'),api=read('js/api.js');
  for(const f of ['payroll-v034','employees','advances'])assert.match(app,new RegExp(`${f}\\.js\\?v=1\\.0\\.29`));
- assert.match(html,/js\/app\.js\?v=1\.0\.29/);
+ assert.match(html,/js\/app\.js\?v=1\.0\.30/);
  for(const f of ['create_monthly_payroll_v128','record_employee_advance_v128','employee_advance_outstanding_v128'])assert.match(api,new RegExp(`rpc\\('${f}'`));
- assert.equal(read('VERSION').trim(),'1.0.29');
+ assert.equal(read('VERSION').trim(),'1.0.30');
 });

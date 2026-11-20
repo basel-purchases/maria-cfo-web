@@ -1,10 +1,10 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.29';
+import * as api from './api.js?v=1.0.30';
 import { esc } from './utils.js?v=1.0';
-import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
+import { toast, friendlyError, modal } from './ui.js?v=1.0.30';
 import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
 import { renderHub } from './pages/hubs.js?v=1.0.24';
-import { renderMaterials } from './pages/materials.js?v=1.0.22';
+import { renderMaterials } from './pages/materials.js?v=1.0.30';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
@@ -14,10 +14,10 @@ import {
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=1.0.24';
+} from './pages/daily.js?v=1.0.30';
 import { renderEmployees } from './pages/employees.js?v=1.0.29';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0.29';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.25';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.30';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
@@ -123,7 +123,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.29</div>
+        <div class="sidebar-foot">Web v1.0.30</div>
       </aside>
 
       <main class="main">
