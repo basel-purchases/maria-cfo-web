@@ -1,8 +1,8 @@
-import * as api from '../api.js?v=1.0.27';
+import * as api from '../api.js?v=1.0.27.1';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.23';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
-import {openEmployeeAdjustmentModalV127} from './employees.js?v=1.0.27';
+import {openEmployeeAdjustmentModalV127} from '../employee-adjustment-modal-v1271.js?v=1.0.27.1';
 import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034} from '../payroll-workbench-v034.js?v=1.0.17';
 
 const MONTH_NAMES=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];

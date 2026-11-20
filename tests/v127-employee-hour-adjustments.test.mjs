@@ -10,6 +10,7 @@ const read=f=>readFileSync(join(root,f),'utf8');
 const sql=read('database/Maria-CFO-Web-v1.0.27-Hourly-Employee-Adjustments.sql');
 const employees=read('js/pages/employees.js');
 const payroll=read('js/pages/payroll-v034.js');
+const modalSource=read('js/employee-adjustment-modal-v1271.js');
 const api=read('js/api.js');
 test('November 2026 has 26 payable workdays excluding four Fridays',()=>{
  const rate=scheduleMonthV127({year:2026,month:11,dailyHours:8});
@@ -64,12 +65,13 @@ test('SQL uses actual weekday schedule and stores the rate in the payroll adjust
 });
 test('employee profile and payroll pages share the same money/hours entry dialog',()=>{
  assert.match(employees,/export function openEmployeeAdjustmentModalV127/);
- assert.match(employees,/option value="hours"/);
- assert.match(employees,/option value="money"/);
- assert.match(employees,/api\.employeeHourRateV127\(/);
- assert.match(employees,/api\.recordEmployeeAdjustmentV127\(/);
+ assert.match(modalSource,/option value="hours"/);
+ assert.match(modalSource,/option value="money"/);
+ assert.match(modalSource,/api\.employeeHourRateV127\(/);
+ assert.match(modalSource,/api\.recordEmployeeAdjustmentV127\(/);
  assert.match(employees,/calc_mode_v127==='hours'/);
  assert.match(payroll,/openEmployeeAdjustmentModalV127/);
+ assert.doesNotMatch(payroll,/from ['"]\.\/employees\.js/);
  assert.match(payroll,/data-salary-adjust="addition"/);
  assert.match(payroll,/data-salary-adjust="deduction"/);
 });

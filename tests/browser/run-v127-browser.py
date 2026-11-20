@@ -1,4 +1,4 @@
-"""Offline Chromium acceptance test of v1.0.27 hourly & monetary employee adjustments.
+"""Offline Chromium acceptance test of v1.0.27.1 hourly & monetary employee adjustments.
 No live Supabase is accessed. The API module is replaced by deterministic mocks.
 """
 import os, re, posixpath, shutil, json

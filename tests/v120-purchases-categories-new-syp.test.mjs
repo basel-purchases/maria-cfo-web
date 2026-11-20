@@ -156,6 +156,6 @@ test('v120 settings show only new SYP, launch checks USD material revalue and ve
   assert.ok(app.includes("./"+mod+'?v='+(['pages/materials.js','pages/settings.js'].includes(mod)?'1.0.22':mod==='pages/purchases.js'?'1.0.23':'1.0.26')),mod);
  }
  assert.match(index,/Web v1\.0\.27/);
- assert.equal(source('VERSION').trim(),'1.0.27');
+ assert.equal(source('VERSION').trim(),'1.0.27.1');
  assert.equal(existsSync(path.join(root,'config.js')),false);
 });
