@@ -1,4 +1,11 @@
 // Bonuses are payroll adjustments, not standalone cash payouts.
+// The legacy payroll ledger requires a nonempty reason in its database schema.
+// Do not force the accountant to invent one: this explicit label records that
+// no reason was supplied while preserving the legacy SQL integrity checks.
+export const UNSPECIFIED_PAYROLL_REASON_V129 = 'لم يُذكر سبب';
+export function optionalPayrollReasonV129(reason) {
+  return String(reason ?? '').trim() || UNSPECIFIED_PAYROLL_REASON_V129;
+}
 export const BONUS_REASONS_V032 = Object.freeze([
   'أداء متميز', 'انضباط والتزام', 'تغطية وردية إضافية', 'تحقيق هدف المبيعات',
   'خدمة عملاء متميزة', 'مناسبة أو مكافأة استثنائية',
@@ -18,10 +25,11 @@ export function validateBonusV032({employee, amount, effectiveDate, reason, note
     throw Error('أدخل مبلغ مكافأة موجبًا.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate) || Number.isNaN(Date.parse(`${effectiveDate}T12:00:00Z`)))
     throw Error('اختر تاريخ استحقاق صحيحًا.');
-  if (!BONUS_REASONS_V032.includes(String(reason))) throw Error('اختر سبب المكافأة.');
+  const selectedReason=String(reason ?? '').trim();
+  if (selectedReason && !BONUS_REASONS_V032.includes(selectedReason)) throw Error('سبب المكافأة غير مدعوم.');
   if (String(note).length > 500) throw Error('الملاحظة أطول من 500 حرف.');
   return {employeeId: employee.id, amount: value, effectiveDate,
-    reason: String(reason), note: String(note).trim()};
+    reason: optionalPayrollReasonV129(selectedReason), note: String(note).trim()};
 }
 export function bonusTotalsV032(rows) {
   const totals = new Map();

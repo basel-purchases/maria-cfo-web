@@ -5,6 +5,7 @@ import * as api from './api.js?v=1.0.28';
 import {modal,toast,friendlyError} from './ui.js?v=1.0.23';
 import {currencyLabel,esc,todayISO} from './utils.js?v=1.0';
 import {dateInEmployeeServiceV128,employeeServiceDateInputV128} from './employee-service-v128.js?v=1.0.28';
+import {optionalPayrollReasonV129} from './bonus-policy-v032.js?v=1.0.29';
 
 // Reused by the employee file and by the payroll screen.
 export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDate=todayISO()){
@@ -23,7 +24,7 @@ export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDat
     <div class="field" data-money-entry><label>المبلغ (${esc(currencyLabel(currency))})</label><input name="amount" type="number" min="0.0001" max="1000000000000" step="any" inputmode="decimal" required></div>
     <div class="field" data-hours-entry hidden><label>عدد الساعات</label><input name="hours" type="number" min="0.01" max="744" step="0.01" inputmode="decimal" disabled></div>
     <div class="field full" data-hour-preview hidden aria-live="polite"></div>
-    <div class="field full"><label>السبب</label><input name="reason" maxlength="120" required></div>
+    <div class="field full"><label>السبب (اختياري)</label><input name="reason" maxlength="120" placeholder="يمكن تركه فارغًا"></div>
     <div class="field full"><label>ملاحظة (اختياري)</label><textarea name="note" maxlength="500" rows="2"></textarea></div>
    </div>
    <div class="notice">قيمة الساعة بحسب الأجر المحفوظ وجدول الدوام للشهر المختار، مع استبعاد أيام الجمعة. يُضاف المبلغ أو يُخصم عند احتساب المسير، ولا تُسجل حركة نقدية الآن. لا تسجل خصم غياب سبق احتسابه تلقائيًا.</div>`,
@@ -38,7 +39,7 @@ export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDat
     if(valueKind==='hours'&&!rateData)throw Error('لم يتم تحميل سعر الساعة من قاعدة البيانات. راجع تحديث SQL v1.0.27.');
     if(!dateInEmployeeServiceV128(employee,String(fd.get('date')||'')))throw Error('تاريخ التسوية خارج فترة خدمة الموظف.');
     await api.recordEmployeeAdjustmentV127({employeeId:employee.id,kind,valueKind,value,
-      date:fd.get('date'),reason:String(fd.get('reason')||'').trim(),note:fd.get('note')});
+      date:fd.get('date'),reason:optionalPayrollReasonV129(fd.get('reason')),note:fd.get('note')});
     toast('تم تسجيل التسوية في كشف الراتب.','success');
     await onSaved?.();return true;
    }catch(e){

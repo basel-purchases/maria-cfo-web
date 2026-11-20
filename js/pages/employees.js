@@ -5,12 +5,12 @@ import { finalMonthTermsV123 } from '../final-month-pay-v123.js?v=1.0.23';
 import { EMPLOYEE_RATE_COLUMNS } from '../business-rules.js?v=1.0';
 import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=1.0';
 import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0.28';
-import {openEmployeeBonusModal} from './bonuses.js?v=1.0';
+import {openEmployeeBonusModal} from './bonuses.js?v=1.0.29';
 import {openEmployeeAdvanceModalV123} from './advances.js?v=1.0.23';
 import {visibleEmployeesV123,employeeTotalsV123,employeeLeaveCountV123,employeeLeaveNameV123,adjustmentKindV123,adjustmentLabelV123,adjustmentReasonV123} from '../employee-ledger-v123.js?v=1.0.23';
 
 import { payTypeBadge } from '../payroll-ui.js?v=1.0';
-import {openEmployeeAdjustmentModalV127 as sharedEmployeeAdjustmentModalV1271} from '../employee-adjustment-modal-v1271.js?v=1.0.28';
+import {openEmployeeAdjustmentModalV127 as sharedEmployeeAdjustmentModalV1271} from '../employee-adjustment-modal-v1271.js?v=1.0.29';
 import {dateInEmployeeServiceV128,employeeServiceDateInputV128,outstandingAdvancesByEmployeeV128} from '../employee-service-v128.js?v=1.0.28';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
 export async function renderEmployees(root) {

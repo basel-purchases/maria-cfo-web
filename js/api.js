@@ -1281,6 +1281,10 @@ export const approveAmeenOrderV024=(orderId)=>rpc('approve_ameen_order_v024',{p_
 // v0.34 -- the server is the sole authority for payroll settlement and event cash movements.
 export const payrollReadyV034=month=>rpc('payroll_ready_v034',{p_month:month});
 export const payrollPaidV034=month=>rpc('payroll_paid_v034',{p_month:month});
+export const payrollItemExplanationsV129=month=>rpc('payroll_item_explanations_v129',{p_month:month});
+export const payApprovedSalariesBulkV129=(month,itemIds,boxId,note='')=>rpc('pay_approved_salaries_bulk_v129',{
+ p_month:month,p_payroll_item_ids:itemIds,p_cashbox_id:boxId,p_note:note||null,
+});
 export const payApprovedSalaryV034=(itemId,amount,boxId,note='')=>rpc('pay_approved_salary_v034',{
   p_payroll_item_id:itemId,p_amount:Number(amount),p_cashbox_id:boxId,p_note:note||null,
 });

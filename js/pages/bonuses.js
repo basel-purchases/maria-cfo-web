@@ -2,7 +2,7 @@ import * as api from '../api.js?v=1.0.10';
 import {modal, toast, loader, friendlyError, confirmBox} from '../ui.js?v=1.0';
 import {currencyLabel, esc, money, dateOnly, todayISO} from '../utils.js?v=1.0';
 import {employeeName} from '../payroll-ui.js?v=1.0';
-import {BONUS_REASONS_V032, BONUS_STATUS_V032, validateBonusV032, bonusTotalsV032} from '../bonus-policy-v032.js?v=1.0';
+import {BONUS_REASONS_V032, BONUS_STATUS_V032, validateBonusV032, bonusTotalsV032} from '../bonus-policy-v032.js?v=1.0.29';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=1.0';
 
@@ -40,7 +40,7 @@ export function openEmployeeBonusModal({staff=[],employeeId='',onSaved=()=>{}}={
       <div class="field"><label>المبلغ</label><input type="number" name="amount" min="0.0001" max="1000000000000" step="any" inputmode="decimal" required placeholder="0"></div>
       <div class="field"><label>العملة</label><div class="employee-bonus-currency" aria-live="polite"></div></div>
       <div class="field"><label>تاريخ الاستحقاق</label><input type="date" name="date" value="${todayISO()}" required></div>
-      <div class="field"><label>سبب المكافأة</label><select name="reason" required>${BONUS_REASONS_V032.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
+      <div class="field"><label>سبب المكافأة (اختياري)</label><select name="reason"><option value="">بدون سبب</option>${BONUS_REASONS_V032.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></div>
       <div class="field full"><label>ملاحظة (اختيارية)</label><textarea name="note" rows="2" maxlength="500" placeholder="مثال: وردية نهاية الأسبوع أو تقييم الأداء"></textarea></div>
     </div>
     <p class="metric-note">المكافأة في عملة راتب الموظف. الموظف ذو الأجر المقطوع مستبعد لأن نظام صرفه الحالي لا يضيف المكافآت تلقائيًا.</p>`,
