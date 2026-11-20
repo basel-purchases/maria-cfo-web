@@ -5,7 +5,7 @@ import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
 import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
 import { renderHub } from './pages/hubs.js?v=1.0.24';
 import { renderMaterials } from './pages/materials.js?v=1.0.22';
-import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.24';
+import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
 import { renderMenu } from './pages/menu.js?v=1.0.7';
 import {
@@ -27,6 +27,7 @@ import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.23';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
+import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.26';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
 import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
@@ -52,6 +53,7 @@ const nav = [
   ['#/reports-hub', 'الإحصائيات والتقارير'],
   ['#/assistant', 'المساعد الذكي'],
   ['#/images', 'الصور'],
+  ['#/baseline-imports', 'استيراد الفواتير والجرد'],
   ['#/quick-imports', 'الإدخالات السريعة'],
   ['#/daily-orders', 'الأوردرات'],
   ['#/settings', 'الإعدادات'],
@@ -121,7 +123,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.25</div>
+        <div class="sidebar-foot">Web v1.0.26</div>
       </aside>
 
       <main class="main">
@@ -559,7 +561,7 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'suppliers', supplier: 'suppliers', purchases: 'basic', purchase: 'basic', menu: 'basic',
+    'baseline-imports':'baseline-imports', 'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'suppliers', supplier: 'suppliers', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
     'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
@@ -587,6 +589,7 @@ async function route() {
     dashboard: 'الرئيسية',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
+    'baseline-imports': 'استيراد الفواتير والجرد',
     'ameen-daily': 'الأوردرات',
     'daily-orders': 'الأوردرات',
     daily: 'التشغيل اليومي',
@@ -629,6 +632,7 @@ async function route() {
       case 'dashboard': return renderDashboard(root);
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
+      case 'baseline-imports': return renderBaselineImportsV126(root);
       case 'ameen-daily':
       case 'daily-orders': return renderAmeenDailyV041(root);
       case 'recipes-import': location.hash='#/quick-imports'; return;

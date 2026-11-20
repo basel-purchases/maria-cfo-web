@@ -194,7 +194,7 @@ export async function readAmeenWorkbook(file){
   strings=children(ss,'si').map(n=>children(n,'t').map(inner).join(''));
  }
  const tables=[];
- for(const sheet of sheets.slice(0,8)){
+ for(const sheet of sheets.slice(0,40)){
   const relId=sheet.getAttribute('r:id')||sheet.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
   const target=relations.get(relId)||'worksheets/sheet1.xml';
   const path=target.startsWith('/')?target.slice(1):target.startsWith('xl/')?target:`xl/${target.replace(/^\.\//,'')}`;

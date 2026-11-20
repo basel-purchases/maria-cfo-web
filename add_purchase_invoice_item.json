@@ -1,0 +1,14 @@
+{
+  "acl": [
+    "postgres=X/postgres",
+    "authenticated=X/postgres"
+  ],
+  "kind": "f",
+  "owner": "postgres",
+  "config": [
+    "search_path=\"\""
+  ],
+  "definition": "CREATE OR REPLACE FUNCTION public.add_purchase_invoice_item(p_invoice_id uuid, p_material_id uuid, p_purchase_unit_id uuid, p_quantity_purchase_unit numeric, p_unit_price_original numeric, p_line_discount_original numeric DEFAULT 0)\n RETURNS uuid\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\r\nbegin\r\n\r\n    return public.add_purchase_invoice_item(\r\n        p_invoice_id,\r\n        p_material_id,\r\n        p_purchase_unit_id,\r\n        p_quantity_purchase_unit,\r\n        p_unit_price_original,\r\n        coalesce(p_line_discount_original, 0),\r\n\r\n        -- AI confidence\r\n        null::numeric,\r\n\r\n        -- Notes\r\n        null::text\r\n    );\r\n\r\nend;\r\n$function$\n",
+  "volatility": "v",
+  "security_definer": false
+}

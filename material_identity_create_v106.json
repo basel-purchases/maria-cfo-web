@@ -1,0 +1,14 @@
+{
+  "acl": [
+    "postgres=X/postgres",
+    "authenticated=X/postgres"
+  ],
+  "kind": "f",
+  "owner": "postgres",
+  "config": [
+    "search_path=\"\""
+  ],
+  "definition": "CREATE OR REPLACE FUNCTION public.material_identity_create_v106(p_name text, p_code text, p_base_unit_id uuid, p_category_id uuid, p_target numeric, p_aliases text[])\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nDECLARE v_id uuid;\r\nBEGIN\r\n IF NOT public.is_app_owner() THEN RAISE EXCEPTION 'Access denied'; END IF;\r\n PERFORM pg_advisory_xact_lock(hashtextextended('maria-material-alias-v106',0));\r\n IF length(btrim(coalesce(p_name,''))) NOT BETWEEN 1 AND 250\r\n THEN RAISE EXCEPTION 'MATERIAL_NAME_INVALID'; END IF;\r\n IF EXISTS(SELECT 1 FROM public.materials m\r\n   WHERE public.material_alias_normalize_v106(m.name)=public.material_alias_normalize_v106(p_name))\r\n THEN RAISE EXCEPTION 'MATERIAL_NAME_ALREADY_EXISTS'; END IF;\r\n IF EXISTS(SELECT 1 FROM public.material_aliases_v106 a\r\n   WHERE a.alias_key=public.material_alias_normalize_v106(p_name))\r\n THEN RAISE EXCEPTION 'MATERIAL_NAME_COLLIDES_WITH_ALIAS'; END IF;\r\n INSERT INTO public.materials(name,code,base_unit_id,category_id_v023,target_stock_base)\r\n VALUES(btrim(p_name),p_code,p_base_unit_id,p_category_id,p_target) RETURNING id INTO v_id;\r\n PERFORM public.material_aliases_set_v106(v_id,p_aliases);\r\n RETURN v_id;\r\nEND;$function$\n",
+  "volatility": "v",
+  "security_definer": true
+}

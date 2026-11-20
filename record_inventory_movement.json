@@ -1,0 +1,14 @@
+{
+  "acl": [
+    "postgres=X/postgres",
+    "authenticated=X/postgres"
+  ],
+  "kind": "f",
+  "owner": "postgres",
+  "config": [
+    "search_path=\"\""
+  ],
+  "definition": "CREATE OR REPLACE FUNCTION public.record_inventory_movement(p_material_id uuid, p_movement_type text, p_quantity_delta_base numeric, p_unit_cost_base_per_base_unit numeric DEFAULT NULL::numeric, p_occurred_at timestamp with time zone DEFAULT now(), p_source_type text DEFAULT NULL::text, p_source_id uuid DEFAULT NULL::uuid, p_source_line_id uuid DEFAULT NULL::uuid, p_note text DEFAULT NULL::text)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare\r\n    v_movement_id uuid;\r\nbegin\r\n\r\n    if not public.is_app_owner() then\r\n        raise exception 'Access denied';\r\n    end if;\r\n\r\n\r\n    if p_quantity_delta_base is null\r\n       or p_quantity_delta_base = 0 then\r\n\r\n        raise exception\r\n            'Inventory quantity cannot be zero';\r\n\r\n    end if;\r\n\r\n\r\n    if not exists (\r\n        select 1\r\n        from public.materials\r\n        where id = p_material_id\r\n          and is_active = true\r\n    ) then\r\n\r\n        raise exception 'Material not found';\r\n\r\n    end if;\r\n\r\n\r\n    insert into public.inventory_movements (\r\n        material_id,\r\n        movement_type,\r\n        quantity_delta_base,\r\n        unit_cost_base_per_base_unit,\r\n        occurred_at,\r\n        source_type,\r\n        source_id,\r\n        source_line_id,\r\n        note\r\n    )\r\n    values (\r\n        p_material_id,\r\n        p_movement_type,\r\n        p_quantity_delta_base,\r\n        p_unit_cost_base_per_base_unit,\r\n        p_occurred_at,\r\n        p_source_type,\r\n        p_source_id,\r\n        p_source_line_id,\r\n        p_note\r\n    )\r\n    returning id\r\n    into v_movement_id;\r\n\r\n\r\n    update public.materials\r\n    set current_stock_base =\r\n        current_stock_base + p_quantity_delta_base\r\n    where id = p_material_id;\r\n\r\n\r\n    return v_movement_id;\r\n\r\nend;\r\n$function$\n",
+  "volatility": "v",
+  "security_definer": true
+}

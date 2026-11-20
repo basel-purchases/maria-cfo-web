@@ -236,6 +236,8 @@ export async function renderSupplierDetail(root,id){
   const priceTrends=supplierPriceTrendsV124(activity);
   const risingPrices=priceTrends.filter(p=>p.percentChange!==null&&p.percentChange>0.001).length;
   const invoices=(activity.invoices||[]).filter(inv=>!inv.archived_at_v122);
+  const historicalInvoicesV126=invoices.filter(inv=>inv.is_ameen_legacy_v029 && inv.status==='posted' && !inv.is_voided);
+  const historicAmountV126=historicalInvoicesV126.reduce((sum,inv)=>sum+Number(inv.total_original||0),0);
   const items=activity.items||[];
   const payments=activity.payments||[];
   const allocations=activity.allocations||[];
@@ -270,6 +272,7 @@ export async function renderSupplierDetail(root,id){
        <div class="k">الدفعات المخصصة</div><div>${money(v.paidAllocated,code)}</div>
        <div class="k">الرصيد المتبقي</div><div><strong>${money(v.outstanding,code)}</strong></div></div></div>`).join('')||'<div class="card"><p>لا توجد فواتير منشورة لهذا المورد.</p></div>'}
    </div>
+   ${historicalInvoicesV126.length?`<div class="notice"><strong>فواتير الأمين التاريخية:</strong> ${historicalInvoicesV126.length} فاتورة، بقيمة إجمالية ${money(historicAmountV126,'SYP')}؛ كلها مؤشرة «مصفاة خارج النظام بحسب إفادة الإدارة»، منفصلة عن الفواتير الجارية ولا تنشئ ديونًا أو مدفوعات نقدية.</div>`:''}
    ${account?`<div class="notice">كشف الحساب المستورد منفصل عن الفواتير الفعلية: الرصيد المرجعي ${reportValue(account.current_balance)}. <button type="button" class="mini-btn supplier-imported-ledger-v119">الحركات المرجعية</button></div>`:''}
    <div class="notice">حركة مخزون مواد المورد تشمل أيضًا الاستهلاك والتسويات ومشتريات الموردين الآخرين لهذه المواد، ولا تُنسب كلها للمورد. تُقارن أسعار المشتريات الصافية بعد خصم البند داخل العملة نفسها ووحدة الشراء نفسها، دون خلط العملات أو احتساب المسودات والملغاة. النسبة تقديرية مقارنة بآخر سعر شراء سابق وليست تغيرًا في قيمة المخزون.</div>
    <div class="supplier-tabs-v119" role="tablist" aria-label="تفاصيل المورد">
@@ -298,12 +301,13 @@ export async function renderSupplierDetail(root,id){
     count=subset.length;
     host.innerHTML=`<div class="supplier-invoice-list-v119">${subset.map(inv=>{
       const list=rowItems(inv.id),paid=paidByInvoice.get(String(inv.id))||0;
-      const status=inv.is_voided?'ملغاة/مصححة':inv.status==='posted'?'منشورة':'مسودة';
+      const historical=Boolean(inv.is_ameen_legacy_v029);
+      const status=inv.is_voided?'ملغاة/مصححة':historical?'تاريخية — مصفاة خارج النظام':inv.status==='posted'?'منشورة':'مسودة';
       return `<details class="supplier-invoice-card-v119">
        <summary><span><strong>${esc(invoiceName(inv))}</strong> · ${dateOnly(inv.invoice_date||inv.occurred_at)}
         <small>${esc(status)} · ${list.length} بند</small></span>
         <span><strong>${money(inv.is_voided?(inv.voided_original_total||0):(inv.total_original||0),inv.currency_code||'SYP')}</strong>
-          <small>مدفوع مخصص: ${money(paid,inv.currency_code||'SYP')}</small></span></summary>
+          <small>${historical?'مصفاة مسبقًا خارج البرنامج (إفادة الإدارة) — لا سداد صندوق':`مدفوع مخصص: ${money(paid,inv.currency_code||'SYP')}`}</small></span></summary>
        <div class="table-wrap"><table class="table"><thead><tr><th>المادة</th><th>الكمية</th><th>الوحدة</th><th>سعر الوحدة</th><th>خصم</th><th>إجمالي البند</th></tr></thead>
        <tbody>${list.map(x=>`<tr><td>${esc(x.material_name||'—')}</td>
         <td>${esc(x.quantity_purchase_unit)}</td><td>${esc(unitLabel(x.unit_code||x.unit_name||'—'))}</td>
