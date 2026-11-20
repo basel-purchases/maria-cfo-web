@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.25';
+import * as api from './api.js?v=1.0.28';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.23';
 import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
@@ -15,16 +15,16 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=1.0.24';
-import { renderEmployees } from './pages/employees.js?v=1.0.27.1';
+import { renderEmployees } from './pages/employees.js?v=1.0.28';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.25';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.27.1';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.28';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
 import { renderSettings } from './pages/settings.js?v=1.0.22';
 import { renderAssets } from './pages/assets.js?v=1.0';
-import { renderAdvances } from './pages/advances.js?v=1.0.23';
+import { renderAdvances } from './pages/advances.js?v=1.0.28';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
 import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.26';
@@ -123,7 +123,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.27.1</div>
+        <div class="sidebar-foot">Web v1.0.28</div>
       </aside>
 
       <main class="main">

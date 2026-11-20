@@ -7,7 +7,7 @@ test('payroll module does not statically import an export from employees page',(
   const profile=read('js/pages/employees.js');
   const shared=read('js/employee-adjustment-modal-v1271.js');
   assert.doesNotMatch(payroll,/from\s+['"]\.\/employees\.js/);
-  assert.match(payroll,/from ['"]\.\.\/employee-adjustment-modal-v1271\.js\?v=1\.0\.27\.1/);
+  assert.match(payroll,/from ['"]\.\.\/employee-adjustment-modal-v1271\.js\?v=1\.0\.28/);
   assert.match(shared,/export function openEmployeeAdjustmentModalV127\(/);
   assert.match(profile,/export function openEmployeeAdjustmentModalV127\(/);
   assert.match(profile,/sharedEmployeeAdjustmentModalV1271/);
@@ -16,9 +16,9 @@ test('entrypoint and dependency URLs are revisioned to prevent stale cache mixin
   const html=read('index.html');
   const app=read('js/app.js');
   const payroll=read('js/pages/payroll-v034.js');
-  assert.match(html,/js\/app\.js\?v=1\.0\.27\.1/);
-  assert.match(app,/pages\/payroll-v034\.js\?v=1\.0\.27\.1/);
-  assert.match(app,/pages\/employees\.js\?v=1\.0\.27\.1/);
-  assert.match(payroll,/employee-adjustment-modal-v1271\.js\?v=1\.0\.27\.1/);
-  assert.equal(read('VERSION').trim(),'1.0.27.1');
+  assert.match(html,/js\/app\.js\?v=1\.0\.28/);
+  assert.match(app,/pages\/payroll-v034\.js\?v=1\.0\.28/);
+  assert.match(app,/pages\/employees\.js\?v=1\.0\.28/);
+  assert.match(payroll,/employee-adjustment-modal-v1271\.js\?v=1\.0\.28/);
+  assert.equal(read('VERSION').trim(),'1.0.28');
 });

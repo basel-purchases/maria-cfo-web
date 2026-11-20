@@ -1,3 +1,15 @@
+# v1.0.28 - Explicit payroll period, employment boundaries, residual advances
+
+- User-selected payroll entitlement period in the create dialog. Creation timestamp remains independent.
+- Service-date snapshots on monthly drafts. New or changed employment boundaries require recalculation before approval.
+- Advance, leave and fixed-pay work dates must fall within employment dates, inclusive; protected in UI and database.
+- Current and projected outstanding advance balances in monthly payroll, current outstanding balance in employee profile.
+- No reset or re-post of previously approved payroll, no cash transaction on draft creation.
+- Local tests: 475 passed, 7 skipped, 0 failed; Chromium simulated API: 6 passed.
+- SQL has NOT been run on a live PostgreSQL/Supabase server. Validate staging first.
+
+---
+
 # v1.0.27.1 — إصلاح منع تشغيل البرنامج بعد التحديث
 
 - فصل نموذج تسوية الرواتب عن صفحة الموظف، وإزالة الاعتماد على تصدير قديم من employees.js عند بدء تشغيل شاشة الرواتب.

@@ -7,6 +7,7 @@ import {runInNewContext} from 'node:vm';
 import {
   monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034,
 } from '../js/payroll-workbench-v034.js';
+import {periodFromPayrollDateV128,outstandingAdvancesByEmployeeV128,advanceRemainingAfterPayrollV128,dateInEmployeeServiceV128,employeeServiceDateInputV128} from '../js/employee-service-v128.js';
 
 const base=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const pageCode=readFileSync(resolve(base,'js/pages/payroll-v034.js'),'utf8');
@@ -72,7 +73,7 @@ function buildScreen(apiOverrides={}){
     }],
     employees:async()=>[{id:'e1',name:'أحمد',status:'active',pay_type:'monthly'}],
     cashboxes:async()=>[{id:'general',name:'الصندوق العام',is_active:true,is_general:true}],
-    prepareScheduledWorkdaysV123:async()=>0,dailyWageDues:async()=>[],
+    prepareScheduledWorkdaysV123:async()=>0,dailyWageDues:async()=>[],employeeAdvanceOutstandingV128:async()=>[],
     list:async()=>[{id:'r1',status:'draft',note:'MARIA_MONTHLY_V014:2026-10',period_start:'2026-10-01',period_end:'2026-10-31'}],
     ...apiOverrides,
   };
@@ -83,6 +84,7 @@ function buildScreen(apiOverrides={}){
     currencyLabel:code=>code,esc:htmlEscape,money:(value,code)=>`${Number(value)} ${code}`,
     dateOnly:value=>String(value??'').slice(0,10),todayISO:()=> '2026-10-25',
     registerTableExport(){},monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034,
+    periodFromPayrollDateV128,outstandingAdvancesByEmployeeV128,advanceRemainingAfterPayrollV128,dateInEmployeeServiceV128,employeeServiceDateInputV128,
   };
   // Execute the real rendering function with isolated API/DOM dependencies, rather than
   // checking for text tokens that might still reference out-of-scope variables.

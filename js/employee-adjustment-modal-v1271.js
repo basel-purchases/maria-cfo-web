@@ -1,9 +1,10 @@
 // Maria CFO v1.0.27.1: shared modal, loaded from a dedicated module so stale
 // employees.js on a partially updated hosting deployment cannot break the
 // entire ES module graph at startup.
-import * as api from './api.js?v=1.0.27.1';
+import * as api from './api.js?v=1.0.28';
 import {modal,toast,friendlyError} from './ui.js?v=1.0.23';
 import {currencyLabel,esc,todayISO} from './utils.js?v=1.0';
+import {dateInEmployeeServiceV128,employeeServiceDateInputV128} from './employee-service-v128.js?v=1.0.28';
 
 // Reused by the employee file and by the payroll screen.
 export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDate=todayISO()){
@@ -17,7 +18,7 @@ export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDat
   subtitle:employee.name+' · '+currencyLabel(currency),
   submitText:'تسجيل التسوية',
   body:`<div class="form-grid">
-    <div class="field"><label>التاريخ</label><input name="date" type="date" value="${esc(defaultDate)}" required></div>
+    <div class="field"><label>التاريخ</label><input name="date" type="date" value="${dateInEmployeeServiceV128(employee,defaultDate)?esc(defaultDate):''}" ${employeeServiceDateInputV128(employee)} required></div>
     <div class="field"><label>نوع التسوية</label><select name="value_kind"><option value="money">مبلغ نقدي</option><option value="hours">ساعات دوام</option></select></div>
     <div class="field" data-money-entry><label>المبلغ (${esc(currencyLabel(currency))})</label><input name="amount" type="number" min="0.0001" max="1000000000000" step="any" inputmode="decimal" required></div>
     <div class="field" data-hours-entry hidden><label>عدد الساعات</label><input name="hours" type="number" min="0.01" max="744" step="0.01" inputmode="decimal" disabled></div>
@@ -35,6 +36,7 @@ export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDat
        (valueKind==='hours'&&(number>744||Math.abs(number*100-Math.round(number*100))>1e-7)))
      throw Error('أدخل عدد الساعات أو المبلغ بشكل صحيح.');
     if(valueKind==='hours'&&!rateData)throw Error('لم يتم تحميل سعر الساعة من قاعدة البيانات. راجع تحديث SQL v1.0.27.');
+    if(!dateInEmployeeServiceV128(employee,String(fd.get('date')||'')))throw Error('تاريخ التسوية خارج فترة خدمة الموظف.');
     await api.recordEmployeeAdjustmentV127({employeeId:employee.id,kind,valueKind,value,
       date:fd.get('date'),reason:String(fd.get('reason')||'').trim(),note:fd.get('note')});
     toast('تم تسجيل التسوية في كشف الراتب.','success');

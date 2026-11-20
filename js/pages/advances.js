@@ -1,9 +1,10 @@
-import * as api from '../api.js?v=1.0.23';
+import * as api from '../api.js?v=1.0.28';
 import { modal, toast, loader, friendlyError } from '../ui.js?v=1.0.23';
 import {currencyLabel, esc, money, dateOnly, todayISO } from '../utils.js?v=1.0';
 import { employeeName } from '../payroll-ui.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
 import {generalCashboxV123} from '../employee-ledger-v123.js?v=1.0.23';
+import {dateInEmployeeServiceV128} from '../employee-service-v128.js?v=1.0.28';
 
 const SIZE=15;
 export async function renderAdvances(root){
@@ -69,7 +70,7 @@ export function openEmployeeAdvanceModalV123({staff=[],boxes=[],employeeId='',on
       <div class="field"><label>\u0645\u0628\u0644\u063a \u0627\u0644\u0633\u0644\u0641\u0629</label><input name="amount" type="number" min="0.0001" step="any" required></div>
       <div class="field"><label>\u0627\u0644\u062a\u0633\u062f\u064a\u062f</label><select name="repayment"><option value="full_next_payroll">\u062e\u0635\u0645\u0647\u0627 \u0645\u0646 \u0627\u0644\u0631\u0627\u062a\u0628 \u0627\u0644\u0642\u0627\u062f\u0645</option><option value="installments">\u0623\u0642\u0633\u0627\u0637</option><option value="manual">\u064a\u062f\u0648\u064a</option></select></div>
       <div class="field"><label>\u0645\u0628\u0644\u063a \u0627\u0644\u0642\u0633\u0637</label><input name="installment" type="number" min="0.0001" step="any"></div>
-      <div class="field"><label>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0633\u0644\u0641\u0629</label><input name="date" type="date" value="${todayISO()}" required></div>
+      <div class="field"><label>\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0633\u0644\u0641\u0629</label><input name="date" type="date" required></div>
       <div class="field full"><label>\u0645\u0644\u0627\u062d\u0638\u0629</label><textarea name="note" rows="2" maxlength="300"></textarea></div></div>
       ${general?'':'<div class="notice rose">\u0644\u0627 \u064a\u0648\u062c\u062f \u0635\u0646\u062f\u0648\u0642 \u0639\u0627\u0645 \u0646\u0634\u0637. \u0627\u062e\u062a\u0631 \u0635\u0646\u062f\u0648\u0642\u0627\u064b \u064a\u062f\u0648\u064a\u0627\u064b.</div>'}`,
     submitText:'\u062d\u0641\u0638 \u0627\u0644\u0633\u0644\u0641\u0629',
@@ -78,14 +79,27 @@ export function openEmployeeAdvanceModalV123({staff=[],boxes=[],employeeId='',on
         const amount=Number(fd.get('amount')),mode=fd.get('repayment'),part=Number(fd.get('installment'));
         if(!Number.isFinite(amount)||amount<=0||mode==='installments'&&(!Number.isFinite(part)||part<=0||part>amount))
           throw Error('INVALID_ADVANCE_AMOUNT');
-        await api.recordEmployeeAdvance({employeeId:fd.get('employee'),cashboxId:fd.get('cashbox'),amount,
+        const person=active.find(e=>String(e.id)===String(fd.get('employee')));
+        if(!dateInEmployeeServiceV128(person,String(fd.get('date')||'')))throw Error('تاريخ السلفة خارج فترة عمل الموظف (التعيين حتى الانتهاء).');
+        await api.recordEmployeeAdvanceV128({employeeId:fd.get('employee'),cashboxId:fd.get('cashbox'),amount,
           repaymentMode:mode,installment:mode==='installments'?part:null,date:fd.get('date'),note:fd.get('note')});
         toast('\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0633\u0644\u0641\u0629 \u0648\u062e\u0635\u0645\u0647\u0627 \u0645\u0646 \u0627\u0644\u0635\u0646\u062f\u0648\u0642.','success');
         await onSaved();return true;
-      }catch(e){toast(friendlyError(e),'error');return false;}
+      }catch(e){toast(/V128_ADVANCE_OUTSIDE_EMPLOYMENT/.test(String(e?.message||''))?'السلفة خارج فترة خدمة الموظف.':
+       /record_employee_advance_v128|PGRST202/i.test(String(e?.message||''))?'يلزم تطبيق SQL v1.0.28 قبل تسجيل السلف.':friendlyError(e),'error');return false;}
     }
   });
-  if(employeeId&&active.some(e=>String(e.id)===String(employeeId)))m.form.elements.namedItem('employee').value=String(employeeId);
+  const employeeSelect=m.form.elements.namedItem('employee');
+  const dateInput=m.form.elements.namedItem('date');
+  if(employeeId&&active.some(e=>String(e.id)===String(employeeId)))employeeSelect.value=String(employeeId);
+  const syncServiceDate=()=>{
+   const person=active.find(e=>String(e.id)===String(employeeSelect.value));
+   if(!person)return;
+   if(person.hire_date)dateInput.min=person.hire_date;else dateInput.removeAttribute('min');
+   if(person.termination_date)dateInput.max=person.termination_date;else dateInput.removeAttribute('max');
+   if(!dateInEmployeeServiceV128(person,dateInput.value))dateInput.value=dateInEmployeeServiceV128(person,todayISO())?todayISO():'';
+  };
+  employeeSelect.addEventListener('change',syncServiceDate);syncServiceDate();
   if(general)m.form.elements.namedItem('cashbox').value=String(general.id);
   const mode=m.form.elements.namedItem('repayment');const installment=m.form.elements.namedItem('installment');
   const sync=()=>{installment.required=mode.value==='installments';installment.disabled=!installment.required;};

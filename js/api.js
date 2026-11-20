@@ -1162,6 +1162,15 @@ export async function payApprovedSalary(payrollItemId,amount=null){
 export async function payrollPaymentHistory(){
   return list('payroll_payments',{order:'occurred_at',limit:300});
 }
+// v1.0.28: user-chosen month; the server keeps the actual creation timestamp.
+export const createMonthlyPayrollV128=periodDate=>rpc('create_monthly_payroll_v128',{p_period_date:periodDate});
+export const recalculateMonthlyPayrollV128=runId=>rpc('recalculate_monthly_payroll_v128',{p_run_id:runId});
+export const approveMonthlyPayrollV128=runId=>rpc('approve_monthly_payroll_v128',{p_run_id:runId});
+export const employeeAdvanceOutstandingV128=()=>rpc('employee_advance_outstanding_v128');
+export const recordEmployeeAdvanceV128=({employeeId,cashboxId,amount,repaymentMode,installment,date,note})=>
+ rpc('record_employee_advance_v128',{p_employee_id:employeeId,p_cashbox_id:cashboxId,
+  p_amount:Number(amount),p_repayment_mode:repaymentMode,p_installment_amount:installment===null?null:Number(installment),
+  p_work_date:date,p_note:String(note||'').trim()||null});
 export async function createMonthlyPayroll(year,month){
   return rpc('create_monthly_payroll_v117',{p_year:Number(year),p_month:Number(month)});
 }

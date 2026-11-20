@@ -1,9 +1,10 @@
-import * as api from '../api.js?v=1.0.27.1';
+import * as api from '../api.js?v=1.0.28';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.23';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
-import {openEmployeeAdjustmentModalV127} from '../employee-adjustment-modal-v1271.js?v=1.0.27.1';
+import {openEmployeeAdjustmentModalV127} from '../employee-adjustment-modal-v1271.js?v=1.0.28';
 import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034} from '../payroll-workbench-v034.js?v=1.0.17';
+import {periodFromPayrollDateV128,outstandingAdvancesByEmployeeV128,advanceRemainingAfterPayrollV128,dateInEmployeeServiceV128,employeeServiceDateInputV128} from '../employee-service-v128.js?v=1.0.28';
 
 const MONTH_NAMES=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
 const PAY_TYPE={monthly:'شهري',daily:'يومي',hourly:'ساعي',fixed:'مقطوع'};
@@ -16,8 +17,8 @@ const rowMonth=(row,start)=>String(row.period_start||row.work_date||'').startsWi
 
 export async function renderPayrollV034(root){
  const today=todayISO();
- const state={year:Number(today.slice(0,4)),month:Number(today.slice(5,7)),tab:'ready',status:'all',query:'',box:'',ready:[],paid:[],daily:[],fixed:[],runs:[],staff:[],boxes:[],busy:false};
- root.innerHTML=`<div class="page-head"><div><h2>الرواتب · مركز الدفع</h2><p>كشف واحد للمراجعة ثم الاعتماد والدفع. كل مبلغ مصروف يذهب إلى سجل المدفوعات وحركة الصندوق تلقائيًا.</p></div>
+ const state={year:Number(today.slice(0,4)),month:Number(today.slice(5,7)),tab:'ready',status:'all',query:'',box:'',ready:[],paid:[],daily:[],fixed:[],runs:[],staff:[],boxes:[],advanceBalances:new Map(),busy:false};
+ root.innerHTML=`<div class="page-head"><div><h2>الرواتب · مركز الدفع</h2><p>اختر شهر العرض في الأعلى؛ وعند إنشاء المسير اختر تاريخ شهر الاستحقاق بنفسك. الصرف النقدي يتم فقط عند الدفع.</p></div>
  <div class="quick-actions"><a class="btn secondary" href="#/employees-list">الموظفون</a><a class="btn secondary" href="#/advances">السلف</a><a class="btn secondary" href="#/bonuses">المكافآت</a><button type="button" class="btn secondary" data-salary-adjust="addition">+ إضافة ساعات / نقود</button><button type="button" class="btn secondary" data-salary-adjust="deduction">+ خصم ساعات / نقود</button></div></div>
  <section class="card payroll-controller-v034">
   <div class="payroll-filter-grid-v034">
@@ -50,6 +51,13 @@ export async function renderPayrollV034(root){
   if(/V117_MONTHLY_DRAFT_REQUIRED/.test(s))return 'لا يمكن اعتماد هذا المسير؛ يجب أن يكون مسودة رواتب شهرية.';
   if(/V117_NON_MONTHLY_ITEM_REQUIRES_RECALCULATION/.test(s))return 'تحتوي المسودة على أجر غير شهري. اضغط إعادة احتساب ثم حاول الاعتماد.';
   if(/create_monthly_payroll_v117|approve_monthly_payroll_v117|recalculate_monthly_payroll_v117|monthly_attendance_default_v117/i.test(s))return 'يجب تشغيل SQL v1.0.17 في Supabase قبل استخدام المسير.';
+  if(/V128_APPROVED_SERVICE_DATES_LOCKED/.test(s))return 'لا يمكن تغيير تاريخ الخدمة الذي يؤثر في راتب معتمد دون تصحيح مالي مستقل.';
+  if(/V128_EMPLOYEE_MISSING_RECALCULATE/.test(s))return 'أُضيف موظف مستحق بعد حساب المسودة؛ اضغط إعادة احتساب لإدراجه.';
+  if(/V128_SERVICE_DATES_CHANGED_RECALCULATE/.test(s))return 'تغيّرت تواريخ التعيين أو الانتهاء بعد حساب المسودة، أو أنها قديمة؛ اضغط إعادة احتساب ثم اعتمد.';
+  if(/V128_EMPLOYEE_OUTSIDE_SERVICE/.test(s))return 'يوجد موظف خارج فترة خدمته. راجع تاريخ التعيين والانتهاء ثم أعد الحساب.';
+  if(/V128_INVALID_PERIOD_DATE/.test(s))return 'تاريخ المسير غير صالح. اختر يومًا من الشهر المطلوب.';
+  if(/V128_ADVANCE_OUTSIDE_EMPLOYMENT|V128_LEAVE_OUTSIDE_EMPLOYMENT|V128_PAY_DATE_OUTSIDE_EMPLOYMENT/.test(s))return 'التاريخ خارج فترة خدمة الموظف.';
+  if(/PGRST202|create_monthly_payroll_v128|recalculate_monthly_payroll_v128|approve_monthly_payroll_v128|employee_advance_outstanding_v128/i.test(s))return 'يلزم تطبيق SQL v1.0.28 على Supabase قبل استخدام النسخة الجديدة.';
   if(/MONTHLY_PAYROLL_ALREADY_EXISTS/.test(s))return 'يوجد مسير لهذا الشهر بالفعل. حدّث المسودة أو اعتمدها.';
   if(/PGRST202|payroll_ready_v034|payroll_paid_v034/i.test(s))return 'يلزم تشغيل تحديث SQL الخاص بالإصدار v0.34 أولًا.';
   return friendlyError(e,s||'تعذرت العملية');
@@ -69,14 +77,14 @@ export async function renderPayrollV034(root){
      // Standard daily/hourly workdays are assumed automatically; exceptions remain unchanged.
      await api.prepareScheduledWorkdaysV123(start,todayISO());
    }
-   const [ready,paid,staff,boxes,runs,daily]=await Promise.all([
+   const [ready,paid,staff,boxes,runs,daily,advances]=await Promise.all([
     api.payrollReadyV034(start),api.payrollPaidV034(start),api.employees(),api.cashboxes(),
-    api.list('payroll_runs',{order:'period_start',limit:500}),api.dailyWageDues(),
+    api.list('payroll_runs',{order:'period_start',limit:500}),api.dailyWageDues(),api.employeeAdvanceOutstandingV128(),
    ]);
    state.ready=Array.isArray(ready)?ready:[];state.paid=Array.isArray(paid)?paid:[];
    state.daily=(Array.isArray(daily)?daily:[]).filter(row=>String(row.work_date||'').startsWith(start.slice(0,7))
       &&Number(row.estimated_due_original)>0.0001);
-   state.staff=staff;state.boxes=boxes;state.runs=runs.filter(r=>r.note?.startsWith('MARIA_MONTHLY_V014:')&&rowMonth(r,start));
+   state.staff=staff;state.boxes=boxes;state.advanceBalances=outstandingAdvancesByEmployeeV128(advances);state.runs=runs.filter(r=>r.note?.startsWith('MARIA_MONTHLY_V014:')&&rowMonth(r,start));
    state.fixed=staff.filter(e=>e.status==='active'&&e.pay_type==='fixed');
    updateBoxes();paint();
   }catch(e){panel.innerHTML=`<div class="notice"><strong>تعذر تحميل كشف الرواتب</strong><div>${esc(errorMessage(e))}</div></div>`;}
@@ -117,18 +125,22 @@ export async function renderPayrollV034(root){
   </div>
   <section class="card finance-section payroll-ready-card-v034">
     <div class="finance-section-head"><div><h3>كشف الموظفين والمستحقات</h3><p>الراتب الأساسي، الإضافي، المكافآت، السلف والخصم والصافي في سطر واحد. المبالغ من حساب قاعدة البيانات المعتمد.</p></div>
-    <button class="btn" id="new-month-run-v034" type="button" ${!state.staff.some(e=>e.pay_type==='monthly')?'disabled':''}>+ إنشاء مسير ${esc(selectedMonth)}</button></div>
+    <button class="btn" id="new-month-run-v034" type="button" ${!state.staff.some(e=>e.pay_type==='monthly')?'disabled':''}>+ إنشاء مسير لشهر تختاره</button></div>
     ${runs.map(r=>`<div class="payroll-run-alert-v034"><div><strong>مسودة ${dateOnly(r.period_start)} — ${dateOnly(r.period_end)}</strong><small>الراتب الشهري كامل افتراضيًا باستثناء شهر انتهاء الخدمة، حيث يُطبّق عدد الأيام المحدد في ملف الموظف. بعد أي تغيير للسلف أو المكافآت أو الأيام اضغط إعادة احتساب.</small></div>
       <div class="quick-actions"><button class="btn secondary" data-run-recalc="${esc(r.id)}">إعادة احتساب</button><button class="btn" data-run-approve="${esc(r.id)}">اعتماد المسير</button></div></div>`).join('')}
     <div class="payroll-list-tools-v034"><div class="field"><label>البحث بالاسم</label><input id="payroll-find-v034" type="search" value="${esc(state.query)}" placeholder="اسم الموظف..."></div>
      <div class="field"><label>عرض</label><select id="payroll-status-v034">${options([['all','الكل'],['ready','جاهز للدفع'],['draft','مسودة'],['partial','مدفوع جزئيًا']],state.status)}</select></div>
      <span class="metric-note">${shown.length} نتيجة · التصدير يشمل جميع نتائج هذا الفلتر</span></div>
     ${shown.length?`<div class="table-wrap"><table class="table payroll-statement-table-v034"><thead><tr>
-      <th>الموظف</th><th>الراتب المستحق</th><th>إضافي</th><th>المكافآت</th><th>السلف</th><th>الخصم</th><th>صافي الراتب</th><th>المدفوع</th><th>الباقي للدفع</th><th>ملاحظات / حالة</th><th>دفع</th>
+      <th>الموظف</th><th>الراتب المستحق</th><th>إضافي</th><th>المكافآت</th><th>السلف المخصومة</th><th>السلف المتبقية</th><th>الخصم</th><th>صافي الراتب</th><th>المدفوع</th><th>الباقي للدفع</th><th>ملاحظات / حالة</th><th>دفع</th>
       </tr></thead><tbody>${shown.map(r=>`<tr class="${r.payable?'payroll-row-payable-v034':''}">
       <td><strong>${esc(r.employee_name)}</strong><small>${esc(PAY_TYPE[r.pay_type]||r.pay_type||'—')}</small></td>
       <td>${compact(r.base,r.currency_code)}</td><td>${compact(r.overtime,r.currency_code)}</td><td class="payroll-positive-v034">+ ${compact(r.bonuses,r.currency_code)}</td>
-      <td>${compact(r.advances,r.currency_code)}</td><td>${compact(r.deductions+r.shortage,r.currency_code)}</td>
+      <td>${compact(r.advances,r.currency_code)}</td>
+      <td>${(()=>{const current=Number(state.advanceBalances.get(String(r.employee_id))?.get(r.currency_code)||0);
+       const future=advanceRemainingAfterPayrollV128(current,r.advances,r.run_status);
+       return `<strong>${compact(current,r.currency_code)}</strong>${r.isDraft?`<small>بعد اعتماد المسودة: ${compact(future,r.currency_code)}</small>`:'<small>الرصيد الحالي</small>'}`;})()}</td>
+      <td>${compact(r.deductions+r.shortage,r.currency_code)}</td>
       <td><strong>${compact(r.net,r.currency_code)}</strong></td><td>${compact(r.paid,r.currency_code)}</td>
       <td><strong>${compact(r.remaining,r.currency_code)}</strong></td>
       <td><small>${esc(r.note||'—')}</small><div><span class="badge ${r.isDraft?'yellow':r.remaining>0?'green':''}">${r.isDraft?'مسودة · غير معتمدة':r.remaining<=.0001?'مسدد':'معتمد'}</span>${r.pay_type!=='monthly'&&Number(r.missing_attendance_days)>0?`<small class="payroll-danger-v034">⚠ ${r.missing_attendance_days} أيام دوام ناقصة</small>`:''}</div></td>
@@ -156,18 +168,35 @@ export async function renderPayrollV034(root){
   const table=panel.querySelector('.payroll-statement-table-v034');
   if(table)registerTableExport(table,()=>{
    const rows=filterPayrollReadyV034(state.ready,state.query).filter(r=>state.status==='all'||(state.status==='ready'&&r.payable)||(state.status==='draft'&&r.isDraft)||(state.status==='partial'&&r.paid>0&&r.remaining>0));
-   return {title:`كشف الرواتب المستحقة ${MONTH_NAMES[state.month-1]} ${state.year}`,headers:['الموظف','نوع الأجر','الراتب','الإضافي','المكافآت','السلف','الخصومات','الصافي','المدفوع','الباقي','الحالة','ملاحظات'],rows:rows.map(r=>[r.employee_name,PAY_TYPE[r.pay_type]||r.pay_type,r.base,r.overtime,r.bonuses,r.advances,r.shortage+r.deductions,r.net,r.paid,r.remaining,r.isDraft?'مسودة':r.remaining>0?'معتمد':'مسدد',r.note||''])};
+   return {title:`كشف الرواتب المستحقة ${MONTH_NAMES[state.month-1]} ${state.year}`,headers:['الموظف','نوع الأجر','الراتب','الإضافي','المكافآت','السلف المخصومة','السلف المتبقية حاليًا','الخصومات','الصافي','المدفوع','الباقي','الحالة','ملاحظات'],rows:rows.map(r=>[r.employee_name,PAY_TYPE[r.pay_type]||r.pay_type,r.base,r.overtime,r.bonuses,r.advances,Number(state.advanceBalances.get(String(r.employee_id))?.get(r.currency_code)||0),r.shortage+r.deductions,r.net,r.paid,r.remaining,r.isDraft?'مسودة':r.remaining>0?'معتمد':'مسدد',r.note||''])};
   });
   panel.querySelector('#payroll-find-v034')?.addEventListener('input',e=>{state.query=e.target.value;const point=e.target.selectionStart;paint();const newInput=panel.querySelector('#payroll-find-v034');newInput?.focus();try{newInput?.setSelectionRange(point,point);}catch(_){} });
   panel.querySelector('#payroll-status-v034')?.addEventListener('change',e=>{state.status=e.target.value;paint();});
-  panel.querySelector('#new-month-run-v034')?.addEventListener('click',()=>modal({title:'إنشاء مسير رواتب شهري',subtitle:'يبدأ مسودة للمراجعة. لا تُصرف أي أموال بمجرد الإنشاء.',submitText:'إنشاء المسودة',
-    body:`<div class="notice rose">${MONTH_NAMES[state.month-1]} ${state.year} · الحضور افتراضي، وتُحتسب الاستثناءات المسجلة فقط.</div>`,
-    onSubmit:async()=>{try{await api.createMonthlyPayroll(state.year,state.month);toast('تم إنشاء المسير. راجع التفاصيل واعتمدها قبل الدفع.','success');await load();return true;}catch(e){toast(errorMessage(e),'error');return false;}}
+  panel.querySelector('#new-month-run-v034')?.addEventListener('click',()=>modal({
+   title:'إنشاء مسير رواتب شهري',
+   subtitle:'اختر تاريخًا من الشهر الذي يستحق عنه الموظفون الراتب، حتى لو كان الإنشاء في شهر لاحق. لن تحدث دفعة نقدية بمجرد الإنشاء.',
+   submitText:'إنشاء المسودة',
+   body:`<div class="field"><label>تاريخ شهر الاستحقاق</label><input name="period_date" type="date" required min="2000-01-01" max="2200-12-31"><small>مثال: لإنشاء رواتب تشرين الثاني في كانون الأول، اختر أي يوم من تشرين الثاني. يبقى تاريخ الإنشاء الفعلي محفوظًا تلقائيًا.</small></div>`,
+   onSubmit:async fd=>{
+    try{
+     const chosen=String(fd.get('period_date')||'');
+     const period=periodFromPayrollDateV128(chosen);
+     await api.createMonthlyPayrollV128(chosen);
+     if(![...yearInput.options].some(option=>Number(option.value)===period.year)){
+      const option=document.createElement('option');option.value=String(period.year);option.textContent=String(period.year);yearInput.add(option);
+     }
+     state.year=period.year;state.month=period.month;
+     yearInput.value=String(period.year);monthInput.value=String(period.month);
+     state.tab='ready';state.status='all';state.query='';
+     toast('تم إنشاء مسودة رواتب شهر '+MONTH_NAMES[period.month-1]+' '+period.year+'، دون صرف نقدي.','success');
+     await load();return true;
+    }catch(e){toast(errorMessage(e),'error');return false;}
+   }
   }));
-  panel.querySelectorAll('[data-run-recalc]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api.recalculateMonthlyPayroll(b.dataset.runRecalc);toast('تم تحديث المسودة بالمكافآت والسلف والخصومات.','success');await load();}catch(e){toast(errorMessage(e),'error');}finally{b.disabled=false;}});
+  panel.querySelectorAll('[data-run-recalc]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api.recalculateMonthlyPayrollV128(b.dataset.runRecalc);toast('تم تحديث المسودة بالمكافآت والسلف والخصومات.','success');await load();}catch(e){toast(errorMessage(e),'error');}finally{b.disabled=false;}});
   panel.querySelectorAll('[data-run-approve]').forEach(b=>b.onclick=async()=>{
    if(!await confirmBox('اعتماد هذا المسير سيثبّت مستحقات الموظفين. راجع السلف والمكافآت والخصومات؛ الاعتماد لا يصرف أي أموال.','اعتماد المسير'))return;
-   b.disabled=true;try{await api.approveMonthlyPayroll(b.dataset.runApprove);toast('تم الاعتماد. أصبحت الرواتب جاهزة للدفع.','success');await load();}catch(e){toast(errorMessage(e),'error');}finally{b.disabled=false;}
+   b.disabled=true;try{await api.approveMonthlyPayrollV128(b.dataset.runApprove);toast('تم الاعتماد. أصبحت الرواتب جاهزة للدفع.','success');await load();}catch(e){toast(errorMessage(e),'error');}finally{b.disabled=false;}
   });
   panel.querySelectorAll('.pay-salary-v034').forEach(b=>b.onclick=()=>{
    const r=filterPayrollReadyV034(state.ready).find(x=>String(x.payroll_item_id)===b.dataset.id);if(!r||!r.payable||!mayPay())return;
@@ -194,8 +223,9 @@ export async function renderPayrollV034(root){
    const e=state.fixed.find(x=>String(x.id)===b.dataset.id);if(!e)return;
    modal({title:'صرف أجر مقطوع',subtitle:'الأجر المقطوع يصرف عند استكمال العمل فقط؛ ليس راتبًا شهريًا.',submitText:'تأكيد الصرف',
     body:`<div class="notice rose">${esc(e.name)} · ${compact(fixedRate(e),e.wage_currency_code)} · ${esc(cashName())}</div>
-    <div class="field"><label>تاريخ العمل</label><input name="date" type="date" value="${todayISO()}" required></div>`,
-    onSubmit:async fd=>{try{await api.payFixedEmployee(e.id,state.box,fd.get('date'));toast('تم صرف الأجر المقطوع.','success');await load();return true;}catch(e){toast(errorMessage(e),'error');return false;}}
+    <div class="field"><label>تاريخ العمل</label><input name="date" type="date" value="${dateInEmployeeServiceV128(e,todayISO())?todayISO():''}" ${employeeServiceDateInputV128(e)} required></div>`,
+    onSubmit:async fd=>{try{if(!dateInEmployeeServiceV128(e,String(fd.get('date')||'')))throw Error('تاريخ صرف الأجر خارج فترة عمل الموظف.');
+     await api.payFixedEmployee(e.id,state.box,fd.get('date'));toast('تم صرف الأجر المقطوع.','success');await load();return true;}catch(e){toast(errorMessage(e),'error');return false;}}
    });
   });
  }

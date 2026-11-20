@@ -1,16 +1,17 @@
-import * as api from '../api.js?v=1.0.27.1';
+import * as api from '../api.js?v=1.0.28';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.23';
 import {currencyLabel, esc, money, todayISO, dateOnly } from '../utils.js?v=1.0';
 import { finalMonthTermsV123 } from '../final-month-pay-v123.js?v=1.0.23';
 import { EMPLOYEE_RATE_COLUMNS } from '../business-rules.js?v=1.0';
 import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=1.0';
-import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0.27.1';
+import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0.28';
 import {openEmployeeBonusModal} from './bonuses.js?v=1.0';
 import {openEmployeeAdvanceModalV123} from './advances.js?v=1.0.23';
 import {visibleEmployeesV123,employeeTotalsV123,employeeLeaveCountV123,employeeLeaveNameV123,adjustmentKindV123,adjustmentLabelV123,adjustmentReasonV123} from '../employee-ledger-v123.js?v=1.0.23';
 
 import { payTypeBadge } from '../payroll-ui.js?v=1.0';
-import {openEmployeeAdjustmentModalV127 as sharedEmployeeAdjustmentModalV1271} from '../employee-adjustment-modal-v1271.js?v=1.0.27.1';
+import {openEmployeeAdjustmentModalV127 as sharedEmployeeAdjustmentModalV1271} from '../employee-adjustment-modal-v1271.js?v=1.0.28';
+import {dateInEmployeeServiceV128,employeeServiceDateInputV128,outstandingAdvancesByEmployeeV128} from '../employee-service-v128.js?v=1.0.28';
 const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر اليومي', hourly: 'أجر الساعة',fixed:'أجر مقطوع'};
 export async function renderEmployees(root) {
   root.innerHTML = loader();
@@ -92,6 +93,7 @@ function profileError(e){
   if(msg.includes('EMPLOYEE_PENDING_BONUS_V032'))return 'توجد مكافأة معلقة لهذا الموظف. عالجها في قسم المكافآت قبل تحويله إلى غير نشط.';
   if(msg.includes('V127_DAILY_HOURS_INVALID'))return 'ساعات الدوام اليومية يجب أن تكون بين ربع ساعة و24 ساعة.';
   if(msg.includes('PGRST202')&&msg.includes('save_employee_profile_hours_v127'))return 'يلزم تطبيق SQL v1.0.27 لتغيير ساعات دوام الموظف.';
+  if(msg.includes('V128_SERVICE_DATES_CHANGED_RECALCULATE'))return 'تم تغيير مدة الخدمة بعد احتساب مسودة الرواتب. أعد احتساب المسودة قبل اعتمادها.';
   if(msg.includes('V123_FINAL_MONTH_ALREADY_APPROVED'))return 'راتب شهر انتهاء العمل معتمد أو مصروف؛ لا يمكن تغيير تاريخ النهاية أو الأيام المستحقة بعد اعتماده.';
   if(msg.includes('V123_FINAL_MONTH_DAYS_INVALID'))return 'راجع عدد الأيام المستحقة في شهر انتهاء العمل وتاريخ التعيين.';
   if(msg.includes('INVALID_EMPLOYEE_PROFILE_V032'))return 'راجع الاسم والمبلغ والهاتف والتواريخ، ثم حاول مرة أخرى.';
@@ -218,16 +220,18 @@ function openEmployeeModal(root, employee=null, defaultHours=8) {
 async function loadEmployeeInsights(m, employee){
   const host=m.form.querySelector('[data-employee-insights]');if(!host)return;
   const year=todayISO().slice(0,4);
-  const [advanceResult,adjustmentResult,leaveResult]=await Promise.allSettled([
-    api.employeeAdvances(),api.employeeAdjustmentsV123(),api.employeeLeaveEventsV123()
+  const [advanceResult,adjustmentResult,leaveResult,balanceResult]=await Promise.allSettled([
+    api.employeeAdvances(),api.employeeAdjustmentsV123(),api.employeeLeaveEventsV123(),api.employeeAdvanceOutstandingV128()
   ]);
   if(!m.element.isConnected)return;
   const advances=advanceResult.status==='fulfilled'?advanceResult.value.filter(x=>String(x.employee_id)===String(employee.id)):[];
   const adjustments=adjustmentResult.status==='fulfilled'?adjustmentResult.value.filter(x=>String(x.employee_id)===String(employee.id)):[];
   const leaves=leaveResult.status==='fulfilled'?leaveResult.value.filter(x=>String(x.employee_id)===String(employee.id)):[];
-  const openAdvances=advances.filter(x=>x.status==='open');
-  const totals=new Map();for(const a of openAdvances){const c=a.currency_code||'SYP';totals.set(c,(totals.get(c)||0)+Number(a.remaining_original||0));}
-  const advanceText=[...totals].map(([c,a])=>money(a,c)).join(' / ')||'0';
+  const advanceAmounts=balanceResult.status==='fulfilled'
+   ?outstandingAdvancesByEmployeeV128(balanceResult.value).get(String(employee.id))
+   :null;
+  const advanceText=balanceResult.status!=='fulfilled'?'غير متاح · تحقق من SQL v1.0.28'
+   :[...(advanceAmounts||new Map())].map(([c,a])=>money(a,c)).join(' / ')||'0';
   const leaveTotal=employeeLeaveCountV123(leaves,employee.id,year);
   const current=employeeTotalsV123(adjustments,employee.id,todayISO().slice(0,7));
   const finalTerms=employee.pay_type==='monthly'&&employee.termination_date
@@ -237,7 +241,7 @@ async function loadEmployeeInsights(m, employee){
   const finalInsight=finalTerms?.paidDays!==null&&finalTerms
     ? `<div class="staff-insight"><span>أجر شهر الانتهاء · ${esc(finalTerms.month)} · ${finalTerms.paidDays}/${finalTerms.daysInMonth} يومًا</span><strong>${money(finalTerms.basePay,employee.wage_currency_code||'SYP')}</strong></div>` : '';
   host.innerHTML=`<div class="staff-v123-profile-stats">${finalInsight}
-      <div class="staff-insight"><span>\u0631\u0635\u064a\u062f\u0020\u0627\u0644\u0633\u0644\u0641</span><strong>${esc(advanceText)}</strong></div>
+      <div class="staff-insight"><span>رصيد السلف المتبقي على الموظف · غير المخصوم من الراتب</span><strong>${esc(advanceText)}</strong></div>
       <div class="staff-insight"><span>\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a ${year}</span><strong>${leaveTotal}</strong></div>
       <div class="staff-insight"><span>\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062a\u0020\u0648\u0627\u0644\u0645\u0643\u0627\u0641\u0622\u062a</span><strong class="staff-v123-positive">+ ${money(current.additions+current.bonuses,employee.wage_currency_code||'SYP')}</strong></div>
       <div class="staff-insight"><span>\u0627\u0644\u062d\u0633\u0645\u064a\u0627\u062a</span><strong class="staff-v123-negative">- ${money(current.deductions,employee.wage_currency_code||'SYP')}</strong></div>
@@ -252,7 +256,7 @@ async function loadEmployeeInsights(m, employee){
         reason:adjustmentReasonV123(a)+(a.calc_mode_v127==='hours'?' · سعر الساعة وقت التسجيل: '+Number(a.hourly_rate_v127).toFixed(4)+' '+currencyLabel(a.currency_code):''),
         status:a.status,note:a.note,action:a.status==='pending'?'adjustment':null})),
       ...leaves.map(l=>({id:l.id,date:l.work_date,kind:employeeLeaveNameV123(l.status),amount:0,currency:employee.wage_currency_code,positive:false,reason:String(l.note||'').replace(/^MARIA_LEAVE_V123:\S*\s*/,'')||'\u2014',status:'recorded',action:String(l.note||'').startsWith('MARIA_LEAVE_V123:')?'leave':null})),
-      ...advances.map(a=>({id:a.id,date:String(a.occurred_at||'').slice(0,10),kind:'\u0633\u0644\u0641\u0629',amount:Number(a.principal_original||0),currency:a.currency_code,positive:false,reason:a.note||'\u2014',status:a.status,action:null})),
+      ...advances.map(a=>({id:a.id,date:String(a.occurred_at||'').slice(0,10),kind:'\u0633\u0644\u0641\u0629',amount:Number(a.principal_original||0),currency:a.currency_code,positive:false,reason:`المتبقي: ${money(a.remaining_original,a.currency_code)}${a.note?' · '+a.note:''}`,status:a.status,action:null})),
     ].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,45).map(r=>`<tr>
       <td>${esc(dateOnly(r.date))}</td><td>${esc(r.kind)}</td>
       <td class="${r.positive?'staff-v123-positive':r.amount?'staff-v123-negative':''}">${r.amount?(r.positive?'+ ':'- ')+money(r.amount,r.currency):'\u2014'}</td>
@@ -281,11 +285,12 @@ export function openEmployeeAdjustmentModalV127(...args){
 }
 function openEmployeeLeaveModalV123(employee,onSaved){
  modal({title:'\u0625\u0636\u0627\u0641\u0629 \u0625\u062c\u0627\u0632\u0629 \u0623\u0648 \u063a\u064a\u0627\u0628',subtitle:employee.name,
-   body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</label><input name="date" type="date" value="${todayISO()}" required></div>
+   body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</label><input name="date" type="date" value="${dateInEmployeeServiceV128(employee,todayISO())?todayISO():''}" ${employeeServiceDateInputV128(employee)} required></div>
      <div class="field"><label>\u0627\u0644\u0646\u0648\u0639</label><select name="kind"><option value="paid_leave">\u0625\u062c\u0627\u0632\u0629 \u0645\u062f\u0641\u0648\u0639\u0629</option><option value="unpaid_leave">\u0625\u062c\u0627\u0632\u0629 \u063a\u064a\u0631 \u0645\u062f\u0641\u0648\u0639\u0629</option><option value="absent">\u063a\u064a\u0627\u0628</option></select></div>
      <div class="field full"><label>\u0627\u0644\u0633\u0628\u0628 / \u0645\u0644\u0627\u062d\u0638\u0629</label><textarea name="note" rows="2" maxlength="400"></textarea></div></div>
      <div class="notice rose">\u0627\u0644\u0625\u062c\u0627\u0632\u0629 \u063a\u064a\u0631 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0629 \u0648\u0627\u0644\u063a\u064a\u0627\u0628 \u064a\u0648\u0644\u062f\u0627\u0646 \u062e\u0635\u0645\u064b\u0627 \u0645\u062d\u0633\u0648\u0628\u064b\u0627 \u0644\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0634\u0647\u0631\u064a. \u0627\u0644\u0625\u062c\u0627\u0632\u0629 \u0627\u0644\u0645\u062f\u0641\u0648\u0639\u0629 \u0644\u0627 \u062a\u0646\u0642\u0635 \u0627\u0644\u0631\u0627\u062a\u0628.</div>`,
-   onSubmit:async fd=>{try{await api.recordEmployeeLeaveV123({employeeId:employee.id,date:fd.get('date'),kind:fd.get('kind'),note:fd.get('note')});
+   onSubmit:async fd=>{try{if(!dateInEmployeeServiceV128(employee,String(fd.get('date')||'')))throw Error('تاريخ الإجازة خارج فترة تعيين الموظف وانتهاء عمله.');
+     await api.recordEmployeeLeaveV123({employeeId:employee.id,date:fd.get('date'),kind:fd.get('kind'),note:fd.get('note')});
      toast('\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0625\u062c\u0627\u0632\u0629.','success');await onSaved();return true;
    }catch(e){toast(friendlyError(e),'error');return false;}}
  });
