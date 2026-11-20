@@ -20,5 +20,5 @@ test('entrypoint and dependency URLs are revisioned to prevent stale cache mixin
   assert.match(app,/pages\/payroll-v034\.js\?v=1\.0\.29/);
   assert.match(app,/pages\/employees\.js\?v=1\.0\.29/);
   assert.match(payroll,/employee-adjustment-modal-v1271\.js\?v=1\.0\.29/);
-  assert.equal(read('VERSION').trim(),'1.0.34');
+  assert.equal(read('VERSION').trim(),'1.0.34.1');
 });

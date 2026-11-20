@@ -251,7 +251,7 @@ CREATE OR REPLACE FUNCTION public.v134_import_sales_archive(
  p_sha256 text,p_documents jsonb)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $sales$
 DECLARE
- d jsonb;l jsonb;v_checksum_lines jsonb;v_ts timestamptz;v_no text;v_key text;v_old text;v_id uuid;
+ d jsonb;l jsonb;v_ts timestamptz;v_no text;v_key text;v_old text;v_id uuid;
  v_md5 text;v_total numeric;v_qty numeric;v_price numeric;v_net numeric;
  v_new integer:=0;v_skipped integer:=0;v_lines integer:=0;v_idx integer;
  v_menu_id uuid;v_menu_name text;v_method text;v_matches integer;v_matched integer:=0;v_unmatched integer:=0;
@@ -273,17 +273,11 @@ BEGIN
   -- Stable checksum of the original Al-Ameen invoice: ignore our optional
   -- menu links, so re-uploading a file with improved secondary-name matches
   -- does not masquerade as a changed invoice or duplicate any sale.
-  -- Keep the original archive checksum stable while excluding the optional
-  -- menu link. Use separate statements to avoid nested SELECT/INTO ambiguity.
-  SELECT coalesce(jsonb_agg(sale_row.line - 'menuName' ORDER BY sale_row.ordinal),'[]'::jsonb)
-    INTO v_checksum_lines
-    FROM jsonb_array_elements(d->'lines') WITH ORDINALITY AS sale_row(line,ordinal);
-  v_md5:=md5(jsonb_build_object(
-    'number',d->>'number',
-    'occurredAt',d->>'occurredAt',
-    'customer',d->>'customer',
-    'lines',v_checksum_lines
-  )::text);
+  SELECT md5((jsonb_build_object('number',d->>'number',
+    'occurredAt',d->>'occurredAt','customer',d->>'customer',
+    'lines',coalesce((SELECT jsonb_agg(x.line - 'menuName' ORDER BY x.ordinal)
+      FROM jsonb_array_elements(d->'lines') WITH ORDINALITY AS x(line,ordinal)),'[]'::jsonb))::text)
+    INTO v_md5;
   SELECT payload_md5 INTO v_old FROM public.v134_sales_archive_documents WHERE document_key=v_key;
   IF FOUND THEN
    IF v_old<>v_md5 THEN RAISE EXCEPTION 'V134_SALES_INVOICE_REIMPORT_CONFLICT: %',v_no;END IF;

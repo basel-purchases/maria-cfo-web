@@ -145,7 +145,7 @@ test('v121 no misleading edit lines button: invoice list and detail create new s
 });
 
 test('v121 version is fully updated and ZIP source does not contain user config',()=>{
-  assert.equal(src('VERSION').trim(),'1.0.34');
+  assert.equal(src('VERSION').trim(),'1.0.34.1');
   assert.match(src('index.html'),/Web v1\.0\.34/);
   assert.match(src('js/app.js'),/Web v1\.0\.34/);
   for(const name of ['materials','purchases','suppliers']){

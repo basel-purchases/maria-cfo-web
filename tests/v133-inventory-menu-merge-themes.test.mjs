@@ -75,7 +75,7 @@ test('v133: all themes affect workspace cards, tables, modals, fields and topbar
  assert.match(css,/not\(\[data-maria-theme="classic"\]\)/);
 });
 test('v133: cache versions and code manifest match',()=>{
- assert.equal(read('VERSION').trim(),'1.0.34');
+ assert.equal(read('VERSION').trim(),'1.0.34.1');
  for(const p of ['js/app.js','js/pages/menu.js','js/pages/settings.js'])assert.match(read(p),/1\.0\.34/);
  const index=read('index.html');
  assert.match(index,/styles\.css\?v=1\.0\.34/);

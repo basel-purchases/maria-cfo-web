@@ -1647,3 +1647,12 @@ export const v132AddMenuAlias = (menuId,name) => rpc('menu_alias_add_v104',{p_me
 export const v133MenuUsage = menuId => rpc('v133_menu_usage',{p_menu_id:menuId});
 export const v133MenuMerge = (sourceId,targetId) => rpc('v133_menu_merge', {p_source_id:sourceId,p_target_id:targetId});
 export const v133MenuDeleteUnused = menuId => rpc('v133_menu_delete_unused',{p_menu_id:menuId});
+
+// v1.0.34.1: show stored recipe import lines in menu without altering stock or costs.
+export async function v134RecipeImportReview(menuId){
+  const rows=await list('v126_menu_recipe_reviews',{
+    select:'menu_item_id,lines,reason,original_status,updated_at',
+    eq:{menu_item_id:menuId},limit:1,
+  });
+  return rows[0]||null;
+}

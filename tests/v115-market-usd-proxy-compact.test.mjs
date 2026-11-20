@@ -73,7 +73,7 @@ test('the shell uses one server-side path and a numeric-only chip with side/appr
   assert.doesNotMatch(app,/await fetchParallelUsdV114\(/);
   assert.match(app,/MARKET_CACHE_KEY_V115/);
   assert.match(app,/Web v1\.0\.34/);
-  assert.equal(read('VERSION').trim(),'1.0.34');
+  assert.equal(read('VERSION').trim(),'1.0.34.1');
   assert.equal(existsSync(resolve(dir,'config.js')),false);
 });
 

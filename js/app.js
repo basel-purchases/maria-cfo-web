@@ -1,5 +1,5 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.34';
+import * as api from './api.js?v=1.0.34.1';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
 import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.34';
@@ -8,7 +8,7 @@ import { renderHub } from './pages/hubs.js?v=1.0.34';
 import { renderMaterials } from './pages/materials.js?v=1.0.31';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
-import { renderMenu } from './pages/menu.js?v=1.0.34';
+import { renderMenu } from './pages/menu.js?v=1.0.34.1';
 import {
   renderInventory,
   renderCashboxes,
@@ -29,7 +29,7 @@ import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
 import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.34';
-import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.34';
+import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.34.1';
 import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
@@ -123,14 +123,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.34</div>
+        <div class="sidebar-foot">Web v1.0.34.1</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.34</span>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.34.1</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
@@ -140,7 +140,7 @@ function shell() {
               </a>`).join('')}
           </nav>
           <div class="topbar-actions">
-            <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="عداد مبيعات مرشحة للتسوية؛ اضغط للتفاصيل" aria-label="عرض مبيعات مرشحة لتسوية التكلفة" hidden>
+            <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="مبيعات تنتظر استكمال المكونات أو الصرف" aria-label="فتح المبيعات غير المكتملة">
               <span aria-hidden="true">📦</span><span class="ai-notify-count" id="sales-cost-notify-count-v131">0</span>
             </button>
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
@@ -726,21 +726,30 @@ async function refreshSaleCostNoticeV131({showToast=false}={}){
  const counter=app.querySelector('#sales-cost-notify-count-v131');
  if(!button||!counter)return;
  try{
-  const count=Number(await api.v131SaleQueueReadyCount());
+  const summary=await api.v131SaleQueueSummary();
+  const count=Math.max(0,Number(summary?.pending||0)+Number(summary?.review||0));
+  const ready=Math.max(0,Number(summary?.ready||0));
   counter.textContent=String(count);
-  button.hidden=count<=0;
-  button.title=count>0?`${count} مبيعات لها وصفات مضافة وتحتاج متابعة التسوية. اضغط لعرض التفاصيل.`:'لا مبيعات مرشحة للتسوية';
-  if(showToast&&count>0)toast(`هناك ${count} مبيعات يمكن استكمال تكلفة مكوناتها. افتح «تسوية تكاليف المبيعات».`,'success');
- }catch(e){button.hidden=true;console.warn('Sale cost queue notification unavailable; check SQL v1.0.31',e);}
+  button.hidden=false; // Keep the route available even when no recipe is ready.
+  button.dataset.readyCount=String(ready);
+  button.title=`${count} بنود تشغيلية لم تكتمل تسويتها؛ ${ready} منها لها وصفات قابلة للاستكمال. أرشيف المبيعات التاريخية مستقل.`;
+  button.setAttribute('aria-label',button.title);
+  if(showToast&&ready>0)toast(`هناك ${ready} مبيعات يمكن استكمال صرف مكوناتها. افتح «تسوية تكاليف المبيعات».`,'success');
+ }catch(e){
+  button.hidden=false;
+  counter.textContent='؟';
+  button.title='تعذر قراءة عداد التسوية. اضغط لفتح الصفحة ومراجعة السبب.';
+  console.warn('Sale cost queue notification unavailable; check SQL v1.0.31',e);
+ }
 }
 function installSaleCostNoticeV131(){
  app.querySelector('#sales-cost-notify-v131')?.addEventListener('click',()=>{
    const count=Number(app.querySelector('#sales-cost-notify-count-v131')?.textContent||0);
    const dialog=modal({title:'مبيعات بانتظار استكمال التكلفة',
-     subtitle:'الرقم بجوار رمز الصندوق 📦 هو عداد بنود بيع لها وصفات مضافة، وليس عدد رسائل جديدة.',
+     subtitle:'العداد يشمل بنود التشغيل التي تنتظر وصفة أو صرفًا؛ ولا يشمل فواتير المبيع التاريخية المستوردة كأرشيف.',
      hideActions:true,
-     body:`<div class="card"><strong>${count} بند مرشح للاستكمال</strong><p>افتح تسوية تكاليف المبيعات لمراجعة الوصفة والتكلفة، ثم تنفيذ صرف المواد المستحقة. لا يعاد تسجيل القبض.</p></div>
-     <div class="quick-actions"><button type="button" class="btn" id="v132-open-queue-notice">عرض البنود المعلّقة</button></div>`});
+     body:`<div class="card"><strong>${Number.isFinite(count)?count:"—"} بند تشغيل غير مكتمل</strong><p>تظهر كل البنود التي تحتاج مكونات أو صرفًا، وليس الوصفات الجاهزة فقط. أرشيف البيع التاريخي يعرض في صفحة أخرى ولا يخصم المخزون.</p></div>
+     <div class="quick-actions"><button type="button" class="btn" id="v132-open-queue-notice">عرض المبيعات غير المكتملة</button><a class="btn secondary" href="#/sales-archive">أرشيف المبيعات التاريخية</a></div>`});
    dialog.element.querySelector('#v132-open-queue-notice').onclick=async()=>{
      await dialog.close();
      if((location.hash||'').startsWith('#/sale-cost-queue'))

@@ -1,5 +1,5 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.34';
+import * as api from '../api.js?v=1.0.34.1';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -404,6 +404,7 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
         </div>
 
         <div class="recipe-items-host"></div>
+        <div class="recipe-import-staged-v1341"></div>
 
         <div class="recipe-dialog-footer">
           <div class="recipe-total" data-recipe-total></div>
@@ -412,6 +413,7 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
     });
 
     const host=m.form.querySelector('.recipe-items-host');
+    const stagedHost=m.form.querySelector('.recipe-import-staged-v1341');
     const entryPanel=m.form.querySelector('.recipe-entry-panel');
     const openEntryBtn=m.form.querySelector('.open-recipe-entry');
     const materialSel=m.form.querySelector('[name="material"]');
@@ -520,9 +522,24 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
     };
 
     async function refreshRecipe(){
-      const fresh=await api.recipeItems(id);
+      const [fresh, staged] = await Promise.all([
+        api.recipeItems(id),
+        api.v134RecipeImportReview(id).catch(err => {
+          console.warn('Recipe import review not available', err);
+          return null;
+        }),
+      ]);
       rows=await enrichRows(fresh);
       renderRows();
+      const pendingLines=Array.isArray(staged?.lines)?staged.lines:[];
+      stagedHost.innerHTML=pendingLines.length?`<div class="notice" role="note">
+        <strong>مكونات محفوظة من ملف المنيو، وتنتظر استكمال مطابقة الوحدات (${pendingLines.length})</strong>
+        <p>لم تُفقد هذه المكونات. هذا جدول مرجعي مستقل عن الوصفة المعتمدة، فلا يُخصم منه المخزون حتى تصح وحداته وتُحفظ المكونات عبر إدارة الوصفة. السبب: ${esc(staged.reason||'وحدات أو مواد غير مطابقة')}</p>
+        <div class="table-wrap"><table class="table"><thead><tr><th>المادة</th><th>الكمية الأصلية</th><th>الوحدة الأصلية</th><th>ملاحظات المصدر</th></tr></thead><tbody>
+        ${pendingLines.map(line=>`<tr><td>${esc(line.materialName||'—')}</td><td>${esc(line.quantity??'—')}</td><td>${esc(line.unit||'—')}</td><td>${esc(line.note||'—')}</td></tr>`).join('')}
+        </tbody></table></div>
+        <p>يمكن اعتماد المقادير التقديرية؛ لكن الوحدات المختلفة، مثل غرام مقابل ربطة أو كيس، تتطلب مطابقة قبل الخصم.</p>
+      </div>`:'';
       populateMaterials();
       qtyInput.value='';
     }
