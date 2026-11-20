@@ -1,5 +1,5 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.32';
+import * as api from '../api.js?v=1.0.33';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -118,6 +118,8 @@ export async function renderMenu(root,{missingOnly=false,search=''}={}){
         <div class="menu-card-actions">
           <button class="btn secondary recipe" data-id="${esc(r.id)}">إدارة الوصفة</button>
           <button class="btn soft edit-menu" data-id="${esc(r.id)}">تعديل الوجبة والتقدير</button>
+          <button class="mini-btn merge-menu v133-menu-merge" data-id="${esc(r.id)}">دمج مع وجبة</button>
+          <button class="mini-btn danger-lite delete-menu v133-menu-delete" data-id="${esc(r.id)}">حذف غير مستخدمة</button>
         </div>
        </div>`).join('')}</div>`:
        '<div class="card empty"><strong>لا توجد وجبات مطابقة</strong><div>غيّر البحث أو التصنيف، أو أضف وجبة.</div></div>'}
@@ -139,6 +141,14 @@ export async function renderMenu(root,{missingOnly=false,search=''}={}){
     host.querySelectorAll('.edit-menu').forEach(b=>{
       const r=rows.find(x=>String(x.id)===b.dataset.id);
       if(r)b.onclick=()=>editMenu(root,r,categories,draw);
+    });
+    host.querySelectorAll('.merge-menu').forEach(b=>{
+      const source=rows.find(x=>String(x.id)===b.dataset.id);
+      if(source)b.onclick=()=>mergeMenuV133(source,draw);
+    });
+    host.querySelectorAll('.delete-menu').forEach(b=>{
+      const source=rows.find(x=>String(x.id)===b.dataset.id);
+      if(source)b.onclick=()=>deleteMenuV133(source,draw);
     });
     host.querySelector('.page-prev')?.addEventListener('click',()=>{state.page=Math.max(1,state.page-1);draw();});
     host.querySelector('.page-next')?.addEventListener('click',()=>{state.page=Math.min(meta.pages,state.page+1);draw();});
@@ -224,6 +234,59 @@ function menuFormValuesV104(fd,id=null){
     aliases:String(fd.get('aliases')||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean),
   };
 }
+// Only the database can decide whether a dish is unused. We never delete sales or historical references.
+async function deleteMenuV133(row,refresh){
+  try {
+    const usage=await api.v133MenuUsage(row.id);
+    if(!usage?.canDelete){
+      toast('لا يمكن حذف هذه الوجبة لأنها مرتبطة بحركات أو سجلات سابقة. استخدم «دمج مع وجبة» بدلًا من الحذف.', 'error');
+      return;
+    }
+    const recipe=Number(usage.recipeLines||0);
+    const message=`هل تريد حذف «${row.name}» نهائيًا من المنيو؟`+
+      (recipe?`\nسيتم حذف ${recipe} سطر مكونات لها أيضًا.`:'')+
+      '\nالحذف متاح فقط إذا لم تكن الوجبة مستخدمة في أي حركة أو سجل.';
+    if(!await confirmBox(message,'تأكيد حذف وجبة غير مستخدمة'))return;
+    await api.v133MenuDeleteUnused(row.id);
+    toast(`تم حذف «${row.name}» من المنيو.`, 'success');
+    await refresh();
+  } catch(e){toast(friendlyError(e,'تعذر حذف الوجبة؛ قد تكون مرتبطة بعمليات سابقة.'),'error');}
+}
+async function mergeMenuV133(row,refresh){
+  try {
+    const options=(await api.menuAliasChoicesV104()).filter(x=>String(x.id)!==String(row.id));
+    if(!options.length){toast('لا توجد وجبة أخرى لدمج هذه الوجبة معها.', 'error');return;}
+    modal({
+      title:`دمج الوجبة «${row.name}»`,
+      subtitle:'ستصبح هذه الوجبة اسمًا ثانويًا للوجبة المختارة، وتُخفى من القائمة. تبقى المبيعات والأسعار التاريخية محفوظة.',
+      body:`<div class="field"><label>الوجبة الرئيسية التي ستبقى</label>
+        <select name="target" required data-searchable-select>
+         <option value="">اختر الوجبة بعد البحث</option>
+         ${options.map(x=>`<option value="${esc(x.id)}" data-search="${esc(x.aliases_text||'')}">${esc(x.name)}</option>`).join('')}
+        </select></div>
+        <div class="notice">سيُنقل ربط المبيعات المعلّقة والأسماء الثانوية. تُعتمد وصفة الوجبة الرئيسية إذا كانت موجودة؛ وإن كانت فارغة، يمكن نقل وصفة الوجبة المدموجة. لا تُحذف الأوردرات أو حركات الصندوق.</div>`,
+      submitText:'تأكيد الدمج',
+      onSubmit:async fd=>{
+        const targetId=String(fd.get('target')||'');
+        if(!targetId){toast('حدد الوجبة الرئيسية أولًا.','error');return false;}
+        const target=options.find(x=>String(x.id)===targetId);
+        const srcPrice=Number(menuPrice(row));
+        const dstPrice=Number(target?.menu_price);
+        const priceWarning=(Number.isFinite(srcPrice)&&srcPrice>0&&Number.isFinite(dstPrice)&&dstPrice>0
+          && Math.abs(srcPrice-dstPrice)>0.01)?`\nتنبيه: سعر البيع مختلف (${money(srcPrice)} مقابل ${money(dstPrice)}). سيبقى سعر الوجبة الرئيسية، ولن تتغير أسعار المبيعات السابقة.`:'';
+        if(!await confirmBox(`دمج «${row.name}» ضمن «${target?.name||'الوجبة المختارة'}»؟ ستبقى الوجبة المختارة هي الرئيسية.${priceWarning}`, 'تأكيد نهائي'))return false;
+        try{
+          const result=await api.v133MenuMerge(row.id,targetId);
+          toast(`تم الدمج. نُقل ربط ${result?.pendingSalesRelinked||0} مبيعات معلّقة.`, 'success');
+          document.dispatchEvent(new CustomEvent('maria:cost-queue-changed'));
+          await refresh();
+          return true;
+        }catch(e){toast(friendlyError(e,'تعذر الدمج؛ راجع تعارض الأسماء أو المكونات.'),'error');return false;}
+      },
+    });
+  }catch(e){toast(friendlyError(e,'تعذر تحميل الوجبات المتاحة للدمج.'),'error');}
+}
+
 function addMenu(root,categories=[],refresh){
   modal({
     title:'إضافة وجبة',

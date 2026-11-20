@@ -2182,3 +2182,95 @@ html[data-maria-theme="elegant"]{--radius:14px;--shadow:0 12px 30px rgba(14,35,5
 html[data-maria-theme="ocean"]{--radius:18px;--shadow:0 12px 30px rgba(14,91,122,.08)}
 html[data-maria-theme="forest"]{--radius:18px;--shadow:0 10px 25px rgba(34,72,52,.08)}
 html[data-maria-theme="sand"]{--radius:24px;--shadow:0 12px 26px rgba(120,89,59,.09)}
+
+/* Maria CFO v1.0.33: theme applies to the ENTIRE workspace, not only navigation.
+   High-specificity rules replace legacy fixed white/pink panels while leaving
+   green success, amber review and red error semantics intact. */
+html[data-maria-theme]:not([data-maria-theme="classic"]) body,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .app-shell,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .main {
+  background:var(--bg);color:var(--text);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .main {
+  background-image:radial-gradient(ellipse 760px 370px at 4% 4%,var(--rose-soft),transparent 78%);
+  background-attachment:fixed;
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .topbar {
+  background:var(--surface);border-color:var(--line);box-shadow:0 4px 16px color-mix(in srgb,var(--plum) 7%,transparent);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .page-head h2,
+html[data-maria-theme]:not([data-maria-theme="classic"]) h2,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .metric-value {color:var(--plum-dark)}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .hero {
+  background:linear-gradient(120deg,var(--surface) 15%,var(--rose-soft) 100%);
+  border:1px solid var(--line);box-shadow:var(--shadow);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .card,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table-wrap,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .modal,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .login-card,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .kv,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-stage-line-v034,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-tabs-v034 {
+  background:var(--surface);border-color:var(--line);color:var(--text);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .card.soft,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .kv .k,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-extra-pay-card-v034,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-final-review-v034 > div,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-total-line-v034,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-budget-row-v034.total {
+  background:var(--surface-2);border-color:var(--line);color:var(--text);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table th,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table thead th,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table tr.clickable:hover,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table tbody tr:hover,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .maria-combo-option-v033:hover {
+  background:var(--surface-2);color:var(--plum-dark);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table td,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .table th,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-budget-row-v034,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-table-numbers-v034 {border-color:var(--line)}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .field input,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .field select,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .field textarea,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .search-box input,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .maria-combo-shell-v033,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .maria-combo-option-v033 {
+  background:var(--surface);border-color:var(--line);color:var(--text);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .field :is(input,select,textarea):focus-visible,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .search-box input:focus-visible {
+  border-color:var(--rose);outline:2px solid var(--rose-soft);outline-offset:2px;
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .btn.secondary,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .mini-btn,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .back-btn,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .v132-analytics-tab,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .v132-theme-option {
+  background:var(--surface);border-color:var(--line);color:var(--plum-dark);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .btn.soft,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .badge:not(.red):not(.green):not(.yellow),
+html[data-maria-theme]:not([data-maria-theme="classic"]) .section-card .tag,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .payroll-flow-v034,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .payroll-flow-v034 b,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .event-summary-mini-v034 {
+  background:var(--rose-soft);border-color:var(--line);color:var(--plum-dark);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .v132-analytics-tab.active,
+html[data-maria-theme]:not([data-maria-theme="classic"]) .v132-analytics-tab:hover {
+  background:var(--plum);color:#fff;border-color:var(--plum);
+}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .notice.rose {background:var(--rose-soft);color:var(--plum-dark)}
+html[data-maria-theme]:not([data-maria-theme="classic"]) .login-page {
+  background:radial-gradient(circle at 15% 15%,var(--rose-soft) 0,transparent 42%),var(--bg);
+}
+html[data-maria-theme="elegant"] .card,
+html[data-maria-theme="elegant"] .hero {box-shadow:0 12px 32px rgba(20,39,64,.07)}
+html[data-maria-theme="elegant"] .page-head h2 {letter-spacing:-.3px}
+.v133-menu-merge,.v133-menu-delete {font-size:12px;white-space:nowrap}
+.menu-card-actions {flex-wrap:wrap}
+@media(max-width:780px){.v133-menu-merge,.v133-menu-delete{flex:1 1 auto}}

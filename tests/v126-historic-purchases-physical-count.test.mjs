@@ -109,7 +109,7 @@ test('historic import does not assert unknown dollar prices or silently translat
 test('app includes dedicated navigation and marks v1.0.26',()=>{
  assert.match(app,/case 'baseline-imports': return renderBaselineImportsV126/);
  assert.match(fs.readFileSync(new URL('../js/pages/hubs.js',import.meta.url),'utf8'),/#\/baseline-imports/);
- assert.match(app,/Web v1\.0\.32/);
+ assert.match(app,/Web v1\.0\.33/);
 });
 
 test('an approved count with a blank quantity must fail, never silently skip the material',()=>{

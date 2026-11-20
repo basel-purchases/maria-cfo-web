@@ -66,7 +66,7 @@ test('v132: nine main navigation sections; stocktaking in basic, images under mo
  assert.ok(!daily.includes('#/count-history'));
  assert.ok(!daily.includes('#/inventory'));
  assert.ok(more.includes('#/images'));
- assert.match(app,/sidebar-foot">Web v1\.0\.32/);
+ assert.match(app,/sidebar-foot">Web v1\.0\.33/);
  assert.match(app,/v132-version-chip/);
 });
 

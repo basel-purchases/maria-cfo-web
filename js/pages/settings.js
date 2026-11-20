@@ -1,7 +1,7 @@
-import {THEMES_V132,readThemeV132,applyThemeV132} from '../theme-v132.js?v=1.0.32';
+import {THEMES_V132,readThemeV132,applyThemeV132} from '../theme-v132.js?v=1.0.33';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
-import * as api from '../api.js?v=1.0.32';
+import * as api from '../api.js?v=1.0.33';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.22';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
@@ -82,7 +82,7 @@ export async function renderSettings(root, selectedTab='general') {
       <div data-settings-pane="about" hidden>
         <section class="card v132-about-card"><div class="v132-about-mark">M</div>
           <h2>Maria CFO</h2><p>برنامج الإدارة المالية والمخزون والموظفين للمطعم</p>
-          <p><strong>الإصدار: Web v1.0.32</strong></p>
+          <p><strong>الإصدار: Web v1.0.33</strong></p>
           <div class="divider"></div><h3>إعداد وبرمجة</h3>
           <p>تمت البرمجة والإعداد من قبل <strong>باسل صليبي</strong></p>
           <p>الهاتف: <a href="tel:0996202134" dir="ltr">0996202134</a></p>

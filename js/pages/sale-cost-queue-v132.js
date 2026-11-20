@@ -1,14 +1,15 @@
-// Maria CFO v1.0.32: every sale has a clear, stage-specific next action.
-import * as api from '../api.js?v=1.0.32';
+// Maria CFO v1.0.33: every sale has a clear, stage-specific next action.
+import * as api from '../api.js?v=1.0.33';
 import { esc, money } from '../utils.js?v=1.0';
 import { toast, friendlyError, loader, confirmBox, modal } from '../ui.js?v=1.0.31';
-import { queueActionV132, menuFilterLinkV132, sortQueueNamesV132 } from '../sale-queue-actions-v132.js?v=1.0.32';
+import { queueActionV132, menuFilterLinkV132, sortQueueNamesV132 } from '../sale-queue-actions-v132.js?v=1.0.33';
 
 const count = n => Number(n || 0).toLocaleString('ar-SY');
 const norm = x => String(x || '').trim().replace(/[أإآٱ]/g, 'ا').replace(/ى/g,'ي').replace(/\s+/g,' ').toLowerCase();
 function readableSaleErrorV132(error) {
   const e=String(error||'');
-  if(e.includes('V131_COST_MISSING_AT_SALE_DATE'))return 'لا يتوفر سعر شراء موثوق بتاريخ البيع؛ راجع تكلفة مكونات الوصفة.';
+  if(e.includes('V131_COST_MISSING_AT_SALE_DATE'))return 'التكلفة التاريخية غير معروفة؛ استكمال صرف المخزون لا يتوقف بسببها.';
+  if(e.includes('V133_COST_UNCONFIRMED_STOCK_ISSUED'))return 'صُرف المخزون، وتكلفة المادة التاريخية تحتاج مراجعة منفصلة.';
   if(e.includes('V131_SALE_MENU_NOT_ASSIGNED'))return 'اسم البيع غير مربوط بوجبة في المنيو.';
   if(e.includes('V131_SALE_RECIPE_NOT_DEFINED'))return 'مكونات الوصفة غير معرفة بعد.';
   if(e.includes('GROUP_STOCK_INSUFFICIENT')||e.includes('STOCK_INSUFFICIENT'))return 'الرصيد غير كافٍ؛ راجع مخزون المواد أو بدائل الدمج.';
@@ -17,13 +18,13 @@ function readableSaleErrorV132(error) {
 }
 
 function statusText(row) {
-  if (row.state === 'issued') return ['مكتمل · صُرفت المواد', 'green'];
-  if (row.state === 'included_in_count') return ['مكتمل · ضمن الجرد', 'green'];
+  if (row.state === 'issued') return row.costComplete === false ? ['صُرفت المواد · تكلفة قيد المراجعة', 'yellow'] : ['مكتمل · صُرفت المواد', 'green'];
+  if (row.state === 'included_in_count') return row.costComplete === false ? ['ضمن الجرد · تكلفة غير مؤكدة', 'yellow'] : ['مكتمل · ضمن الجرد', 'green'];
   if (row.state === 'review') return ['مراجعة صرف سابق', 'yellow'];
   const action = queueActionV132(row);
   if (action === 'add') return ['غير موجود بالمنيو', 'yellow'];
   if (action === 'recipe') return ['بانتظار مكونات الوجبة', 'yellow'];
-  if (row.error) return ['مكونات مضافة · مراجعة الصرف', 'yellow'];
+  if (row.error) return ['مكونات جاهزة · راجع الرصيد', 'yellow'];
   return ['مكونات مضافة · قابلة للاستكمال', 'yellow'];
 }
 
@@ -68,7 +69,7 @@ async function newMenuOrAliasV132(row, onChanged) {
         location.hash = menuFilterLinkV132(targetName);
         return true;
       } catch (error) {
-        toast(friendlyError(error, 'تعذر ربط البيع بالمنيو؛ تأكد من تثبيت تحديث SQL v1.0.32.'), 'error');
+        toast(friendlyError(error, 'تعذر ربط البيع بالمنيو؛ تأكد من تثبيت تحديث SQL v1.0.33.'), 'error');
         return false;
       }
     },
@@ -95,7 +96,7 @@ export async function renderSaleCostQueueV132(root, {pendingOnly = false} = {}) 
       toast(`صُرفت: ${count(result.issued)} · شملها الجرد: ${count(result.countCovered)} · بقيت معلّقة: ${count(result.stillWaiting)}`,
         (result.issued || result.countCovered) ? 'success' : 'error');
     } catch(error) {
-      toast(friendlyError(error, 'تعذرت تسوية هذا البيع. تحقق من مكونات الوصفة وأسعارها ورصيد المواد.'), 'error');
+      toast(friendlyError(error, 'تعذر صرف مكونات هذا البيع؛ تحقق من اكتمال الوصفة ورصيد المخزون.'), 'error');
     }
     await reload();
   };
@@ -103,7 +104,7 @@ export async function renderSaleCostQueueV132(root, {pendingOnly = false} = {}) 
     const completed = Number(totals.completed || 0), waiting = Number(totals.pending || 0), ready = Number(totals.ready || 0);
     const visible = sortQueueNamesV132(rows).filter(row => !query || norm(`${row.menuName || ''} ${row.sourceName || ''}`).includes(norm(query)));
     root.innerHTML = `<div class="page-head"><div><h2>تسوية تكاليف المبيعات</h2>
-      <p>مرتبة حسب اسم الوجبة. كل اسم جديد يُضاف مرة واحدة إلى المنيو، ثم تُستكمل وصفته ويُصرف مخزونه عند الجاهزية.</p></div></div>
+      <p>مرتبة حسب اسم الوجبة. يُستكمل صرف المواد حتى لو لم يتوفر سعر شراء تاريخي؛ تُراجع التكلفة بصورة منفصلة دون إعادة تسجيل البيع.</p></div></div>
       <div class="grid cols-3"><div class="card"><small>بانتظار الاستكمال</small><h3>${count(waiting)}</h3></div>
       <div class="card"><small>لها مكونات</small><h3>${count(ready)}</h3></div>
       <div class="card"><small>تسويات مكتملة</small><h3>${count(completed)}</h3></div></div>
@@ -164,6 +165,6 @@ export async function renderSaleCostQueueV132(root, {pendingOnly = false} = {}) 
     const handler = () => { if (root.isConnected) void reload(); else document.removeEventListener('maria:sale-queue-refresh',handler); };
     document.addEventListener('maria:sale-queue-refresh',handler);
   } catch(error) {
-    root.innerHTML = `<div class="notice rose">${esc(friendlyError(error,'تعذر فتح تسوية المبيعات. يجب تثبيت SQL v1.0.32 أولًا.'))}</div>`;
+    root.innerHTML = `<div class="notice rose">${esc(friendlyError(error,'تعذر فتح تسوية المبيعات. يجب تثبيت SQL v1.0.33 أولًا.'))}</div>`;
   }
 }

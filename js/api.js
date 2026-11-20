@@ -446,7 +446,8 @@ export async function menuItems(){
   try{master=await list('menu_items',{order:'name',ascending:true,limit:500});}catch(_){}
   let costs=[];
   try{costs=await list('menu_item_costs',{order:'name',ascending:true,limit:500});}catch(_){}
-  if(!master.length) return costs;
+  if(!master.length) return costs.filter(x=>x.is_archived_v133!==true);
+  master=master.filter(m=>m.is_archived_v133!==true);
   const costMap=Object.fromEntries(costs.map(x=>[String(x.id),x]));
   return master.map(m=>({...m,...(costMap[String(m.id)]||{}),...m}));
 }
@@ -1641,3 +1642,8 @@ export const v131CompleteReadySales=(limit=100,id=null)=>rpc('v131_complete_read
 export const v132AutoLinkSaleQueue = () => rpc('v132_auto_link_sale_queue');
 export const v132LinkSaleQueueMenu = (name, menuId) => rpc('v132_link_sale_queue_menu', {p_cashier_name:name,p_menu_id:menuId});
 export const v132AddMenuAlias = (menuId,name) => rpc('menu_alias_add_v104',{p_menu_id:menuId,p_name:name});
+
+// v1.0.33: guarded menu merge / deletion; server enforces owner access and references.
+export const v133MenuUsage = menuId => rpc('v133_menu_usage',{p_menu_id:menuId});
+export const v133MenuMerge = (sourceId,targetId) => rpc('v133_menu_merge', {p_source_id:sourceId,p_target_id:targetId});
+export const v133MenuDeleteUnused = menuId => rpc('v133_menu_delete_unused',{p_menu_id:menuId});
