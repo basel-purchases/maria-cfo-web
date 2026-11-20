@@ -1,5 +1,5 @@
 // Maria CFO v1.0.5: cashier imports post source-net cash exactly once per new order.
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.31';
 import {esc,money,todayISO} from '../utils.js?v=1.0';
 import {toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0';
 import {readAmeenWorkbook,findReportSheet,parseAmeenRows,sha256Hex} from '../ameen-import-parser.js?v=1.0';
@@ -183,7 +183,7 @@ export async function renderAmeenDailyV041(root){
     <details open><summary>الأوردرات في الملف (${sum.orders})</summary><div class="table-wrap daily-scroll-v041"><table class="table"><thead><tr><th>اليوم</th><th>رقم الأوردر</th><th>البنود</th><th>مجموع البنود</th><th>فرق الصافي</th><th>الصافي المقبوض</th><th>مراجعة</th></tr></thead><tbody>${records.map(r=>`<tr><td>${text(r.date)}</td><td>${text(r.number)}</td><td>${r.items.length}</td><td>${curr(r.grossTotal)}</td><td>${curr(r.netTotal-r.grossTotal)}</td><td><strong>${curr(r.netTotal)}</strong></td><td>${r.reviewReasons?.length?text(r.reviewReasons.join('؛ ')):'جاهز'}</td></tr>`).join('')}</tbody></table></div></details>
     <h4>تنبيهات اختلاف أسعار المنيو (للمعلومة فقط)</h4><p class="metric-note">سعر الكاشير في الملف هو مبلغ البيع الفعلي وسيُحفظ كما هو دائمًا. اختلافه عن سعر المنيو لا يغيّره ولا يحتاج منك اختيار سعر. اختر فقط ما إذا كان الاسم غير المعروف اسمًا بديلًا أو صنفًا جديدًا.</p>
     <div class="table-wrap daily-scroll-v041"><table class="table daily-price-review-v100"><thead><tr><th>الصنف</th><th>سعر المنيو</th><th>سعر الملف الأخير</th><th>المطابقة</th><th>القرار</th></tr></thead><tbody>${indexed.map(reviewRow).join('')}</tbody></table></div>
-    <div class="notice sage">اعتماد الاستيراد سيضيف صافي الأوردرات <strong>الجديدة فقط</strong> إلى صندوق الكاشير المختار كقبض واحد لكل أوردر. الملف أو الأوردر المكرر لن يضيف قبضًا جديدًا؛ الاستيرادات القديمة تحتاج مطابقة مالية مستقلة. لا يخصم المخزون تلقائيًا.</div>
+    <div class="notice sage">اعتماد الاستيراد سيضيف صافي الأوردرات <strong>الجديدة فقط</strong> إلى صندوق الكاشير المختار كقبض واحد لكل أوردر. الملف أو الأوردر المكرر لن يضيف قبضًا جديدًا؛ الاستيرادات القديمة تحتاج مطابقة مالية مستقلة. تظهر المبيعات في «تسوية تكاليف المبيعات» لإكمال صرف المكونات، دون إعادة القبض.</div>
     <button type="button" id="daily-confirm-v041" class="btn">تأكيد استيراد ${sum.orders} أوردر</button></div>`;
    const previewHost=h('#daily-import-preview-v041');
    previewHost.querySelectorAll('.daily-new-action-v104').forEach(select=>{
@@ -229,6 +229,16 @@ export async function renderAmeenDailyV041(root){
       h('#daily-import-preview-v041').innerHTML=`<div class="notice sage"><strong>نتيجة الاستيراد</strong><p>${text(summary)}</p>${result.duplicateFile?'<p>الملف نفسه سبق استيراده؛ لم تنشأ حركة قبض ثانية. إذا كان من الإصدار القديم فراجعه ماليًا قبل الترحيل اليدوي.</p>':''}${notices?`<p>التعارضات: ${text(notices)}</p>`:''}</div>`;
       shownDate=prepared.records.map(r=>r.date).sort().at(-1)||shownDate;
       prepared=null;h('#daily-day-v041').value=shownDate;
+      try{
+       await api.v131SeedSalesQueue();
+       const readyCount=await api.v131SaleQueueReadyCount();
+       if(Number(readyCount)>0)
+        toast(`توجد ${Number(readyCount)} مبيعات لها وصفات جاهزة. راجعها من «تسوية تكاليف المبيعات» واعتمد صرفها.`, 'success');
+       document.dispatchEvent(new CustomEvent('maria:cost-queue-changed'));
+      }catch(queueError){
+       toast('تم استيراد الأوردرات وقبضها، لكن تعذرت تسوية المخزون. افتح «تسوية تكاليف المبيعات» لاحقًا.','error');
+       console.warn('Cost queue completion failed after cashier receipt',queueError);
+      }
       await refresh();await renderHistory();
     }catch(e){toast(friendlyError(e,'فشل الاستيراد؛ لم يُحفظ استيراد جزئي. تأكد من SQL v1.0.5.'),'error');b.disabled=false;}
    };

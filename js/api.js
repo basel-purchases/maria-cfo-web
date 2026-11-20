@@ -148,6 +148,11 @@ export const materialGroupSaveV130=({id=null,name,members,accepted=false})=>
  rpc('material_group_save_v130',{
    p_group_id:id,p_name:name,p_members:members,p_accept_price_warning:accepted
  });
+export const materialGroupSaveV131=({id=null,name,referenceUnitId,members,factors,accepted=false})=>
+ rpc('material_group_save_v131',{
+   p_group_id:id,p_name:name,p_reference_unit_id:referenceUnitId,
+   p_members:members,p_factors:factors,p_accept_price_warning:accepted
+ });
 export const materialGroupDeleteV130=id=>rpc('material_group_delete_v130',{p_group_id:id});
 
 export async function materials(){
@@ -1618,3 +1623,16 @@ export const eventAddExternalDishV125=(eventId,input)=>rpc('event_add_external_d
 export const eventPriceExternalDishV125=(id,profit)=>rpc('event_price_external_dish_v125',{
  p_id:id,p_unit_profit_base:Number(profit),
 });
+
+// v1.0.31: count categories, idempotent count history, and pending sales costing.
+export const v131ClassifyCountCatalog=rows=>rpc('v131_classify_count_catalog',{p_rows:rows});
+export const v131ImportPhysicalCounts=(sha,records,createMissing,filename)=>rpc('v131_import_physical_counts',{
+ p_sha256:sha,p_records:records,p_create_missing:createMissing,p_filename:filename||'Excel',
+});
+export const v131CountHistory=()=>rpc('v131_counts_history');
+export const v131CountDetails=id=>rpc('v131_count_history_detail',{p_batch_id:id});
+export const v131SeedSalesQueue=()=>rpc('v131_seed_sales_queue');
+export const v131SaleQueue=(limit=200,offset=0,onlyPending=false)=>rpc('v131_sale_queue_list',{p_limit:limit,p_offset:offset,p_only_pending:onlyPending});
+export const v131SaleQueueSummary=()=>rpc('v131_sale_queue_summary');
+export const v131SaleQueueReadyCount=()=>rpc('v131_sale_queue_ready_count');
+export const v131CompleteReadySales=(limit=100,id=null)=>rpc('v131_complete_ready_sales',{p_limit:limit,p_queue_id:id});

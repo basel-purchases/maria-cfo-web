@@ -66,7 +66,7 @@ export function parseHistoryInvoicesV126(workbook){
 const detailedCountHeaders=['اسم المادة المعتمد','الكمية المعدودة','وحدة العد','تاريخ الجرد'];
 const simpleCountHeaders=['اسم المادة','الكمية','الواحدة','التاريخ'];
 export function parsePhysicalCountV126(workbook){
- const records=[],warnings=[],names=new Map();let empty=0,review=0,sections=0;
+ const records=[],warnings=[],names=new Map(),catalog=new Map();let empty=0,review=0,sections=0;
  for(const sh of workbook.sheets){
   const oldHead=headerIndex(sh.rows,detailedCountHeaders);
   const simple=oldHead<0;
@@ -80,6 +80,16 @@ export function parsePhysicalCountV126(workbook){
   for(let i=h+1;i<sh.rows.length;i++){
    const r=sh.rows[i]||[];const name=cleanV126(val(r,cols,kName));
    if(!name)continue;
+   const department=cleanV126(val(r,cols,'القسم')) || (['الجرد','sheet1','sheet 1'].includes(cleanV126(sh.name).toLowerCase())?'':cleanV126(sh.name));
+   const catalogKey=name.toLocaleLowerCase('ar');
+   if(department && department.length<=120){
+    const saved=catalog.get(catalogKey);
+    if(!saved)catalog.set(catalogKey,{name,department});
+    else if(saved.department!==department){
+      catalog.set(catalogKey,{name,department:'',conflict:true});
+      warnings.push(`المادة «${name}» تظهر بأكثر من قسم؛ لن يُحدد تصنيفها تلقائيًا.`);
+    }
+   }
    const raw=val(r,cols,kQty);
    const approved=simple?'معتمد':cleanV126(val(r,cols,'حالة الاعتماد'));
    if(raw==null||cleanV126(raw)===''){
@@ -96,14 +106,14 @@ export function parsePhysicalCountV126(workbook){
     if(!simple)throw Error(`الجرد ${sh.name} / السطر ${i+1}: الوحدة والتاريخ إلزاميان عند الاعتماد.`);
     review++;warnings.push(`${sh.name} / السطر ${i+1}: الكمية محفوظة لكن الوحدة أو التاريخ ناقص/غير صالح، لذلك لن تُرحّل.`);continue;
    }
-   const key=name.toLocaleLowerCase('ar');
-   if(names.has(key))throw Error(`الجرد: المادة «${name}» مكررة في ${names.get(key)} و${sh.name}، لا يمكن احتسابها مرتين.`);
+   const key=name.toLocaleLowerCase('ar')+'|'+date;
+   if(names.has(key))throw Error(`الجرد: المادة «${name}» مكررة بنفس تاريخ العد في ${names.get(key)} و${sh.name}، لا يمكن احتسابها مرتين.`);
    names.set(key,sh.name);
-   records.push({name,quantity:qty,unit,date,department:sh.name,note:cleanV126(val(r,cols,kNote)).slice(0,400)});
+   records.push({name,quantity:qty,unit,date,department,note:cleanV126(val(r,cols,kNote)).slice(0,400)});
   }
  }
  if(!sections)throw Error('ملف الجرد غير مطابق: يلزم خمسة أعمدة «اسم المادة، الكمية، الواحدة، التاريخ، ملاحظات»، أو النموذج المفصل القديم.');
- return {records,issues:warnings,stats:{sections,approved:records.length,empty,review}};
+ return {records,catalog:[...catalog.values()].filter(x=>x.department&&!x.conflict),issues:warnings,stats:{sections,approved:records.length,empty,review,categorizedCandidates:[...catalog.values()].filter(x=>x.department&&!x.conflict).length}};
 }
 // Server-side conversion works only for known dimensional equivalences. This is a UX hint, not authority.
 export function countPresentAtDateV126({count,opening,after}={}){

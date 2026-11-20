@@ -1,23 +1,23 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.30';
+import * as api from './api.js?v=1.0.31';
 import { esc } from './utils.js?v=1.0';
-import { toast, friendlyError, modal } from './ui.js?v=1.0.30';
+import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
 import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
-import { renderHub } from './pages/hubs.js?v=1.0.24';
-import { renderMaterials } from './pages/materials.js?v=1.0.30';
+import { renderHub } from './pages/hubs.js?v=1.0.31';
+import { renderMaterials } from './pages/materials.js?v=1.0.31';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
-import { renderMenu } from './pages/menu.js?v=1.0.7';
+import { renderMenu } from './pages/menu.js?v=1.0.31';
 import {
   renderInventory,
   renderCashboxes,
   renderExpenses,
   renderOrders,
   renderOrderDetail,
-} from './pages/daily.js?v=1.0.30';
+} from './pages/daily.js?v=1.0.31';
 import { renderEmployees } from './pages/employees.js?v=1.0.29';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0.29';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.30';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.31';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
@@ -26,8 +26,10 @@ import { renderSettings } from './pages/settings.js?v=1.0.22';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
-import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.5';
-import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.26';
+import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
+import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.31';
+import {renderSaleCostQueueV131} from './pages/sale-cost-queue-v131.js?v=1.0.31';
+import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
 import {marketQuoteFreshV114,marketCachedQuoteV114,MARKET_CACHE_MS_V114} from './market-usd-v114.js?v=1.0.14';
@@ -56,6 +58,8 @@ const nav = [
   ['#/baseline-imports', 'استيراد الفواتير والجرد'],
   ['#/quick-imports', 'الإدخالات السريعة'],
   ['#/daily-orders', 'الأوردرات'],
+  ['#/sale-cost-queue', 'تسوية تكاليف المبيعات'],
+  ['#/count-history', 'سجل الجرد'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -123,7 +127,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.30</div>
+        <div class="sidebar-foot">Web v1.0.31</div>
       </aside>
 
       <main class="main">
@@ -140,6 +144,9 @@ function shell() {
               </a>`).join('')}
           </nav>
           <div class="topbar-actions">
+            <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="مبيعات جاهزة لتسوية تكلفة مكوناتها" aria-label="مبيعات بانتظار تسوية التكلفة" hidden>
+              <span aria-hidden="true">📦</span><span class="ai-notify-count" id="sales-cost-notify-count-v131">0</span>
+            </button>
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
               <span aria-hidden="true">🔔</span><span class="ai-notify-count" id="ai-notify-count" hidden>0</span>
             </button>
@@ -178,6 +185,7 @@ function shell() {
   };
 
   startAiJobWatcher();
+  installSaleCostNoticeV131();
   route();
 }
 
@@ -563,6 +571,7 @@ function active(hash) {
   const parent = {
     'baseline-imports':'baseline-imports', 'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'suppliers', supplier: 'suppliers', purchases: 'basic', purchase: 'basic', menu: 'basic',
     inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
+    'sale-cost-queue': 'daily', 'count-history': 'baseline-imports',
     'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
     'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
   }[key] || key;
@@ -592,6 +601,8 @@ async function route() {
     'baseline-imports': 'استيراد الفواتير والجرد',
     'ameen-daily': 'الأوردرات',
     'daily-orders': 'الأوردرات',
+    'sale-cost-queue': 'تسوية تكاليف المبيعات',
+    'count-history': 'سجل الجرد',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
     events: 'الحفلات',
@@ -633,6 +644,8 @@ async function route() {
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
       case 'baseline-imports': return renderBaselineImportsV126(root);
+      case 'sale-cost-queue': return renderSaleCostQueueV131(root);
+      case 'count-history': return renderPhysicalCountHistoryV131(root);
       case 'ameen-daily':
       case 'daily-orders': return renderAmeenDailyV041(root);
       case 'recipes-import': location.hash='#/quick-imports'; return;
@@ -698,3 +711,28 @@ async function boot() {
 }
 
 boot();
+
+// v1.0.31 — recipe completion notification, not a new financial posting.
+let saleNoticeInstalledV131=false;
+async function refreshSaleCostNoticeV131({showToast=false}={}){
+ if(!currentSession)return;
+ const button=app.querySelector('#sales-cost-notify-v131');
+ const counter=app.querySelector('#sales-cost-notify-count-v131');
+ if(!button||!counter)return;
+ try{
+  const count=Number(await api.v131SaleQueueReadyCount());
+  counter.textContent=String(count);
+  button.hidden=count<=0;
+  button.title=count>0?`${count} مبيعات لها مكونات قابلة للاستكمال؛ افتح تسوية التكاليف`:'لا مبيعات جاهزة';
+  if(showToast&&count>0)toast(`هناك ${count} مبيعات يمكن استكمال تكلفة مكوناتها. افتح «تسوية تكاليف المبيعات».`,'success');
+ }catch(e){button.hidden=true;console.warn('Sale cost queue notification unavailable; check SQL v1.0.31',e);}
+}
+function installSaleCostNoticeV131(){
+ app.querySelector('#sales-cost-notify-v131')?.addEventListener('click',()=>{location.hash='#/sale-cost-queue';});
+ if(!saleNoticeInstalledV131){
+  document.addEventListener('maria:recipe-saved',()=>void refreshSaleCostNoticeV131({showToast:true}));
+  document.addEventListener('maria:cost-queue-changed',()=>void refreshSaleCostNoticeV131());
+  saleNoticeInstalledV131=true;
+ }
+ void refreshSaleCostNoticeV131();
+}

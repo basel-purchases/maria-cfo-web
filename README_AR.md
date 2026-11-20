@@ -1,8 +1,10 @@
 > آخر إصدار: **v1.0.30** — مجموعات دمج المواد المرتبة للصرف من المخزون، مع تحذير السعر وموافقة المحاسب.
 
-# Maria CFO Web — المشروع الكامل (الإصدار الحالي v1.0.28)
+# Maria CFO Web — المشروع الكامل (الإصدار الحالي v1.0.31)
 
 نظام إدارة مالي وتشغيلي لمطعم وحفلات، بواجهة عربية RTL مبنية على HTML/CSS/JavaScript وSupabase/PostgreSQL.
+
+**v1.0.31:** تظل المواد والفواتير والأسعار مستقلة. حدد علاقة التحويل لكل مادة تختلف وحدتها عن وحدة المجموعة، ثم ترتيب الصرف. Also includes deferred sale-cost reconciliation and dated inventory counts. See [README_v1.0.31_PENDING_SALES_COUNTS_CATEGORIES_AR.md](README_v1.0.31_PENDING_SALES_COUNTS_CATEGORIES_AR.md).
 
 **v1.0.28:** اختيار شهر المسير يدويًا، حماية تواريخ خدمة الموظف، وعرض رصيد السلف المتبقي. راجع دليل الإصدار الجديد قبل النشر.
 

@@ -1,5 +1,5 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.10';
+import * as api from '../api.js?v=1.0.31';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -503,6 +503,7 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
         await api.addRecipeItem({menuItemId:id,materialId,unitId,quantity});
         changed=true;
         toast('تمت إضافة المكوّن إلى الوصفة.','success');
+        document.dispatchEvent(new CustomEvent('maria:recipe-saved',{detail:{menuId:id}}));
         await refreshRecipe();
         closeEntry();
       }catch(e){
@@ -549,6 +550,7 @@ async function editRecipeItem({row,material,units,onSaved}){
       try{
         await api.updateRecipeItem(row.id,{unitId:fd.get('unit'),quantity:fd.get('qty')});
         toast('تم تعديل المكوّن.','success');
+        document.dispatchEvent(new CustomEvent('maria:recipe-saved')); 
         m.close();
         await onSaved();
         return false;

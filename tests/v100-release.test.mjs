@@ -47,7 +47,7 @@ test('v1.0: sidebar, page heading, import action and report use neutral product 
  assert.match(daily,/data-price-index="\$\{p.originalIndex\}"/);
  assert.match(hub,/#\/daily-orders/);
  assert.match(read('index.html'),/app\.js\?v=1\.0/);
- assert.equal(read('VERSION').trim(),'1.0.30');
+ assert.equal(read('VERSION').trim(),'1.0.31');
  for(const dir of ['js','js/pages'])for(const name of readdirSync(join(base,dir)).filter(n=>n.endsWith('.js'))){
   // The v1.0.26 migration page must identify the *source* Al-Ameen format to prevent a wrong upload.
   if(name==='baseline-imports-v126.js'||name==='suppliers.js')continue; // faithful source format in dedicated upload and historical account views

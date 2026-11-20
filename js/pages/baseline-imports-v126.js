@@ -1,10 +1,11 @@
 // Maria CFO v1.0.26 — controlled historical purchases, menu-only and dated count imports.
-import * as api from '../api.js?v=1.0.26';
+import * as api from '../api.js?v=1.0.31';
 import {esc} from '../utils.js?v=1.0';
 import {toast,friendlyError,confirmBox,loader} from '../ui.js?v=1.0.25';
 import {readAmeenWorkbook,sha256Hex} from '../ameen-import-parser.js?v=1.0.26';
 import {parseMasterV030} from '../quick-import-parser-v030.js?v=1.0.1';
-import {parseHistoryInvoicesV126,parsePhysicalCountV126} from '../baseline-parsers-v126.js?v=1.0.26';
+import {parseHistoryInvoicesV126} from '../baseline-parsers-v126.js?v=1.0.26';
+import {parsePhysicalCountV131} from '../physical-count-standard-v131.js?v=1.0.31';
 
 const kinds={history:'أرشيف فواتير الشراء الشامل (الأمين)',menu:'المنيو والوصفات فقط — بلا أي تعديل للكميات',count:'الجرد الفعلي بتاريخ العد'};
 const num=n=>Number(n||0).toLocaleString('ar-SY',{maximumFractionDigits:4});
@@ -13,7 +14,7 @@ function chunks(arr,n){const list=[];for(let i=0;i<arr.length;i+=n)list.push(arr
 function summarize(kind,p){
  if(kind==='history')return [['الفواتير',p.stats.invoices],['بنود شراء',p.stats.lines],['الموردون',p.stats.suppliers],['مواد متنوعة',p.stats.materials],['القيمة ل.س',num(p.stats.totalNet)],['صفوف بلا وحدة',p.stats.missingUnits]];
  if(kind==='menu')return [['المواد في الملف',p.stats.materials],['أصناف المنيو',p.stats.menu],['وصفات مكتملة في المصدر',p.stats.readyRecipes],['تحتاج إكمال',p.stats.pendingRecipes]];
- return [['أقسام',p.stats.sections],['كميات معتمدة',p.stats.approved],['أسطر غير مكتملة أو للمراجعة',p.stats.review],['مواد لم تُجرد',p.stats.empty]];
+ return [['شيتات الجرد',p.stats.sections],['كميات معتمدة',p.stats.approved],['مواد يمكن تصنيفها',p.stats.categorizedCandidates||0],['مواد لم تُجرد',p.stats.empty]];
 }
 const asMessage=e=>friendlyError(e,'تعذر الاستيراد. افحص الترحيل والإصدار ووحدات المواد.');
 export async function renderBaselineImportsV126(root){
@@ -23,10 +24,11 @@ export async function renderBaselineImportsV126(root){
  <div class="card"><h3>اختر العملية وملف Excel</h3><div class="form-grid">
  <div class="field"><label>نوع الاستيراد</label><select id="v126-kind">${Object.entries(kinds).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
  <div class="field"><label>ملف Excel</label><input id="v126-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
- </div><div class="notice">في الجرد المبسط تُستخدم الأعمدة الخمسة: اسم المادة، الكمية، الواحدة، التاريخ، ملاحظات. تُستورد الكميات التي لها وحدة وتاريخ صالحان فقط، وتُترك الخانات الفارغة دون تغيير. ويبقى النموذج المفصل القديم مدعومًا.</div>
+ </div><div class="notice">ملف الجرد الرسمي: اسم المادة، الكمية، الواحدة، التاريخ، القسم. سيُستخدم «القسم» لتصنيف المادة غير المصنّفة، حتى لو كانت خانة الكمية فارغة. لا يتغيّر أي تصنيف موجود، ولا تُستورد الكميات الفارغة.</div>
  <button class="btn" id="v126-review">تحليل الملف ومعاينة البيانات</button></div>
  <div id="v126-result" aria-live="polite"></div>
- <div class="card"><h3>المعاملات اللاحقة</h3><p>استخدم <a href="#/daily-orders">استيراد الأوردرات</a> بعد التأسيس. استيراد لقطات أوردرات الأمين لا يعني تلقائيًا أنها خصمت مواد وصفاتها؛ الاعتماد والنشر والخصم يتبع مسار الأوردرات القائم. أي ملف أوردرات ثالث غير مرفق يحتاج اختبارًا منفصلًا.</p>
+ <div class="card"><a href="#/count-history" class="btn secondary">سجل الجرد وتفاصيله</a> <a href="#/sale-cost-queue" class="btn secondary">تسوية تكاليف المبيعات</a></div>
+ <div class="card"><h3>المعاملات اللاحقة</h3><p>استخدم <a href="#/daily-orders">استيراد الأوردرات</a> بعد التأسيس. تُحفظ المبيعات والتحصيل أولًا، ثم تُتابع مكونات الأوردرات الناقصة في «تسوية تكاليف المبيعات» دون قبض جديد. راجع حالات النقص بعد الاستيراد.</p>
  <p class="metric-note">لا تُغيّر أسماء المواد أو وحدات العبوة على أساس تشابه الاسم فقط. الجرد المتأخر يستخدم أرصدة التاريخ وحركات المخزون اللاحقة، ولا يعتمد على خانة كمية يوم الرفع.</p></div></div>`;
  const kindInput=root.querySelector('#v126-kind'),fileInput=root.querySelector('#v126-file'),result=root.querySelector('#v126-result'),review=root.querySelector('#v126-review');
  let selection=0;const changed=()=>{selection++;result.innerHTML='';};kindInput.onchange=changed;fileInput.onchange=changed;
@@ -38,20 +40,21 @@ export async function renderBaselineImportsV126(root){
   try{
    const workbook=await readAmeenWorkbook(file);
    const sha=await sha256Hex(workbook.buffer);
-   const parsed=kind==='history'?parseHistoryInvoicesV126(workbook):kind==='menu'?parseMasterV030(workbook):parsePhysicalCountV126(workbook);
+   const parsed=kind==='history'?parseHistoryInvoicesV126(workbook):kind==='menu'?parseMasterV030(workbook):parsePhysicalCountV131(workbook);
    if(token!==selection)return;
    const issues=parsed.issues||parsed.warnings||[];
    const metrics=summarize(kind,parsed);
    const count=kind==='history'?parsed.records.length:kind==='menu'?parsed.dishes.length:parsed.records.length;
+   const canCategorize=kind==='count'&&Boolean(parsed.catalog?.length);
    result.innerHTML=`<div class="card"><h3>المعاينة: ${esc(file.name)}</h3>
     <div class="quick-metrics-v102">${metrics.map(([label,v])=>`<div class="card"><strong>${esc(String(v))}</strong><div class="metric-note">${esc(label)}</div></div>`).join('')}</div>
     ${kind==='history'?`<div class="notice">القيمة محفوظة بعملة SYP كما في تقرير الأمين، ولا يضاف دولار ولا يولد قبض أو سحب بالصندوق. حفظ التاريخ والسعر والكمية وفق سطور الفاتورة؛ الفواتير التاريخية مؤشرة «مصفاة خارج البرنامج بحسب الإدارة». ${parsed.stats.missingUnits?'توجد ${parsed.stats.missingUnits} وحدات شراء ناقصة: يجب اعتمادها يدويًا أو قبول استخدام «قطعة» مؤقتًا بوضوح.':''}</div>
       ${parsed.stats.missingUnits?'<label><input id="v126-missing-unit" type="checkbox"> أوافق صراحة على استيراد الوحدات الناقصة كـ«قطعة» مؤقتًا وأتحمل مراجعتها وتصحيح عبواتها</label>':''}`:''}
     ${kind==='menu'?'<div class="notice">هذا المسار يستورد كتالوج المواد والمنيو والوصفات المناسبة فقط، دون أي تعديل لأرصدة المخزون أو حركة الفواتير التاريخية. الوصفات الناقصة لا تُنشر بتكلفة صفر.</div>':''}
-    ${kind==='count'?`<div class="notice">سيُستخدم الجرد المعتمد في نهاية تاريخ كل سطر: الرصيد الحالي = الكمية المعدودة + صافي الحركات بعد ذلك التاريخ. ${parsed.stats.review} صفًا غير مكتمل أو للمراجعة و${parsed.stats.empty} دون كمية؛ لن تُعدّل كمياتها.</div>`:''}
+    ${kind==='count'?`<div class="notice">سيُستخدم الجرد المعتمد في نهاية تاريخ كل سطر: الرصيد الحالي = الكمية المعدودة + صافي الحركات بعد ذلك التاريخ. عند إعادة رفع المادة بنفس تاريخ الجرد تُترك كميتها القديمة دون تكرار، وتُضاف المواد غير المسجلة سابقًا فقط. وستُستعمل الأقسام لتصنيف المواد غير المصنّفة.</div>`:''}
     ${issues.length?`<details><summary>ملاحظات المصدر (${issues.length})</summary><div style="max-height:220px;overflow:auto">${issues.slice(0,35).map(i=>`<p>${esc(typeof i==='string'?i:(i.message||JSON.stringify(i)))}</p>`).join('')}</div></details>`:''}
     ${kind==='count'?'<label><input type="checkbox" id="v126-create-missing"> أسمح بإنشاء مادة جديدة من سطر جرد «معتمد» لا يوجد اسمها في الفواتير والمنيو (دون افتراض سعر شراء)</label>':''}
-    <button class="btn" id="v126-commit" ${!count?'disabled':''}>اعتماد وبدء الاستيراد (${count} ${kind==='history'?'فاتورة':kind==='menu'?'صنف':'كمية'})</button>
+    <button class="btn" id="v126-commit" ${!count&&!canCategorize?'disabled':''}>اعتماد وبدء الاستيراد (${count} ${kind==='history'?'فاتورة':kind==='menu'?'صنف':'كمية'})</button>
     <p class="metric-note">الاستيراد مجزّأ إلى معاملات آمنة، وإعادة رفع الملف لا تكرر الفواتير أو قيود الجرد نفسها. لا تغادر الصفحة أثناء التنفيذ.</p>
     <div id="v126-progress" role="status" aria-live="polite"></div></div>`;
    const submit=result.querySelector('#v126-commit'),progress=result.querySelector('#v126-progress');
@@ -61,7 +64,7 @@ export async function renderBaselineImportsV126(root){
     if(kind==='history'&&parsed.stats.missingUnits&&!result.querySelector('#v126-missing-unit')?.checked){toast('أكد مراجعة الوحدات الثلاث الناقصة قبل الاستيراد.','error');return;}
     const accepted=await confirmBox(kind==='history'?`استيراد ${parsed.stats.invoices} فاتورة تاريخية بعملة SYP، واعتبارها مصفاة خارج النظام دون دفع نقدي أو ديون جديدة؟`:
       kind==='menu'?`اعتماد ${parsed.dishes.length} صنف منيو دون استيراد أي رصيد افتتاحي أو تعديل أرصدة المخزون الحالية؟`:
-      `اعتماد ${parsed.records.length} سطر جرد، مع تصحيح مخزون التاريخ وإعادة احتساب الحركات اللاحقة؟ استخدم نسخة احتياطية قبل الإجراء.`,
+      `اعتماد ${parsed.records.length} سطر جرد وتصنيف ${parsed.catalog?.length||0} مادة غير مصنّفة من عمود القسم، مع تجاهل أي مادة سبق اعتماد جردها بتاريخها؟`,
       'تأكيد الحفظ المالي');
     if(!accepted)return;
     if(token!==selection)return;
@@ -73,14 +76,23 @@ export async function renderBaselineImportsV126(root){
       progress.innerHTML=`<div class="notice">جاري اعتماد المعاملة ${i+1} من ${blocks.length} · تم ${done} سجل. في حالة انقطاع الاتصال، أعد رفع الملف ذاته ليستكمل دون تكرار السجلات السابقة.</div>`;
       const payload=kind==='history'?{p_sha256:sha,p_documents:blocks[i],p_accept_missing_units:Boolean(result.querySelector('#v126-missing-unit')?.checked)}:
         kind==='menu'?{p_sha256:sha,p_filename:file.name,p_payload:{materials:parsed.materials,dishes:parsed.dishes}}:
-        {p_sha256:sha,p_records:blocks[i],p_create_missing:Boolean(result.querySelector('#v126-create-missing')?.checked)};
-      const fn=kind==='history'?'v126_import_historic_invoices':kind==='menu'?'v126_import_menu_only':'v126_import_physical_counts';
+        {p_sha256:sha,p_filename:file.name,p_records:blocks[i],p_create_missing:Boolean(result.querySelector('#v126-create-missing')?.checked)};
+      const fn=kind==='history'?'v126_import_historic_invoices':kind==='menu'?'v126_import_menu_only':'v131_import_physical_counts';
       const saved=await api.rpc(fn,payload);
       done+=kind==='history'?saved.invoicesCreated||0:kind==='menu'?saved.menuItems||0:saved.approved||0;
       total+=kind==='history'?saved.invoicesAlreadyPresent||0:kind==='count'?saved.alreadyApproved||0:0;
       if(token!==selection)break;
      }
-     progress.innerHTML=`<div class="notice">اكتمل الاستيراد بنجاح. عدد السجلات المعالجة: ${done}${total?`، موجودة سابقًا ولم تتكرر: ${total}`:''}. راجع تقارير المخزون بعد الاستيراد.</div>`;
+     let categorized=0,alreadyClassified=0;
+     if(kind==='count' && parsed.catalog?.length){
+       for(const entries of chunks(parsed.catalog,120)){
+        const classification=await api.v131ClassifyCountCatalog(entries);
+        categorized+=Number(classification.classified||0);
+        alreadyClassified+=Number(classification.alreadyClassified||0);
+       }
+     }
+     progress.innerHTML=`<div class="notice">اكتمل الاستيراد بنجاح. عدد السجلات المعالجة: ${done}${total?`، جرى تجاهلها لأنها مجرودة من قبل في التاريخ نفسه: ${total}`:''}${kind==='count'?`، مواد صُنِّفت من عمود القسم: ${categorized}، احتُفظ بتصنيف ${alreadyClassified} مادة`:''}. راجع تقارير المخزون بعد الاستيراد.</div>`;
+     if(kind==='menu')document.dispatchEvent(new CustomEvent('maria:recipe-saved'));
      toast('اكتمل حفظ البيانات المعتمدة','success');
     }catch(e){progress.innerHTML=`<div class="notice rose">توقف الاستيراد عند ${done} سجل جديد. العمليات السابقة التي أكّدها الخادم محفوظة؛ أعد رفع الملف نفسه بعد معالجة السبب، ولا تعدّل الملف لإنشاء نسخة جديدة قبل المراجعة. التفاصيل: ${esc(asMessage(e))}</div>`;toast(asMessage(e),'error');}
     finally{inFlight=false;review.disabled=false;kindInput.disabled=false;fileInput.disabled=false;submit.disabled=false;}

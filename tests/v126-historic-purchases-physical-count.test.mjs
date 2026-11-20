@@ -61,7 +61,7 @@ test('explicit counted zero is valid and different from unknown blank',()=>{
  assert.equal(p.records[0].quantity,0);assert.equal(p.records.length,2);
 });
 test('duplicate approved item across sheets is refused before any database write',()=>{
- const x=structuredClone(countSample);x.sheets[1].rows[4][0]='صدر دجاج';
+ const x=structuredClone(countSample);x.sheets[1].rows[4][0]='صدر دجاج';x.sheets[1].rows[4][3]='2026-11-18';
  assert.throws(()=>parsePhysicalCountV126(x),/مكررة/);
 });
 test('invalid date in approved count is rejected',()=>{
@@ -109,7 +109,7 @@ test('historic import does not assert unknown dollar prices or silently translat
 test('app includes dedicated navigation and marks v1.0.26',()=>{
  assert.match(app,/case 'baseline-imports': return renderBaselineImportsV126/);
  assert.match(app,/\['#\/baseline-imports', 'استيراد الفواتير والجرد'\]/);
- assert.match(app,/Web v1\.0\.30/);
+ assert.match(app,/Web v1\.0\.31/);
 });
 
 test('an approved count with a blank quantity must fail, never silently skip the material',()=>{

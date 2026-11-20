@@ -1,5 +1,5 @@
 import * as api from '../api.js?v=1.0.30';
-import {openMaterialGroupsV130} from '../material-groups-ui-v130.js?v=1.0.30';
+import {openMaterialGroupsV130} from '../material-groups-ui-v130.js?v=1.0.31';
 import {materialCategoryFieldV122,attachMaterialCategoryPickerV122} from '../material-category-picker-v122.js?v=1.0.22';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {roundUpKnownMaterialPriceV120,displayKnownMaterialPriceV120,editedKnownMaterialPriceV120} from '../material-price-rounding-v120.js?v=1.0.22';

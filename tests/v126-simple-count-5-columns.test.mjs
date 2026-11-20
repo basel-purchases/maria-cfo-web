@@ -15,7 +15,7 @@ test('5-column count imports dated numeric amounts and explicit zero, not blanks
   ['صدر دجاج',5,'2026-11-20'],['ثوم',0,'2026-11-20']]);
 });
 test('5-column count rejects duplicate material names across sheets',()=>{
- const x=structuredClone(wb);x.sheets.push({name:'آخر',rows:[cols,['ثوم',3,'كغ','2026-11-19','']]});
+ const x=structuredClone(wb);x.sheets.push({name:'آخر',rows:[cols,['ثوم',3,'كغ','2026-11-20','']]});
  assert.throws(()=>parsePhysicalCountV126(x),/مكررة/);
 });
 test('5-column count rejects invalid quantity and ignores missing date/unit safely',()=>{
