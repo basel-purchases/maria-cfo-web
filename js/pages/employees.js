@@ -1,10 +1,10 @@
-import * as api from '../api.js?v=1.0.23';
+import * as api from '../api.js?v=1.0.27';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.23';
 import {currencyLabel, esc, money, todayISO, dateOnly } from '../utils.js?v=1.0';
 import { finalMonthTermsV123 } from '../final-month-pay-v123.js?v=1.0.23';
 import { EMPLOYEE_RATE_COLUMNS } from '../business-rules.js?v=1.0';
 import {employeeDirectoryScoreV033} from '../staff-ux-v033.js?v=1.0';
-import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0.23';
+import {buildEmployeeProfileV032} from '../employee-profile-v032.js?v=1.0.27';
 import {openEmployeeBonusModal} from './bonuses.js?v=1.0';
 import {openEmployeeAdvanceModalV123} from './advances.js?v=1.0.23';
 import {visibleEmployeesV123,employeeTotalsV123,employeeLeaveCountV123,employeeLeaveNameV123,adjustmentKindV123,adjustmentLabelV123,adjustmentReasonV123} from '../employee-ledger-v123.js?v=1.0.23';
@@ -14,8 +14,8 @@ const WAGE_LABELS = {monthly: 'الراتب الشهري', daily: 'الأجر ا
 export async function renderEmployees(root) {
   root.innerHTML = loader();
   try {
-    const [allRows,adjustments,leaves] = await Promise.all([
-      api.employees(),api.employeeAdjustmentsV123(),api.employeeLeaveEventsV123()
+    const [allRows,adjustments,leaves,staffSettings] = await Promise.all([
+      api.employees(),api.employeeAdjustmentsV123(),api.employeeLeaveEventsV123(),api.payrollSettings()
     ]);
     const rows=visibleEmployeesV123(allRows);
     const month=todayISO().slice(0,7), year=todayISO().slice(0,4);
@@ -54,7 +54,7 @@ export async function renderEmployees(root) {
         }).join('')}</tbody>
       </table></div><div id="employee-no-match-v032" class="empty" hidden>لا يوجد موظفون مطابقون للبحث.</div>`
         : '<div class="card empty"><strong>لا يوجد موظفون بعد</strong><div>أضف الموظفين يدويًا، أو استخدم الإدخالات السريعة لرفع جدول Excel.</div><a class="btn secondary" href="#/quick-imports">استيراد الموظفين</a></div>'}`;
-    root.querySelector('.add').onclick = () => openEmployeeModal(root);
+    root.querySelector('.add').onclick = () => openEmployeeModal(root,null,Number(staffSettings.default_required_daily_hours)||8);
     root.querySelectorAll('.employee-clickable').forEach(tr => {
       const open=()=>{const employee=rows.find(e=>String(e.id)===tr.dataset.employee);if(employee)openEmployeeModal(root,employee);};
       tr.addEventListener('click',open);
@@ -89,6 +89,8 @@ function profileError(e){
   if(msg.includes('EMPLOYEE_NAME_ALREADY_USED_V032'))return 'هذا الاسم مستخدم لموظف آخر. لا يمكن إنشاء سجلين بالاسم نفسه.';
   if(msg.includes('EMPLOYEE_PAY_BASIS_LOCKED_V032'))return 'لا يمكن تغيير نوع الأجر أو العملة لوجود سجل دوام أو سلفة أو راتب أو مكافأة. يمكنك تعديل مبلغ الراتب والبيانات الأخرى دون المساس بالتاريخ المالي.';
   if(msg.includes('EMPLOYEE_PENDING_BONUS_V032'))return 'توجد مكافأة معلقة لهذا الموظف. عالجها في قسم المكافآت قبل تحويله إلى غير نشط.';
+  if(msg.includes('V127_DAILY_HOURS_INVALID'))return 'ساعات الدوام اليومية يجب أن تكون بين ربع ساعة و24 ساعة.';
+  if(msg.includes('PGRST202')&&msg.includes('save_employee_profile_hours_v127'))return 'يلزم تطبيق SQL v1.0.27 لتغيير ساعات دوام الموظف.';
   if(msg.includes('V123_FINAL_MONTH_ALREADY_APPROVED'))return 'راتب شهر انتهاء العمل معتمد أو مصروف؛ لا يمكن تغيير تاريخ النهاية أو الأيام المستحقة بعد اعتماده.';
   if(msg.includes('V123_FINAL_MONTH_DAYS_INVALID'))return 'راجع عدد الأيام المستحقة في شهر انتهاء العمل وتاريخ التعيين.';
   if(msg.includes('INVALID_EMPLOYEE_PROFILE_V032'))return 'راجع الاسم والمبلغ والهاتف والتواريخ، ثم حاول مرة أخرى.';
@@ -96,7 +98,7 @@ function profileError(e){
   return friendlyError(e);
 }
 
-function openEmployeeModal(root, employee=null) {
+function openEmployeeModal(root, employee=null, defaultHours=8) {
   const editing=!!employee;
   const rate=editing?employee[EMPLOYEE_RATE_COLUMNS[employee.pay_type]]:'';
   const value=x=>esc(String(x??''));
@@ -120,6 +122,7 @@ function openEmployeeModal(root, employee=null) {
           <option value="monthly">شهري</option><option value="daily">يومي</option><option value="hourly">بالساعة</option><option value="fixed">مقطوع</option>
         </select></div>
         <div class="field"><label class="wage-label">الراتب الشهري</label><input name="wage" type="number" min="0.0001" step="any" required inputmode="decimal" value="${value(rate)}"></div>
+        <div class="field"><label>ساعات الدوام اليومية (الجمعة عطلة لحساب سعر الساعة)</label><input name="daily_hours" type="number" min="0.25" max="24" step="0.01" inputmode="decimal" required value="${value(employee?.required_daily_hours??defaultHours)}"></div>
         <div class="field"><label>عملة الأجر</label><select name="currency"><option value="SYP">ل.س · ليرة سورية</option><option value="USD">USD · دولار</option></select></div>
         <div class="field"><label>تاريخ التعيين</label><input name="hire_date" type="date" value="${value(employee?.hire_date)}"></div>
         <div class="field"><label>تاريخ انتهاء العمل (اختياري)</label><input name="termination_date" type="date" value="${value(employee?.termination_date)}"></div>
@@ -142,7 +145,14 @@ function openEmployeeModal(root, employee=null) {
     onSubmit: async fd=>{
       try {
         const input=buildEmployeeProfileV032(fd);
-        if(editing){await api.updateEmployeeFinalV123(employee.id,input);toast('تم تحديث بيانات الموظف بنجاح.','success');}
+        if(editing){
+          // Keep the existing profile RPC when hours are unchanged; otherwise
+          // update the salary and daily hours together in the v1.0.27 RPC.
+          if(Number(employee.required_daily_hours??8)===input.requiredDailyHours)
+            await api.updateEmployeeFinalV123(employee.id,input);
+          else await api.updateEmployeeHoursV127(employee.id,input);
+          toast('تم تحديث بيانات الموظف بنجاح.','success');
+        }
         else {await api.createEmployee(input);toast('تمت إضافة الموظف.','success');}
         await renderEmployees(root);
         return true;
@@ -196,8 +206,8 @@ function openEmployeeModal(root, employee=null) {
         openEmployeeAdvanceModalV123({staff,boxes,employeeId:employee.id,onSaved:()=>loadEmployeeInsights(m,employee)});
       }catch(e){toast(friendlyError(e),'error');}
     };
-    m.form.querySelector('.staff-v123-deduction').onclick=()=>openEmployeeAdjustmentModalV123(employee,'deduction',()=>loadEmployeeInsights(m,employee));
-    m.form.querySelector('.staff-v123-addition').onclick=()=>openEmployeeAdjustmentModalV123(employee,'addition',()=>loadEmployeeInsights(m,employee));
+    m.form.querySelector('.staff-v123-deduction').onclick=()=>openEmployeeAdjustmentModalV127(employee,'deduction',()=>loadEmployeeInsights(m,employee));
+    m.form.querySelector('.staff-v123-addition').onclick=()=>openEmployeeAdjustmentModalV127(employee,'addition',()=>loadEmployeeInsights(m,employee));
     m.form.querySelector('.staff-v123-leave').onclick=()=>openEmployeeLeaveModalV123(employee,()=>loadEmployeeInsights(m,employee));
     m.form.querySelector('.staff-v123-delete').onclick=()=>openEmployeeRemovalV123(root,employee,m);
     loadEmployeeInsights(m,employee);
@@ -235,7 +245,11 @@ async function loadEmployeeInsights(m, employee){
       <p>السلف والحسميات والمكافآت والإجازات، مرتّبة من الأحدث إلى الأقدم.</p></div></div>
     <div class="table-wrap staff-v124-history-wrap" tabindex="0" aria-label="سجل حركات الموظف"><table class="table staff-v123-detail-table"><thead><tr><th>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</th><th>\u0627\u0644\u0646\u0648\u0639</th><th>\u0627\u0644\u0645\u0628\u0644\u063a</th><th>\u0627\u0644\u0633\u0628\u0628</th><th>\u0627\u0644\u062d\u0627\u0644\u0629</th><th>\u0625\u062c\u0631\u0627\u0621</th></tr></thead>
     <tbody>${[
-      ...adjustments.map(a=>({id:a.id,date:a.effective_date,kind:adjustmentLabelV123(a),amount:Number(a.amount_original||0),currency:a.currency_code,positive:adjustmentKindV123(a)!=='deduction',reason:adjustmentReasonV123(a),status:a.status,note:a.note,action:a.status==='pending'?'adjustment':null})),
+      ...adjustments.map(a=>({id:a.id,date:a.effective_date,
+        kind:adjustmentLabelV123(a)+(a.calc_mode_v127==='hours'?' · '+Number(a.entered_hours_v127)+' ساعة':''),
+        amount:Number(a.amount_original||0),currency:a.currency_code,positive:adjustmentKindV123(a)!=='deduction',
+        reason:adjustmentReasonV123(a)+(a.calc_mode_v127==='hours'?' · سعر الساعة وقت التسجيل: '+Number(a.hourly_rate_v127).toFixed(4)+' '+currencyLabel(a.currency_code):''),
+        status:a.status,note:a.note,action:a.status==='pending'?'adjustment':null})),
       ...leaves.map(l=>({id:l.id,date:l.work_date,kind:employeeLeaveNameV123(l.status),amount:0,currency:employee.wage_currency_code,positive:false,reason:String(l.note||'').replace(/^MARIA_LEAVE_V123:\S*\s*/,'')||'\u2014',status:'recorded',action:String(l.note||'').startsWith('MARIA_LEAVE_V123:')?'leave':null})),
       ...advances.map(a=>({id:a.id,date:String(a.occurred_at||'').slice(0,10),kind:'\u0633\u0644\u0641\u0629',amount:Number(a.principal_original||0),currency:a.currency_code,positive:false,reason:a.note||'\u2014',status:a.status,action:null})),
     ].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,45).map(r=>`<tr>
@@ -259,23 +273,93 @@ async function loadEmployeeInsights(m, employee){
   });
 }
 
-function openEmployeeAdjustmentModalV123(employee,kind,onSaved){
- if(employee.pay_type==='fixed'){toast('\u0627\u0644\u0623\u062c\u0631 \u0627\u0644\u0645\u0642\u0637\u0648\u0639 \u0644\u0627 \u064a\u062f\u0639\u0645 \u0627\u0644\u062a\u0633\u0648\u064a\u0627\u062a \u0636\u0645\u0646 \u0627\u0644\u0645\u0633\u064a\u0631 \u0627\u0644\u062d\u0627\u0644\u064a.','error');return;}
+// Reused by the employee file and by the payroll screen.
+export function openEmployeeAdjustmentModalV127(employee,kind,onSaved,defaultDate=todayISO()){
+ if(employee.pay_type==='fixed'){
+  toast('الأجر المقطوع لا يدعم التسويات ضمن المسير الحالي.','error');return;
+ }
  const addition=kind==='addition';
- modal({title:addition?'\u0625\u0636\u0627\u0641\u0629 \u0639\u0644\u0649 \u0631\u0627\u062a\u0628 \u0627\u0644\u0645\u0648\u0638\u0641':'\u062e\u0635\u0645 \u0645\u0646 \u0631\u0627\u062a\u0628 \u0627\u0644\u0645\u0648\u0638\u0641',
-   subtitle:employee.name+' · '+currencyLabel(employee.wage_currency_code||'SYP'),
-   body:`<div class="form-grid"><div class="field"><label>\u0627\u0644\u062a\u0627\u0631\u064a\u062e</label><input name="date" type="date" value="${todayISO()}" required></div>
-    <div class="field"><label>\u0627\u0644\u0645\u0628\u0644\u063a</label><input name="amount" type="number" min="0.0001" max="1000000000000" step="any" required></div>
-    <div class="field full"><label>\u0627\u0644\u0633\u0628\u0628</label><input name="reason" maxlength="120" required></div>
-    <div class="field full"><label>\u0645\u0644\u0627\u062d\u0638\u0629</label><textarea name="note" maxlength="500" rows="2"></textarea></div></div>
-    <div class="notice">\u062a\u0637\u0628\u0642 \u0627\u0644\u062a\u0633\u0648\u064a\u0629 \u0639\u0646\u062f \u0627\u0639\u062a\u0645\u0627\u062f \u0645\u0633\u064a\u0631 \u0627\u0644\u0631\u0648\u0627\u062a\u0628\u060c \u0648\u0644\u0627 \u062a\u0646\u0642\u0635 \u0645\u0646 \u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0641\u0648\u0631\u0627\u064b.</div>`,
-   onSubmit:async fd=>{
-     try{await api.recordEmployeeAdjustmentV123({employeeId:employee.id,kind,amount:fd.get('amount'),
-       date:fd.get('date'),reason:String(fd.get('reason')||'').trim(),note:fd.get('note')});
-       toast('\u062a\u0645 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062a\u0633\u0648\u064a\u0629.','success');await onSaved();return true;
-     }catch(e){toast(friendlyError(e),'error');return false;}
+ const currency=employee.wage_currency_code||'SYP';
+ const m=modal({
+  title:addition?'إضافة على راتب الموظف':'خصم من راتب الموظف',
+  subtitle:employee.name+' · '+currencyLabel(currency),
+  submitText:'تسجيل التسوية',
+  body:`<div class="form-grid">
+    <div class="field"><label>التاريخ</label><input name="date" type="date" value="${esc(defaultDate)}" required></div>
+    <div class="field"><label>نوع التسوية</label><select name="value_kind"><option value="money">مبلغ نقدي</option><option value="hours">ساعات دوام</option></select></div>
+    <div class="field" data-money-entry><label>المبلغ (${esc(currencyLabel(currency))})</label><input name="amount" type="number" min="0.0001" max="1000000000000" step="any" inputmode="decimal" required></div>
+    <div class="field" data-hours-entry hidden><label>عدد الساعات</label><input name="hours" type="number" min="0.01" max="744" step="0.01" inputmode="decimal" disabled></div>
+    <div class="field full" data-hour-preview hidden aria-live="polite"></div>
+    <div class="field full"><label>السبب</label><input name="reason" maxlength="120" required></div>
+    <div class="field full"><label>ملاحظة (اختياري)</label><textarea name="note" maxlength="500" rows="2"></textarea></div>
+   </div>
+   <div class="notice">قيمة الساعة بحسب الأجر المحفوظ وجدول الدوام للشهر المختار، مع استبعاد أيام الجمعة. يُضاف المبلغ أو يُخصم عند احتساب المسير، ولا تُسجل حركة نقدية الآن. لا تسجل خصم غياب سبق احتسابه تلقائيًا.</div>`,
+  onSubmit:async fd=>{
+   try{
+    const valueKind=fd.get('value_kind');
+    const value=fd.get(valueKind==='hours'?'hours':'amount');
+    const number=Number(value);
+    if(!String(value??'').trim()||!Number.isFinite(number)||number<=0||
+       (valueKind==='hours'&&(number>744||Math.abs(number*100-Math.round(number*100))>1e-7)))
+     throw Error('أدخل عدد الساعات أو المبلغ بشكل صحيح.');
+    if(valueKind==='hours'&&!rateData)throw Error('لم يتم تحميل سعر الساعة من قاعدة البيانات. راجع تحديث SQL v1.0.27.');
+    await api.recordEmployeeAdjustmentV127({employeeId:employee.id,kind,valueKind,value,
+      date:fd.get('date'),reason:String(fd.get('reason')||'').trim(),note:fd.get('note')});
+    toast('تم تسجيل التسوية في كشف الراتب.','success');
+    await onSaved?.();return true;
+   }catch(e){
+    const text=String(e?.message||e||'');
+    toast(/PGRST202|employee_hour_rate_v127|record_employee_adjustment_v127/.test(text)
+     ?'يلزم تطبيق SQL v1.0.27 على Supabase قبل استخدام تسويات الساعات أو المبالغ.':friendlyError(e),'error');
+    return false;
    }
+  },
  });
+ const form=m.form,mode=form.elements.namedItem('value_kind');
+ const date=form.elements.namedItem('date'),hours=form.elements.namedItem('hours');
+ const amount=form.elements.namedItem('amount');
+ const preview=form.querySelector('[data-hour-preview]');
+ let rateData=null,request=0;
+ const update=async()=>{
+  const token=++request,byHours=mode.value==='hours';
+  form.querySelector('[data-hours-entry]').hidden=!byHours;
+  form.querySelector('[data-money-entry]').hidden=byHours;
+  hours.disabled=!byHours;hours.required=byHours;
+  amount.disabled=byHours;amount.required=!byHours;
+  preview.hidden=!byHours;
+  if(!byHours){rateData=null;preview.textContent='';return;}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date.value)){
+   rateData=null;preview.textContent='اختر تاريخًا صحيحًا.';return;
+  }
+  preview.textContent='جاري حساب سعر الساعة...';rateData=null;
+  try{
+   const data=await api.employeeHourRateV127(employee.id,date.value);
+   if(token!==request||!m.element.isConnected)return;
+   if(!data||!(Number(data.hourly_rate)>0))throw Error('V127_HOURLY_RATE_INVALID');
+   rateData=data;
+   showPreview();
+  }catch(e){
+   if(token!==request||!m.element.isConnected)return;
+   rateData=null;
+   preview.textContent=/PGRST202|employee_hour_rate_v127/i.test(String(e?.message||''))
+     ?'يلزم تطبيق تحديث SQL v1.0.27 لحساب ساعات الرواتب.':friendlyError(e);
+  }
+ };
+ const fmt=value=>new Intl.NumberFormat('en-US',{maximumFractionDigits:4}).format(Number(value));
+ function showPreview(){
+  if(!rateData)return;
+  const rate=Number(rateData.hourly_rate),quantity=Number(hours.value);
+  const breakdown=rateData.pay_type==='monthly'
+   ?`أيام العمل دون الجمعة: ${Number(rateData.working_days)} · الساعات المقررة لهذا الشهر: ${fmt(rateData.monthly_hours)}`
+   :rateData.pay_type==='daily'?`ساعات اليوم: ${fmt(rateData.daily_hours)}`:'أجر الساعة المحدد للموظف';
+  preview.innerHTML=`<div class="notice"><strong>${esc(breakdown)}</strong>
+   <div>أجر الساعة: <strong>${fmt(rate)} ${esc(currencyLabel(currency))}</strong></div>
+   ${Number.isFinite(quantity)&&quantity>0?`<div>المبلغ المتوقع: <strong>${fmt(Math.round(rate*quantity*10000)/10000)} ${esc(currencyLabel(currency))}</strong></div>`:''}
+   <small>الحساب الرسمي يتم في قاعدة البيانات عند الحفظ، ويُحفظ سعر الساعة مع الحركة.</small></div>`;
+ }
+ mode.addEventListener('change',update);
+ date.addEventListener('change',update);
+ hours.addEventListener('input',showPreview);
 }
 function openEmployeeLeaveModalV123(employee,onSaved){
  modal({title:'\u0625\u0636\u0627\u0641\u0629 \u0625\u062c\u0627\u0632\u0629 \u0623\u0648 \u063a\u064a\u0627\u0628',subtitle:employee.name,

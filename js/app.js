@@ -15,10 +15,10 @@ import {
   renderOrders,
   renderOrderDetail,
 } from './pages/daily.js?v=1.0.24';
-import { renderEmployees } from './pages/employees.js?v=1.0.24';
+import { renderEmployees } from './pages/employees.js?v=1.0.27';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.25';
-import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.23';
+import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.27';
 import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
@@ -123,7 +123,7 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.26</div>
+        <div class="sidebar-foot">Web v1.0.27</div>
       </aside>
 
       <main class="main">

@@ -838,6 +838,7 @@ export async function createEmployee(input){
     mobile_phone_v031: input.phone || null, status: input.status || 'active',
     hire_date: input.hireDate || null, termination_date: input.terminationDate || null,
     termination_paid_days_v123:input.terminationPayableDays ?? null,
+    required_daily_hours:input.requiredDailyHours ?? 8,
     notes: input.notes || null,
   });
 }
@@ -856,6 +857,16 @@ export const updateEmployeeFinalV123=(id,input)=>rpc('save_employee_final_profil
   p_wage:input.wage,p_currency:input.currency,p_status:input.status,
   p_hire_date:input.hireDate,p_termination_date:input.terminationDate,
   p_notes:input.notes||null,p_paid_days:input.terminationPayableDays
+});
+// v1.0.27: daily working hours are saved atomically with the employee profile.
+export const updateEmployeeHoursV127=(id,input)=>rpc('save_employee_profile_hours_v127',{
+ p_employee_id:id,p_name:input.name,p_job_title:input.jobTitle||null,
+ p_department:input.department||null,p_residence:input.residence||null,
+ p_mobile_phone:input.phone||null,p_pay_type:input.payType,
+ p_wage:input.wage,p_currency:input.currency,p_status:input.status,
+ p_hire_date:input.hireDate,p_termination_date:input.terminationDate,
+ p_notes:input.notes||null,p_paid_days:input.terminationPayableDays,
+ p_daily_hours:input.requiredDailyHours,
 });
 export const employeeBonusesV032=()=>list('employee_payroll_adjustments', {
   eq:{adjustment_type:'bonus'}, order:'created_at', limit:2000,
@@ -1523,6 +1534,15 @@ export const employeeLeaveEventsV123=async()=>{
 export const recordEmployeeAdjustmentV123=({employeeId,kind,amount,date,reason,note})=>
   rpc('record_employee_adjustment_v123',{p_employee_id:employeeId,p_kind:kind,
     p_amount:Number(amount),p_effective_date:date,p_reason:reason,p_note:note||null});
+// v1.0.27: the server calculates and snapshots the hourly rate.
+export const employeeHourRateV127=(employeeId,date)=>rpc('employee_hour_rate_v127',{
+ p_employee_id:employeeId,p_effective_date:date,
+}).then(result=>Array.isArray(result)?result[0]:result);
+export const recordEmployeeAdjustmentV127=({employeeId,kind,valueKind,value,date,reason,note})=>
+ rpc('record_employee_adjustment_v127',{
+ p_employee_id:employeeId,p_kind:kind,p_value_kind:valueKind,
+ p_value:Number(value),p_effective_date:date,p_reason:reason,p_note:note||null,
+ });
 export const voidEmployeeAdjustmentV123=(id,reason)=>
   rpc('void_employee_adjustment_v123',{p_adjustment_id:id,p_reason:reason});
 export const recordEmployeeLeaveV123=({employeeId,date,kind,note})=>

@@ -24,6 +24,8 @@ export function buildEmployeeProfileV032(fd) {
   const terminationDate = str(fd, 'termination_date');
   const paidDaysText = str(fd, 'termination_paid_days');
   const wageText = str(fd, 'wage');
+  const dailyHoursText = str(fd, 'daily_hours');
+  const dailyHours = dailyHoursText ? Number(dailyHoursText) : null;
   const wage = Number(wageText);
   if (!name || name.length > 250) throw Error('اكتب اسم الموظف (حتى 250 حرفًا).');
   if (jobTitle.length > 250 || department.length > 250 || residence.length > 200 || notes.length > 2000)
@@ -34,11 +36,14 @@ export function buildEmployeeProfileV032(fd) {
   if (!CURRENCIES.has(currency)) throw Error('عملة الأجر غير معتمدة.');
   if (!wageText || !Number.isFinite(wage) || wage <= 0 || wage > 1000000000000)
     throw Error('أدخل أجرًا موجبًا وصحيحًا للموظف.');
+  if (dailyHoursText && (!Number.isFinite(dailyHours) || dailyHours < 0.25 || dailyHours > 24 || Math.abs(dailyHours*100-Math.round(dailyHours*100))>1e-7))
+    throw Error('ساعات الدوام اليومية يجب أن تكون من 0.25 إلى 24 ساعة، بمنزلتين عشريتين.');
   if (!['active', 'inactive'].includes(status)) throw Error('حالة الموظف غير صحيحة.');
   if (!validDay(hireDate) || !validDay(terminationDate) || (hireDate && terminationDate && hireDate > terminationDate))
     throw Error('راجع تاريخ التعيين وتاريخ انتهاء العمل.');
   const terms = finalMonthTermsV123({payType, wage, hireDate, terminationDate, paidDays:paidDaysText||null});
   const terminationPayableDays = terms?.paidDays ?? null;
   return {name, jobTitle, department, residence, phone, notes, payType, wage, currency,
-    status, hireDate: hireDate || null, terminationDate: terminationDate || null, terminationPayableDays};
+    status, hireDate: hireDate || null, terminationDate: terminationDate || null, terminationPayableDays,
+    requiredDailyHours:dailyHours};
 }

@@ -1,7 +1,8 @@
-import * as api from '../api.js?v=1.0.23';
+import * as api from '../api.js?v=1.0.27';
 import {modal,toast,loader,friendlyError,confirmBox} from '../ui.js?v=1.0.23';
 import {currencyLabel,esc,money,dateOnly,todayISO} from '../utils.js?v=1.0';
 import {registerTableExport} from '../table-export-v027.js?v=1.0';
+import {openEmployeeAdjustmentModalV127} from './employees.js?v=1.0.27';
 import {monthStartV034,filterPayrollReadyV034,currencyGroupsV034,normalizedPayrollRowV034} from '../payroll-workbench-v034.js?v=1.0.17';
 
 const MONTH_NAMES=['كانون الثاني','شباط','آذار','نيسان','أيار','حزيران','تموز','آب','أيلول','تشرين الأول','تشرين الثاني','كانون الأول'];
@@ -17,7 +18,7 @@ export async function renderPayrollV034(root){
  const today=todayISO();
  const state={year:Number(today.slice(0,4)),month:Number(today.slice(5,7)),tab:'ready',status:'all',query:'',box:'',ready:[],paid:[],daily:[],fixed:[],runs:[],staff:[],boxes:[],busy:false};
  root.innerHTML=`<div class="page-head"><div><h2>الرواتب · مركز الدفع</h2><p>كشف واحد للمراجعة ثم الاعتماد والدفع. كل مبلغ مصروف يذهب إلى سجل المدفوعات وحركة الصندوق تلقائيًا.</p></div>
- <div class="quick-actions"><a class="btn secondary" href="#/employees-list">الموظفون</a><a class="btn secondary" href="#/advances">السلف</a><a class="btn secondary" href="#/bonuses">المكافآت</a></div></div>
+ <div class="quick-actions"><a class="btn secondary" href="#/employees-list">الموظفون</a><a class="btn secondary" href="#/advances">السلف</a><a class="btn secondary" href="#/bonuses">المكافآت</a><button type="button" class="btn secondary" data-salary-adjust="addition">+ إضافة ساعات / نقود</button><button type="button" class="btn secondary" data-salary-adjust="deduction">+ خصم ساعات / نقود</button></div></div>
  <section class="card payroll-controller-v034">
   <div class="payroll-filter-grid-v034">
    <div class="field"><label for="payroll-month-v034">الشهر</label><select id="payroll-month-v034">${MONTH_NAMES.map((name,i)=>`<option value="${i+1}" ${i+1===state.month?'selected':''}>${name}</option>`).join('')}</select></div>
@@ -202,6 +203,27 @@ export async function renderPayrollV034(root){
   const table=panel.querySelector('.payroll-paid-table-v034');if(!table)return;
   registerTableExport(table,()=>({title:`الرواتب المقبوضة ${MONTH_NAMES[state.month-1]} ${state.year}`,headers:['الموظف','التاريخ','الفترة','النوع','المدفوع','مكافآت المسير','خصم السلفة','الصندوق','ملاحظات'],rows:state.paid.map(p=>[p.employee_name,p.paid_at?.slice(0,10)||'',`${p.period_start} — ${p.period_end}`,PAY_TYPE[p.payment_kind]||p.payment_kind,p.amount_original,p.bonus_original,p.advance_deduction_original,state.boxes.find(b=>b.id===p.cashbox_id)?.name||'',p.note||''])}));
  }
+ // Use the exact same atomic adjustment dialog from the employee profile.
+ root.querySelectorAll('[data-salary-adjust]').forEach(button=>button.onclick=()=>{
+  const staff=state.staff.filter(e=>e.status==='active'&&!e.archived_v123&&e.pay_type!=='fixed');
+  if(!staff.length){toast('لا يوجد موظف نشط بنظام راتب يقبل الإضافة أو الخصم.','error');return;}
+  const kind=button.dataset.salaryAdjust;
+  let selected=null;
+  modal({title:kind==='addition'?'اختيار موظف للإضافة':'اختيار موظف للخصم',
+   subtitle:'تُطبق التسوية على الشهر الموافق للتاريخ، وليس كحركة صندوق.',
+   submitText:'متابعة',
+   body:`<div class="field"><label>الموظف</label><select name="employee" required>
+      ${staff.map(e=>`<option value="${esc(e.id)}">${esc(e.name)} · ${esc(PAY_TYPE[e.pay_type]||e.pay_type)}</option>`).join('')}
+    </select></div>`,
+   onSubmit:async fd=>{
+    selected=staff.find(x=>String(x.id)===String(fd.get('employee')))||null;
+    return Boolean(selected);
+   },
+   onClose:()=>{
+    if(selected)openEmployeeAdjustmentModalV127(selected,kind,load,state.year===Number(todayISO().slice(0,4))&&state.month===Number(todayISO().slice(5,7))?todayISO():monthStartV034(state.year,state.month));
+   },
+  });
+ });
  root.querySelectorAll('[data-pay-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.payTab;paint();});
  boxSelect.addEventListener('change',()=>{state.box=boxSelect.value;paint();});
  const filterChange=()=>{state.month=Number(monthInput.value);state.year=Number(yearInput.value);state.status='all';state.query='';load();};
