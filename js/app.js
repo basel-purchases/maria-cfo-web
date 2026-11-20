@@ -1,13 +1,14 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.31';
+import * as api from './api.js?v=1.0.32';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
-import { renderDashboard } from './pages/dashboard.js?v=1.0.24';
-import { renderHub } from './pages/hubs.js?v=1.0.31';
+import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.32';
+import {readThemeV132,applyThemeV132} from './theme-v132.js?v=1.0.32';
+import { renderHub } from './pages/hubs.js?v=1.0.32';
 import { renderMaterials } from './pages/materials.js?v=1.0.31';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
-import { renderMenu } from './pages/menu.js?v=1.0.31';
+import { renderMenu } from './pages/menu.js?v=1.0.32';
 import {
   renderInventory,
   renderCashboxes,
@@ -19,16 +20,15 @@ import { renderEmployees } from './pages/employees.js?v=1.0.29';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0.29';
 import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.31';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
-import { renderReports } from './pages/reports.js?v=1.0';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.22';
+import { renderSettings } from './pages/settings.js?v=1.0.32';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
 import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.31';
-import {renderSaleCostQueueV131} from './pages/sale-cost-queue-v131.js?v=1.0.31';
+import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.32';
 import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
@@ -38,6 +38,7 @@ import {marketNewSypPerUsdV120,rateApprovalStateV120} from './fx-rate-v120.js?v=
 import {materialPricingErrorV111} from './pricing-error-v111.js?v=1.0.12';
 import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.js?v=1.0.24';
 
+applyThemeV132(readThemeV132(),false);
 const app = document.querySelector('#app');
 installSearchableSelectsV033();
 let currentSession = null;
@@ -46,20 +47,14 @@ let aiJobsInitialized = false;
 const aiJobState = new Map();
 
 const nav = [
-  ['#/dashboard', 'الرئيسية'],
+  ['#/dashboard', 'الصفحة الرئيسية'],
   ['#/basic', 'الإدخالات الأساسية'],
-  ['#/suppliers', 'الموردون وإحصائياتهم'],
   ['#/daily', 'التشغيل اليومي'],
   ['#/employees', 'الموظفون والرواتب'],
   ['#/events', 'الحفلات'],
-  ['#/reports-hub', 'الإحصائيات والتقارير'],
   ['#/assistant', 'المساعد الذكي'],
-  ['#/images', 'الصور'],
-  ['#/baseline-imports', 'استيراد الفواتير والجرد'],
-  ['#/quick-imports', 'الإدخالات السريعة'],
-  ['#/daily-orders', 'الأوردرات'],
-  ['#/sale-cost-queue', 'تسوية تكاليف المبيعات'],
-  ['#/count-history', 'سجل الجرد'],
+  ['#/statistics', 'الإحصائيات'],
+  ['#/more', 'أخرى'],
   ['#/settings', 'الإعدادات'],
 ];
 
@@ -127,14 +122,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.31</div>
+        <div class="sidebar-foot">Web v1.0.32</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.32</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
@@ -144,7 +139,7 @@ function shell() {
               </a>`).join('')}
           </nav>
           <div class="topbar-actions">
-            <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="مبيعات جاهزة لتسوية تكلفة مكوناتها" aria-label="مبيعات بانتظار تسوية التكلفة" hidden>
+            <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="عداد مبيعات مرشحة للتسوية؛ اضغط للتفاصيل" aria-label="عرض مبيعات مرشحة لتسوية التكلفة" hidden>
               <span aria-hidden="true">📦</span><span class="ai-notify-count" id="sales-cost-notify-count-v131">0</span>
             </button>
             <button class="ai-notify-btn" id="ai-notify-btn" type="button" aria-label="نتائج المعالجة الخلفية" title="نتائج المعالجة الخلفية">
@@ -569,11 +564,13 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'baseline-imports':'baseline-imports', 'quick-imports':'quick-imports', 'recipes-import':'quick-imports', assets:'basic', materials: 'basic', suppliers: 'suppliers', supplier: 'suppliers', purchases: 'basic', purchase: 'basic', menu: 'basic',
-    inventory: 'daily', cashboxes: 'daily', expenses: 'daily', orders: 'daily', order: 'daily',
-    'sale-cost-queue': 'daily', 'count-history': 'baseline-imports',
-    'employees-list': 'employees', attendance: 'employees', payroll: 'employees', advances: 'employees', bonuses: 'employees',
-    'events-list': 'events', 'event-reservations': 'events', 'event-bookings': 'events', reports: 'reports-hub', images: 'images',
+    'baseline-imports':'basic', 'count-history':'basic', 'quick-imports':'basic', 'recipes-import':'basic',
+    assets:'basic',materials:'basic',suppliers:'basic',supplier:'basic',purchases:'basic',purchase:'basic',menu:'basic',
+    inventory:'basic',cashboxes:'daily',expenses:'daily',orders:'daily',order:'daily',
+    'sale-cost-queue':'daily','daily-orders':'daily','ameen-daily':'daily',
+    'employees-list':'employees',attendance:'employees',payroll:'employees',advances:'employees',bonuses:'employees',
+    'events-list':'events','event-reservations':'events','event-bookings':'events',event:'events',
+    reports:'statistics','reports-hub':'statistics',images:'more',
   }[key] || key;
   app.querySelectorAll('.nav a').forEach((a) => {
     const routeKey = a.dataset.route.replace('#/', '');
@@ -595,7 +592,9 @@ async function route() {
   const id = parts[1];
 
   const titles = {
-    dashboard: 'الرئيسية',
+    dashboard: 'الصفحة الرئيسية',
+    statistics: 'الإحصائيات',
+    more: 'أخرى',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
     'baseline-imports': 'استيراد الفواتير والجرد',
@@ -640,11 +639,13 @@ async function route() {
 
   try {
     switch (key) {
-      case 'dashboard': return renderDashboard(root);
+      case 'dashboard': return renderAnalyticsTabsV132(root,{initialTab:id||'overview'});
+      case 'statistics': return renderAnalyticsTabsV132(root,{initialTab:id||'finance'});
+      case 'more': return renderHub(root,'more');
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
       case 'baseline-imports': return renderBaselineImportsV126(root);
-      case 'sale-cost-queue': return renderSaleCostQueueV131(root);
+      case 'sale-cost-queue': return renderSaleCostQueueV132(root,{pendingOnly:id==='pending'});
       case 'count-history': return renderPhysicalCountHistoryV131(root);
       case 'ameen-daily':
       case 'daily-orders': return renderAmeenDailyV041(root);
@@ -652,7 +653,7 @@ async function route() {
       case 'daily': return renderHub(root, 'daily');
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');
-      case 'reports-hub': return renderHub(root, 'reports');
+      case 'reports-hub': location.hash='#/statistics/finance'; return;
       case 'materials': return renderMaterials(root);
       case 'assets': return renderAssets(root);
       case 'advances': return renderAdvances(root);
@@ -661,7 +662,7 @@ async function route() {
       case 'supplier': return renderSupplierDetail(root,id);
       case 'purchases': return renderPurchases(root);
       case 'purchase': return renderPurchaseDetail(root, id);
-      case 'menu': return renderMenu(root,{missingOnly:id==='unpriced'});
+      case 'menu': return renderMenu(root,{missingOnly:id==='unpriced',search:id==='find'?decodeURIComponent(parts.slice(2).join('/')):''});
       case 'inventory': return renderInventory(root);
       case 'cashboxes': return renderCashboxes(root);
       case 'expenses': return renderExpenses(root);
@@ -674,7 +675,7 @@ async function route() {
       case 'event-reservations': return renderEventsV034(root,'booking');
       case 'event-bookings': return renderEventDetailV034(root,id,'booking');
       case 'event': return renderEventDetailV034(root,id);
-      case 'reports': return renderReports(root);
+      case 'reports': location.hash='#/statistics/finance'; return;
       case 'assistant': return renderAssistant(root);
       case 'images': return renderImages(root);
       case 'settings': return renderSettings(root,id||'general');
@@ -723,12 +724,25 @@ async function refreshSaleCostNoticeV131({showToast=false}={}){
   const count=Number(await api.v131SaleQueueReadyCount());
   counter.textContent=String(count);
   button.hidden=count<=0;
-  button.title=count>0?`${count} مبيعات لها مكونات قابلة للاستكمال؛ افتح تسوية التكاليف`:'لا مبيعات جاهزة';
+  button.title=count>0?`${count} مبيعات لها وصفات مضافة وتحتاج متابعة التسوية. اضغط لعرض التفاصيل.`:'لا مبيعات مرشحة للتسوية';
   if(showToast&&count>0)toast(`هناك ${count} مبيعات يمكن استكمال تكلفة مكوناتها. افتح «تسوية تكاليف المبيعات».`,'success');
  }catch(e){button.hidden=true;console.warn('Sale cost queue notification unavailable; check SQL v1.0.31',e);}
 }
 function installSaleCostNoticeV131(){
- app.querySelector('#sales-cost-notify-v131')?.addEventListener('click',()=>{location.hash='#/sale-cost-queue';});
+ app.querySelector('#sales-cost-notify-v131')?.addEventListener('click',()=>{
+   const count=Number(app.querySelector('#sales-cost-notify-count-v131')?.textContent||0);
+   const dialog=modal({title:'مبيعات بانتظار استكمال التكلفة',
+     subtitle:'الرقم بجوار رمز الصندوق 📦 هو عداد بنود بيع لها وصفات مضافة، وليس عدد رسائل جديدة.',
+     hideActions:true,
+     body:`<div class="card"><strong>${count} بند مرشح للاستكمال</strong><p>افتح تسوية تكاليف المبيعات لمراجعة الوصفة والتكلفة، ثم تنفيذ صرف المواد المستحقة. لا يعاد تسجيل القبض.</p></div>
+     <div class="quick-actions"><button type="button" class="btn" id="v132-open-queue-notice">عرض البنود المعلّقة</button></div>`});
+   dialog.element.querySelector('#v132-open-queue-notice').onclick=async()=>{
+     await dialog.close();
+     if((location.hash||'').startsWith('#/sale-cost-queue'))
+       document.dispatchEvent(new CustomEvent('maria:sale-queue-refresh'));
+     else location.hash='#/sale-cost-queue/pending';
+   };
+ });
  if(!saleNoticeInstalledV131){
   document.addEventListener('maria:recipe-saved',()=>void refreshSaleCostNoticeV131({showToast:true}));
   document.addEventListener('maria:cost-queue-changed',()=>void refreshSaleCostNoticeV131());

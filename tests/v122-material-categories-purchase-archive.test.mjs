@@ -107,7 +107,7 @@ test('v122 source includes controlled archive, material CRUD and SQL with no har
   assert.doesNotMatch(material,/materialCategoryChoicesV121/);
   assert.match(material,/categoryId:await categoryPicker\.resolve\(\)/);
   const settings=src('js/pages/settings.js');
-  assert.match(settings,/data-settings-tab="material-categories"/);
+  assert.match(settings,/data-category-tab="material-categories"/);
   assert.match(settings,/manageMaterialCategoryV122\('delete'/);
   const purchases=src('js/pages/purchases.js');
   assert.match(purchases,/purchase-status-v122/);

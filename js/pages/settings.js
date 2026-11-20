@@ -1,6 +1,7 @@
+import {THEMES_V132,readThemeV132,applyThemeV132} from '../theme-v132.js?v=1.0.32';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
-import * as api from '../api.js?v=1.0.22';
+import * as api from '../api.js?v=1.0.32';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.22';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
@@ -57,17 +58,37 @@ export async function renderSettings(root, selectedTab='general') {
     root.innerHTML = `
       <div class="page-head"><div><h2>الإعدادات</h2>
         <p>الإعدادات العامة والوحدات وتحويلات المواد المستخدمة في الفواتير والوصفات.</p></div></div>
-      <div class="settings-tabs" role="tablist">
+      <div class="settings-tabs v132-settings-main-tabs" role="tablist">
         <button type="button" class="settings-tab" data-settings-tab="general">عام</button>
-        <button type="button" class="settings-tab" data-settings-tab="units">الوحدات وعلاقاتها</button>
-        <button type="button" class="settings-tab" data-settings-tab="orders">\u0627\u0644\u062e\u0635\u0645 \u0648\u0627\u0644\u0631\u0633\u0648\u0645</button>
-        <button type="button" class="settings-tab" data-settings-tab="expenses">\u062a\u0635\u0646\u064a\u0641\u0627\u062a \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062a</button>
+        <button type="button" class="settings-tab" data-settings-tab="units">الوحدات وتحويلاتها</button>
+        <button type="button" class="settings-tab" data-settings-tab="orders">الخصومات والرسوم</button>
         <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
-        <button type="button" class="settings-tab" data-settings-tab="staff">\u0627\u0644\u062f\u0648\u0627\u0645 \u0648\u0627\u0644\u0625\u062c\u0627\u0632\u0627\u062a</button>
-        <button type="button" class="settings-tab" data-settings-tab="material-categories">تصنيفات المواد</button>
-        <button type="button" class="settings-tab" data-settings-tab="catalogs">تصنيفات الأساسيات والمنيو</button>
+        <button type="button" class="settings-tab" data-settings-tab="staff">الدوام والإجازات</button>
+        <button type="button" class="settings-tab" data-settings-tab="categories">التصنيفات</button>
+        <button type="button" class="settings-tab" data-settings-tab="appearance">ستايل البرنامج</button>
+        <button type="button" class="settings-tab" data-settings-tab="about">حول البرنامج</button>
       </div>
-
+      <div data-settings-pane="appearance" hidden>
+        <section class="card"><h3>اختيار ألوان البرنامج وتنسيقه</h3><p>اختر رقم الستايل المناسب. التغيير فوري ومحفوظ لهذا المتصفح دون التأثير في أي بيانات.</p>
+          <div class="v132-theme-grid" role="group" aria-label="ستايلات البرنامج">
+            ${THEMES_V132.map(theme=>`<button type="button" class="v132-theme-option" data-choose-theme="${esc(theme.id)}">
+              <span class="v132-theme-sample v132-theme-sample-${esc(theme.id)}"><span></span><span></span><span></span></span>
+              <strong>${theme.number}. ${esc(theme.name)}</strong><small>${esc(theme.subtitle)}</small>
+              <span class="v132-theme-selected" aria-hidden="true">✓</span>
+            </button>`).join('')}
+          </div>
+        </section>
+      </div>
+      <div data-settings-pane="about" hidden>
+        <section class="card v132-about-card"><div class="v132-about-mark">M</div>
+          <h2>Maria CFO</h2><p>برنامج الإدارة المالية والمخزون والموظفين للمطعم</p>
+          <p><strong>الإصدار: Web v1.0.32</strong></p>
+          <div class="divider"></div><h3>إعداد وبرمجة</h3>
+          <p>تمت البرمجة والإعداد من قبل <strong>باسل صليبي</strong></p>
+          <p>الهاتف: <a href="tel:0996202134" dir="ltr">0996202134</a></p>
+          <p>البريد الإلكتروني: <a href="mailto:basel.slaby@gmail.com" dir="ltr">basel.slaby@gmail.com</a></p>
+        </section>
+      </div>
       <div data-settings-pane="general">
         <div class="grid cols-2">
           <div class="card"><h3>إعدادات حالية</h3><div class="kv">
@@ -185,8 +206,31 @@ export async function renderSettings(root, selectedTab='general') {
         </div>
       </div>`;
 
+    // Move existing category editors into one parent tab, without replacing their
+    // forms, RPCs or save/remove behaviour.
+    const categoryGroup=document.createElement('div');
+    categoryGroup.dataset.settingsPane='categories';
+    categoryGroup.hidden=true;
+    categoryGroup.innerHTML=`<div class="settings-tabs v132-category-tabs" role="tablist" aria-label="أنواع التصنيفات">
+      <button type="button" class="settings-tab" data-category-tab="material-categories">تصنيفات المواد</button>
+      <button type="button" class="settings-tab" data-category-tab="catalogs">تصنيفات المنيو والأساسيات</button>
+      <button type="button" class="settings-tab" data-category-tab="expenses">تصنيفات المصروفات</button>
+    </div><div id="v132-category-panes"></div>`;
+    root.querySelector('[data-settings-pane="general"]').before(categoryGroup);
+    const categoryContent=categoryGroup.querySelector('#v132-category-panes');
+    ['material-categories','catalogs','expenses'].forEach(key=>{
+      const pane=root.querySelector(`[data-settings-pane="${key}"]`);
+      if(pane)categoryContent.appendChild(pane);
+    });
+    const categoryTabs=[...categoryGroup.querySelectorAll('[data-category-tab]')];
+    const setCategoryTab=key=>{
+      const selected=['material-categories','catalogs','expenses'].includes(key)?key:'material-categories';
+      categoryTabs.forEach(b=>{const active=b.dataset.categoryTab===selected;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
+      categoryContent.querySelectorAll('[data-settings-pane]').forEach(p=>p.hidden=p.dataset.settingsPane!==selected);
+    };
+    categoryTabs.forEach(b=>b.onclick=()=>setCategoryTab(b.dataset.categoryTab));
     const tabs=[...root.querySelectorAll('[data-settings-tab]')];
-    const panes=[...root.querySelectorAll('[data-settings-pane]')];
+    const panes=[...root.querySelectorAll('[data-settings-pane]')].filter(p=>!categoryContent.contains(p));
     const setTab=key=>{
       tabs.forEach(tab=>{
         const active=tab.dataset.settingsTab===key;
@@ -196,8 +240,16 @@ export async function renderSettings(root, selectedTab='general') {
       panes.forEach(p=>p.hidden=p.dataset.settingsPane!==key);
     };
     tabs.forEach(tab=>{tab.onclick=()=>setTab(tab.dataset.settingsTab);});
-    setTab(['general','payroll','units','orders','expenses','staff','material-categories','catalogs'].includes(selectedTab)?selectedTab:'general');
-
+    const isCategory=['material-categories','catalogs','expenses'].includes(selectedTab);
+    setCategoryTab(isCategory?selectedTab:'material-categories');
+    setTab(isCategory?'categories':(['general','payroll','units','orders','staff','categories','appearance','about'].includes(selectedTab)?selectedTab:'general'));
+    const drawThemes=()=>root.querySelectorAll('[data-choose-theme]').forEach(b=>{
+      const isActive=b.dataset.chooseTheme===readThemeV132();
+      b.classList.toggle('active',isActive);
+      b.setAttribute('aria-pressed',String(isActive));
+    });
+    root.querySelectorAll('[data-choose-theme]').forEach(b=>b.onclick=()=>{applyThemeV132(b.dataset.chooseTheme);drawThemes();});
+    drawThemes();
     root.querySelector('#save-payroll-cashbox').onclick=async()=>{
       const id=root.querySelector('#payroll-cashbox').value;
       if(!id){toast('اختر صندوقًا لدفع الرواتب.','error');return;}

@@ -107,7 +107,7 @@ test('two OCR modes available, both default to Arabic and English',()=>{
 });
 
 test('new images route and styles integrated without changing config.js',()=>{
-  assert.match(app,/\['#\/images', 'الصور'\]/);
+  assert.match(readFileSync(resolve(root,'js/pages/hubs.js'),'utf8'),/#\/images/);
   assert.match(app,/case 'images': return renderImages\(root\)/);
   assert.match(css,/\.image-document-grid\{/);
   assert.match(images,/data-ocr="3"/);

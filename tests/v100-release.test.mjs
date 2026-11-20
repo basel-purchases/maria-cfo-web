@@ -37,7 +37,7 @@ test('v1.0: inconsistent prices sort before new items, and exact matches last, w
 });
 test('v1.0: sidebar, page heading, import action and report use neutral product names',()=>{
  const app=read('js/app.js'),daily=read('js/pages/ameen-daily-v041.js'),hub=read('js/pages/hubs.js');
- assert.match(app,/\['#\/daily-orders', 'الأوردرات'\]/);
+ assert.match(hub,/#\/daily-orders/);
  assert.match(app,/case 'daily-orders'/);
  assert.match(app,/case 'ameen-daily'/); // old bookmarks remain compatible
  assert.match(daily,/<h2>الأوردرات<\/h2>/);
@@ -47,7 +47,7 @@ test('v1.0: sidebar, page heading, import action and report use neutral product 
  assert.match(daily,/data-price-index="\$\{p.originalIndex\}"/);
  assert.match(hub,/#\/daily-orders/);
  assert.match(read('index.html'),/app\.js\?v=1\.0/);
- assert.equal(read('VERSION').trim(),'1.0.31');
+ assert.equal(read('VERSION').trim(),'1.0.32');
  for(const dir of ['js','js/pages'])for(const name of readdirSync(join(base,dir)).filter(n=>n.endsWith('.js'))){
   // The v1.0.26 migration page must identify the *source* Al-Ameen format to prevent a wrong upload.
   if(name==='baseline-imports-v126.js'||name==='suppliers.js')continue; // faithful source format in dedicated upload and historical account views

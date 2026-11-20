@@ -81,6 +81,6 @@ test('working pages remain and day-hub image duplicate removed',()=>{
  const hubs=file('js/pages/hubs.js');
  assert.match(hubs,/#\/orders/);
  assert.match(hubs,/#\/inventory/);
- assert.doesNotMatch(hubs,/#\/images/);
+ assert.match(hubs,/more:\{[^}]+#\/images/);
  assert.match(file('js/pages/daily.js'),/renderFilteredExpenses/);
 });

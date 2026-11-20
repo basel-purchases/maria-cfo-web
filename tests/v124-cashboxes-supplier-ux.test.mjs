@@ -74,13 +74,13 @@ test('all cashbox presentations use the v124 balance, and navigation exposes sup
  assert.match(api,/rpc\('cashbox_business_today_v124'\)/);
  assert.match(api,/rpc\('get_cashbox_overview_v124'/);
  assert.doesNotMatch(api.slice(api.indexOf('export async function cashboxOverview'),api.indexOf('export async function cashboxManualTransactions')),/catch\s*\(/);
- assert.match(app,/\['#\/suppliers', 'الموردون وإحصائياتهم'\]/);
+ assert.match(read('js/pages/hubs.js'),/#\/suppliers/);
  assert.match(dash,/cashOverviewRows/);
  assert.match(cash,/الرصيد المستمر حتى الآن/);
  assert.match(suppliers,/data-supplier-tab="prices"/);
  assert.match(suppliers,/supplierPriceTrendsV124\(activity\)/);
  assert.match(css,/\.staff-profile-insights\[data-employee-insights\]\{display:flex;flex-direction:column/);
  assert.match(css,/\.staff-v124-history-wrap\{width:100%/);
- assert.equal(read('VERSION').trim(),'1.0.31');
- assert.match(read('index.html'),/v=1\.0\.31/);
+ assert.equal(read('VERSION').trim(),'1.0.32');
+ assert.match(read('index.html'),/v=1\.0\.32/);
 });

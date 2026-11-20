@@ -1636,3 +1636,8 @@ export const v131SaleQueue=(limit=200,offset=0,onlyPending=false)=>rpc('v131_sal
 export const v131SaleQueueSummary=()=>rpc('v131_sale_queue_summary');
 export const v131SaleQueueReadyCount=()=>rpc('v131_sale_queue_ready_count');
 export const v131CompleteReadySales=(limit=100,id=null)=>rpc('v131_complete_ready_sales',{p_limit:limit,p_queue_id:id});
+
+// v1.0.32: name-only linking; no mutation of paid orders or inventory.
+export const v132AutoLinkSaleQueue = () => rpc('v132_auto_link_sale_queue');
+export const v132LinkSaleQueueMenu = (name, menuId) => rpc('v132_link_sale_queue_menu', {p_cashier_name:name,p_menu_id:menuId});
+export const v132AddMenuAlias = (menuId,name) => rpc('menu_alias_add_v104',{p_menu_id:menuId,p_name:name});

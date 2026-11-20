@@ -1,5 +1,5 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.31';
+import * as api from '../api.js?v=1.0.32';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -49,25 +49,26 @@ function materialBaseCost(row){
   return Number.isFinite(n)?n:null;
 }
 
-export async function renderMenu(root,{missingOnly=false}={}){
+export async function renderMenu(root,{missingOnly=false,search=''}={}){
  root.innerHTML=loader();
  try{
   const categories=await api.menuCategoriesV023();
   const categoryMap=new Map(categories.map(c=>[String(c.id),c.name]));
-  const state={page:1,categoryId:'',query:'',sequence:0,missingOnly};
+  const state={page:1,categoryId:'',query:String(search||'').trim(),sequence:0,missingOnly};
   root.innerHTML=`
     <div class="page-head"><div>
       <h2>الوجبات والوصفات</h2>
       <p>استعرض الوجبات صفحة بصفحة، وابحث عنها بالاسم الرئيسي أو أي اسم بديل أو التصنيف؛ تكلفة الطعام تُحسب من الوصفة.</p>
     </div><div class="page-head-actions"><button class="btn add">إضافة وجبة</button></div></div>
     <div class="list-toolbar">
-      <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off"></div>
+      <div class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="menu-search" placeholder="ابحث عن وجبة" autocomplete="off" value="${esc(state.query)}"></div>
       <select id="menu-cost-filter-v041"><option value="all" ${missingOnly?'':'selected'}>كل الوجبات</option><option value="missing" ${missingOnly?'selected':''}>ناقصة التكلفة فقط</option></select>
       <select id="menu-category-filter"><option value="">كل التصنيفات</option>${categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
       <span class="list-count" id="menu-count"></span>
       <button class="mini-btn" type="button" id="menu-export-excel">⇩ Excel</button>
       <button class="mini-btn" type="button" id="menu-export-pdf">⇩ PDF</button>
     </div>
+    ${search?`<div class="notice sage">نتائج البحث عن الوجبة: <strong>${esc(search)}</strong> — يمكنك فتح «إدارة الوصفة» لهذا الصنف مباشرة.</div>`:''}
     ${missingOnly?'<div class="notice sage">أنت تعرض فقط أصناف المينيو التي لا تملك وصفة مكتملة أو تكلفة تقديرية معتمدة. يمكنك إدخال تقدير أو مكونات الوصفة ثم الرجوع إلى تقرير المبيعات.</div>':''}
     <div id="menu-results" aria-live="polite"></div>`;
   root.querySelector('.add').onclick=()=>addMenu(root,categories,draw);
