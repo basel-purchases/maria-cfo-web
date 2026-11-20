@@ -2274,3 +2274,13 @@ html[data-maria-theme="elegant"] .page-head h2 {letter-spacing:-.3px}
 .v133-menu-merge,.v133-menu-delete {font-size:12px;white-space:nowrap}
 .menu-card-actions {flex-wrap:wrap}
 @media(max-width:780px){.v133-menu-merge,.v133-menu-delete{flex:1 1 auto}}
+
+/* v1.0.34: five-stage initial setup in Settings (not a daily transaction). */
+.v134-setup-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:16px 0 22px}
+.v134-step{display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:var(--text);background:var(--surface,#fff);border:1px solid var(--line,#e4dee2);border-radius:14px;padding:14px;min-height:98px}
+.v134-step strong{display:block;font-size:14px}.v134-step small{display:block;font-size:12px;line-height:1.55;opacity:.72;margin-top:4px}
+.v134-step-number{display:flex;align-items:center;justify-content:center;min-width:32px;height:32px;border-radius:50%;border:1px solid currentColor;font-weight:700}
+.v134-step.current{border-color:var(--primary,#725066);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary,#725066) 10%,transparent)}
+.v134-step.current .v134-step-number{background:var(--primary,#725066);color:white;border-color:var(--primary,#725066)}
+@media(max-width:680px){.v134-setup-steps{grid-template-columns:1fr 1fr}.v134-step{padding:10px;min-height:90px}}
+@media(max-width:400px){.v134-setup-steps{grid-template-columns:1fr}}

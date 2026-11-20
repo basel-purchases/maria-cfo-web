@@ -1,14 +1,14 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.33';
+import * as api from './api.js?v=1.0.34';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
-import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.33';
-import {readThemeV132,applyThemeV132} from './theme-v132.js?v=1.0.33';
-import { renderHub } from './pages/hubs.js?v=1.0.33';
+import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.34';
+import {readThemeV132,applyThemeV132} from './theme-v132.js?v=1.0.34';
+import { renderHub } from './pages/hubs.js?v=1.0.34';
 import { renderMaterials } from './pages/materials.js?v=1.0.31';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
-import { renderMenu } from './pages/menu.js?v=1.0.33';
+import { renderMenu } from './pages/menu.js?v=1.0.34';
 import {
   renderInventory,
   renderCashboxes,
@@ -22,13 +22,14 @@ import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.33';
+import { renderSettings } from './pages/settings.js?v=1.0.34';
+import {renderSalesArchiveV134} from './pages/sales-archive-v134.js?v=1.0.34';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
-import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.31';
-import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.33';
+import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.34';
+import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.34';
 import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
@@ -122,14 +123,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.33</div>
+        <div class="sidebar-foot">Web v1.0.34</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.33</span>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.34</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
@@ -564,10 +565,10 @@ function startAiJobWatcher(){
 function active(hash) {
   const key = hash.split('/').filter(Boolean)[0] || 'dashboard';
   const parent = {
-    'baseline-imports':'basic', 'count-history':'basic', 'quick-imports':'basic', 'recipes-import':'basic',
+    'baseline-imports':'settings', 'count-history':'basic', 'quick-imports':'basic', 'recipes-import':'basic',
     assets:'basic',materials:'basic',suppliers:'basic',supplier:'basic',purchases:'basic',purchase:'basic',menu:'basic',
     inventory:'basic',cashboxes:'daily',expenses:'daily',orders:'daily',order:'daily',
-    'sale-cost-queue':'daily','daily-orders':'daily','ameen-daily':'daily',
+    'sale-cost-queue':'daily','daily-orders':'daily','ameen-daily':'daily','count-entry':'daily','sales-archive':'daily',
     'employees-list':'employees',attendance:'employees',payroll:'employees',advances:'employees',bonuses:'employees',
     'events-list':'events','event-reservations':'events','event-bookings':'events',event:'events',
     reports:'statistics','reports-hub':'statistics',images:'more',
@@ -597,7 +598,9 @@ async function route() {
     more: 'أخرى',
     basic: 'الإدخالات الأساسية',
     'quick-imports': 'الإدخالات السريعة',
-    'baseline-imports': 'استيراد الفواتير والجرد',
+    'baseline-imports': 'الإدخال الأول',
+    'count-entry': 'إضافة جرد',
+    'sales-archive': 'سجل المبيعات التاريخية',
     'ameen-daily': 'الأوردرات',
     'daily-orders': 'الأوردرات',
     'sale-cost-queue': 'تسوية تكاليف المبيعات',
@@ -644,7 +647,9 @@ async function route() {
       case 'more': return renderHub(root,'more');
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
-      case 'baseline-imports': return renderBaselineImportsV126(root);
+      case 'baseline-imports': location.hash='#/settings/first-setup';return;
+      case 'count-entry': return renderBaselineImportsV126(root,{fixedKind:'count'});
+      case 'sales-archive': return renderSalesArchiveV134(root);
       case 'sale-cost-queue': return renderSaleCostQueueV132(root,{pendingOnly:id==='pending'});
       case 'count-history': return renderPhysicalCountHistoryV131(root);
       case 'ameen-daily':

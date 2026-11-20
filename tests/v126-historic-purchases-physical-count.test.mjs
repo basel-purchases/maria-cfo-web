@@ -107,9 +107,9 @@ test('historic import does not assert unknown dollar prices or silently translat
  assert.match(page,/لا يُخترَع سعر دولار/);
 });
 test('app includes dedicated navigation and marks v1.0.26',()=>{
- assert.match(app,/case 'baseline-imports': return renderBaselineImportsV126/);
- assert.match(fs.readFileSync(new URL('../js/pages/hubs.js',import.meta.url),'utf8'),/#\/baseline-imports/);
- assert.match(app,/Web v1\.0\.33/);
+ assert.match(app,/case 'baseline-imports': location.hash='#\/settings\/first-setup'/);
+ assert.match(fs.readFileSync(new URL('../js/pages/hubs.js',import.meta.url),'utf8'),/#\/settings\/first-setup/);
+ assert.match(app,/Web v1\.0\.34/);
 });
 
 test('an approved count with a blank quantity must fail, never silently skip the material',()=>{

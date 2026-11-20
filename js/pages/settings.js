@@ -1,3 +1,4 @@
+import {renderInitialSetupV134} from './initial-setup-v134.js?v=1.0.34';
 import {THEMES_V132,readThemeV132,applyThemeV132} from '../theme-v132.js?v=1.0.33';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
@@ -38,6 +39,7 @@ function relationHtml(entry){
 }
 
 export async function renderSettings(root, selectedTab='general') {
+  if(selectedTab==='first-setup')return renderInitialSetupV134(root);
   root.innerHTML = loader();
   try {
     const [settingsRows, units, cashboxes, materials, materialUnits, unitConversions, expenseCategories, materialCategories, assetCategories, menuCategories] = await Promise.all([
@@ -59,6 +61,7 @@ export async function renderSettings(root, selectedTab='general') {
       <div class="page-head"><div><h2>الإعدادات</h2>
         <p>الإعدادات العامة والوحدات وتحويلات المواد المستخدمة في الفواتير والوصفات.</p></div></div>
       <div class="settings-tabs v132-settings-main-tabs" role="tablist">
+        <a class="settings-tab" href="#/settings/first-setup">الإدخال الأول</a>
         <button type="button" class="settings-tab" data-settings-tab="general">عام</button>
         <button type="button" class="settings-tab" data-settings-tab="units">الوحدات وتحويلاتها</button>
         <button type="button" class="settings-tab" data-settings-tab="orders">الخصومات والرسوم</button>
@@ -82,7 +85,7 @@ export async function renderSettings(root, selectedTab='general') {
       <div data-settings-pane="about" hidden>
         <section class="card v132-about-card"><div class="v132-about-mark">M</div>
           <h2>Maria CFO</h2><p>برنامج الإدارة المالية والمخزون والموظفين للمطعم</p>
-          <p><strong>الإصدار: Web v1.0.33</strong></p>
+          <p><strong>الإصدار: Web v1.0.34</strong></p>
           <div class="divider"></div><h3>إعداد وبرمجة</h3>
           <p>تمت البرمجة والإعداد من قبل <strong>باسل صليبي</strong></p>
           <p>الهاتف: <a href="tel:0996202134" dir="ltr">0996202134</a></p>

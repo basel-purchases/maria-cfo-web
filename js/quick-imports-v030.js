@@ -51,13 +51,14 @@ function parseWorkbook(kind,workbook){
  }
  return {records:parsed.records,stats:parsed.stats,warnings:parsed.warnings};
 }
-export async function renderQuickImportsV030(root){
+export async function renderQuickImportsV030(root,options={}){
+ const fixedKind=options.fixedKind==='employees'?'employees':null;
  root.innerHTML=`
   <div class="quick-page-v102">
-  <div class="page-head"><div><h2>الإدخالات السريعة</h2><p>استيراد مركزي للملفات الخمسة، مع معاينة وسجل وتراجع خلال 24 ساعة.</p></div></div>
+  <div class="page-head"><div><h2>${fixedKind?'استيراد جدول الموظفين':'الإدخالات السريعة'}</h2><p>استيراد مركزي للملفات الخمسة، مع معاينة وسجل وتراجع خلال 24 ساعة.</p></div></div>
   <div class="card quick-upload-card-v102">
     <div class="form-grid">
-      <div class="field"><label for="quick-kind-v030">نوع الإدخال</label><select id="quick-kind-v030"><option value="">اختر الملف</option>${Object.entries(TYPES).map(([key,label])=>`<option value="${key}">${esc(label)}</option>`).join('')}</select></div>
+      <div class="field" ${fixedKind?'hidden':''}><label for="quick-kind-v030">نوع الإدخال</label><select id="quick-kind-v030"><option value="">اختر الملف</option>${Object.entries(TYPES).map(([key,label])=>`<option value="${key}">${esc(label)}</option>`).join('')}</select></div>
       <div class="field"><label for="quick-file-v030">ملف Excel</label><input id="quick-file-v030" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
     </div>
     <button type="button" class="btn" id="quick-preview-v030">معاينة الملف</button>
@@ -67,6 +68,7 @@ export async function renderQuickImportsV030(root){
   <div class="card quick-history-card-v102"><h3>سجل الإدخالات والتراجع خلال 24 ساعة</h3><div id="quick-history-v030">${loader()}</div></div>
   </div>`;
  const preview=root.querySelector('#quick-result-v030');
+ if(fixedKind)root.querySelector('#quick-kind-v030').value=fixedKind;
  // A preview is bound to the selected type/file; never confirm a stale selection.
  for(const id of ['quick-kind-v030','quick-file-v030']){
    root.querySelector('#'+id).addEventListener('change',()=>{if(!importing)preview.innerHTML='';});

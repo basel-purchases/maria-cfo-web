@@ -62,11 +62,11 @@ test('v132: nine main navigation sections; stocktaking in basic, images under mo
  const basic=hub.slice(hub.indexOf('basic:{'),hub.indexOf('daily:{'));
  const daily=hub.slice(hub.indexOf('daily:{'),hub.indexOf('employees:{'));
  const more=hub.slice(hub.indexOf('more:{'));
- for(const route of ['#/inventory','#/count-history','#/baseline-imports'])assert.ok(basic.includes(route),route);
+ for(const route of ['#/inventory','#/count-history','#/settings/first-setup'])assert.ok(basic.includes(route),route);
  assert.ok(!daily.includes('#/count-history'));
  assert.ok(!daily.includes('#/inventory'));
  assert.ok(more.includes('#/images'));
- assert.match(app,/sidebar-foot">Web v1\.0\.33/);
+ assert.match(app,/sidebar-foot">Web v1\.0\.34/);
  assert.match(app,/v132-version-chip/);
 });
 

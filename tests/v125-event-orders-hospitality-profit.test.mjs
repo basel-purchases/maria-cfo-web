@@ -151,8 +151,8 @@ test('v125 UI, API, report export and cache bust all target the new release',()=
  assert.match(api,/p_request_key:input\.requestKey/);
  assert.match(api,/input\.unitCost===''[^\n]+null:Number\(input\.unitCost\)/);
  assert.match(read('js/app.js'),/events-v034\.js\?v=1\.0\.31/);
- assert.equal(read('VERSION').trim(),'1.0.33');
- assert.match(read('index.html'),/styles\.css\?v=1\.0\.33/);
+ assert.equal(read('VERSION').trim(),'1.0.34');
+ assert.match(read('index.html'),/styles\.css\?v=1\.0\.34/);
  assert.equal(fs.existsSync(new URL('../config.js',import.meta.url)),false);
 });
 
