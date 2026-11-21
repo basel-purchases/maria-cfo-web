@@ -1,14 +1,14 @@
 import * as api from '../api.js?v=1.0.34';
 import {esc} from '../utils.js?v=1.0';
-import {renderBaselineImportsV126} from './baseline-imports-v126.js?v=1.0.35';
+import {renderBaselineImportsV126} from './baseline-imports-v126.js?v=1.0.36';
 import {renderQuickImportsV030} from '../quick-imports-v030.js?v=1.0.34';
 
 const stages=[
- {id:'history',name:'فواتير الشراء',desc:'الموردون والمواد وآخر أسعار الشراء، مع خصم الفاتورة من الصندوق العام مرة واحدة',counter:'purchaseInvoices'},
- {id:'menu',name:'المنيو والمكونات',desc:'199 وجبة و861 مكونًا؛ شيت المواد يضيف غير المشترى برصيد صفر، والأسعار من الشراء فقط',counter:'menuItems'},
- {id:'count',name:'الجرد الفعلي',desc:'اعتماد أسماء المواد المطابقة ووحداتها بعد انتهاء يوم العد؛ غير المحسوم يبقى للمراجعة',counter:'countedMaterials'},
- {id:'salesArchive',name:'فواتير المبيع',desc:'مبيعات تاريخية تُضاف إلى تسوية التكاليف والصندوق الأول، دون خصم مخزون مكرر',counter:'salesInvoices'},
- {id:'employees',name:'جدول الموظفين',desc:'استيراد الموظفين بصيغته الحالية دون تعديل الحسابات أو الراتب السابق',counter:'employees'}
+ {id:'history',name:'فواتير الشراء',desc:'ارفع «حركة تفاصيل الفواتير شراء.xlsx» أولًا؛ المواد وأسعار الشراء والموردون من الأمين',counter:'purchaseInvoices'},
+ {id:'menu',name:'المنيو والمكونات',desc:'ارفع «2-المنيو-والمواد-بدون-أساسيات.xlsx» فقط؛ لا ترفع «المواد.xlsx» المنفصل مرة ثانية',counter:'menuItems'},
+ {id:'salesArchive',name:'فواتير المبيع التاريخية',desc:'ارفع «حركة تفاصيل الفواتير مبيع.xlsx» قبل اعتماد أي جرد؛ ترتبط التسويات بالوصفات والمطابقات المعتمدة',counter:'salesInvoices'},
+ {id:'employees',name:'جدول الموظفين (إن وجد)',desc:'ملف مستقل اختياري للموظفين، وليس واحدًا من ملفات الحزمة الأربعة',counter:'employees'},
+ {id:'count',name:'الجرد الفعلي — المرحلة الأخيرة',desc:'«نموذج-الجرد-الرسمي.xlsx» بعد تعبئة الكميات وتواريخ العد؛ لا تعتمد جردًا فارغًا',counter:'countedMaterials'}
 ];
 export const INITIAL_SETUP_STAGES_V134=stages.map(({id,name})=>({id,name}));
 
@@ -22,8 +22,8 @@ export async function renderInitialSetupV134(root){
  ${stages.map((s,i)=>`<a class="v134-step ${stage.id===s.id?'current':''}" href="#/settings/first-setup/${s.id}"><span class="v134-step-number">${i+1}</span><span><strong>${esc(s.name)}</strong><small>${esc(s.desc)}</small><small data-setup-count="${s.counter}"></small></span></a>`).join('')}</div>
  <div id="v134-setup-content"></div>
  ${stage.id==='salesArchive'?'<div class="card"><a class="btn secondary" href="#/sales-archive">عرض سجل المبيعات التاريخية</a> <a class="btn secondary" href="#/sale-cost-queue/archive">تسوية المبيعات التاريخية</a> <a class="btn secondary" href="#/historical-cash">ترحيل الفواتير السابقة للإصلاح</a></div>':''}
- ${stage.id==='menu'?'<div class="notice">ارفع ملف المنيو الموحد ذي الشيتين «المواد» و«المنيو والوصفات». تُضاف مواد الوصفات غير المشتراة برصيد صفر وتكلفة مجهولة؛ لا يُعاد ضبط رصيد أو سعر أي مادة سبق إنشاؤها من الفواتير.</div>':''}
- ${stage.id==='count'?'<div class="notice">ملف «جرد.xlsx» الأصلي فيه أسماء وعبوات غير متطابقة؛ استخدم «PHYSICAL-COUNT-READY-EXACT.xlsx» للأرصدة المدققة فقط، والباقي من ملف «PHYSICAL-COUNT-NEEDS-REVIEW.xlsx» بعد اعتماد الأسماء والتحويلات. لا تعتمد جرد اليوم قبل نهايته بتوقيت المطعم.</div>':''}
+ ${stage.id==='menu'?'<div class="notice">ارفع الملف «2-المنيو-والمواد-بدون-أساسيات.xlsx» كاملًا. الورقة «المواد» بداخله مطابقة لملف «المواد.xlsx» المنفصل، فلا تستورد الأخير مجددًا. «الأساسيات.xlsx» كتالوج تجهيزات بلا كميات جرد، وليس ملف مواد شراء أو جردًا مؤهلًا.</div>':''}
+ ${stage.id==='count'?'<div class="notice">لا ترفع «نموذج-الجرد-الرسمي.xlsx» قبل تعبئة كمية فعلية وتاريخ العد لكل مادة مجرودة. اجعل الجرد آخر خطوة بعد المبيعات التاريخية؛ لا تُدخل أرقامًا مفترضة.</div>':''}
  ${stage.id==='employees'?'<div class="notice">هذا هو مستورد جدول الموظفين الحالي نفسه، ولم نغيّر صيغته أو طريقة احتساب رواتبه.</div>':''}`;
  const host=root.querySelector('#v134-setup-content');
  if(stage.id==='employees')await renderQuickImportsV030(host,{fixedKind:'employees'});

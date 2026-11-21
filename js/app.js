@@ -22,17 +22,17 @@ import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.35';
+import { renderSettings } from './pages/settings.js?v=1.0.36';
 import {renderSalesArchiveV134} from './pages/sales-archive-v134.js?v=1.0.35';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
-import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.35';
+import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.36';
 import {renderUnifiedCostQueueV135} from './pages/archive-cost-v135.js?v=1.0.35';
 import {renderDailyInputsV135} from './pages/daily-inputs-v135.js?v=1.0.35';
 import {renderFoodCostV135} from './pages/food-cost-v135.js?v=1.0.35';
-import {renderHistoricalCashV135} from './pages/historical-cash-v135.js?v=1.0.35';
+import {renderHistoricalCashV135} from './pages/historical-cash-v135.js?v=1.0.36';
 import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
@@ -127,14 +127,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.35</div>
+        <div class="sidebar-foot">Web v1.0.36</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.35</span>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.36</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
