@@ -7,7 +7,7 @@ import {parseMenuOnlyV134,parseSalesArchiveV134,parseOriginalCountV134} from '..
 import {parseHistoryInvoicesV126} from '../baseline-parsers-v126.js?v=1.0.26';
 import {parsePhysicalCountV131} from '../physical-count-standard-v131.js?v=1.0.31';
 
-const kinds={history:'أرشيف فواتير الشراء الشامل (الأمين)',menu:'المنيو والوصفات مع كتالوج المواد (دون أسعار شراء)',count:'الجرد الفعلي بتاريخ العد',salesArchive:'أرشيف فواتير المبيع — دون صرف مخزون أو قبض صندوق'};
+const kinds={history:'أرشيف فواتير الشراء الشامل (الأمين)',menu:'المنيو والوصفات مع كتالوج المواد (دون أسعار شراء)',count:'الجرد الفعلي بتاريخ العد',salesArchive:'فواتير المبيع التاريخية — تسوية تكلفة وقبض صندوق'};
 const num=n=>Number(n||0).toLocaleString('ar-SY',{maximumFractionDigits:4});
 let inFlight=false;
 function chunks(arr,n){const list=[];for(let i=0;i<arr.length;i+=n)list.push(arr.slice(i,i+n));return list;}
@@ -22,7 +22,7 @@ export async function renderBaselineImportsV126(root,options={}){
  const fixedKind=['history','menu','count','salesArchive'].includes(options.fixedKind)?options.fixedKind:null;
  root.innerHTML=`<div class="quick-page-v102"><div class="page-head"><div><h2>${fixedKind?kinds[fixedKind]:'استيراد تأسيس البيانات والجرد'}</h2>
  <p>ترتيب تأسيس آمن: فواتير الشراء التاريخية ← منيو بوصفات وكميات فقط ← مطابقة الجرد ← اعتماد الجرد ← أرشفة المبيع التاريخي (ثم استيراد الأوردرات التشغيلية المختلفة لاحقًا).</p></div></div>
- <div class="notice">هذه الواجهة <strong>لا تصفّر قاعدة البيانات</strong>. قبل التأسيس احفظ Backup قابلًا للاستعادة، وطبّق ترحيل SQL v1.0.26. فواتير الأمين المرفقة بالليرة السورية فقط وتُحفظ كفواتير تاريخية <strong>مصفاة خارج النظام بحسب إفادتك</strong> بلا دين جديد أو صرف نقدي، ولا يُخترَع سعر دولار.</div>
+ <div class="notice">هذه الواجهة <strong>لا تصفّر قاعدة البيانات</strong>. قبل التأسيس احفظ Backup قابلًا للاستعادة، وطبّق ترحيل SQL v1.0.26. فواتير الأمين بالليرة السورية. بعد تفعيل SQL v1.0.35 تُحفظ الفواتير التاريخية وتُسجَّل حركة الصندوق المرتبطة بها مرة واحدة: الشراء من العام والمبيعات في الصندوق التشغيلي الأول عند غياب اسم الصندوق. لا يُخترَع سعر دولار.</div>
  <div class="card"><h3>اختر العملية وملف Excel</h3><div class="form-grid">
  <div class="field" ${fixedKind?'hidden':''}><label>نوع الاستيراد</label><select id="v126-kind">${Object.entries(kinds).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></div>
  <div class="field"><label>ملف Excel</label><input id="v126-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></div>
@@ -30,7 +30,7 @@ export async function renderBaselineImportsV126(root,options={}){
  <button class="btn" id="v126-review">تحليل الملف ومعاينة البيانات</button></div>
  <div id="v126-result" aria-live="polite"></div>
  <div class="card"><a href="#/count-history" class="btn secondary">سجل الجرد وتفاصيله</a> <a href="#/sale-cost-queue" class="btn secondary">تسوية تكاليف المبيعات</a></div>
- <div class="card"><h3>المعاملات اللاحقة</h3><p>ملف «حركة تفاصيل الفواتير مبيع» ليس ملف أوردرات تشغيلية، فلا يجوز اعتباره دفعات صندوق. أضفْه عبر «أرشيف فواتير المبيع» للحفظ والتدقيق فقط. استخدم <a href="#/daily-orders">استيراد الأوردرات</a> فقط لملف الأوردرات ذي العناوين «رقم الطلب، صافي الطلب، صافي القلم».</p>
+ <div class="card"><h3>المعاملات اللاحقة</h3><p>ملف «حركة تفاصيل الفواتير مبيع» يُستورد عبر «فواتير المبيع التاريخية». تُحفظ منه حركة قبض تاريخية واحدة لكل فاتورة مرتبطة بالصندوق الأول إذا لم يذكر الملف الصندوق. استخدم <a href="#/daily-orders">استيراد الأوردرات</a> فقط لملف الأوردرات ذي العناوين «رقم الطلب، صافي الطلب، صافي القلم».</p>
  <p class="metric-note">لا تُغيّر أسماء المواد أو وحدات العبوة على أساس تشابه الاسم فقط. الجرد المتأخر يستخدم أرصدة التاريخ وحركات المخزون اللاحقة، ولا يعتمد على خانة كمية يوم الرفع.</p></div></div>`;
  const kindInput=root.querySelector('#v126-kind'),fileInput=root.querySelector('#v126-file'),result=root.querySelector('#v126-result'),review=root.querySelector('#v126-review');
  if(fixedKind)kindInput.value=fixedKind;
@@ -51,10 +51,10 @@ export async function renderBaselineImportsV126(root,options={}){
    const canCategorize=kind==='count'&&Boolean(parsed.catalog?.length);
    result.innerHTML=`<div class="card"><h3>المعاينة: ${esc(file.name)}</h3>
     <div class="quick-metrics-v102">${metrics.map(([label,v])=>`<div class="card"><strong>${esc(String(v))}</strong><div class="metric-note">${esc(label)}</div></div>`).join('')}</div>
-    ${kind==='history'?`<div class="notice">القيمة محفوظة بعملة SYP كما في تقرير الأمين، ولا يضاف دولار ولا يولد قبض أو سحب بالصندوق. حفظ التاريخ والسعر والكمية وفق سطور الفاتورة؛ الفواتير التاريخية مؤشرة «مصفاة خارج البرنامج بحسب الإدارة». ${parsed.stats.missingUnits?'توجد ${parsed.stats.missingUnits} وحدات شراء ناقصة: يجب اعتمادها يدويًا أو قبول استخدام «قطعة» مؤقتًا بوضوح.':''}</div>
+    ${kind==='history'?`<div class="notice">القيمة محفوظة بعملة SYP كما في تقرير الأمين، ولا يُخترع سعر دولار. بعد ترحيل SQL v1.0.35 يُخصم إجمالي الفاتورة من الصندوق العام مرة واحدة؛ احتفظ بالتاريخ والسعر والكمية كما وردت. ${parsed.stats.missingUnits?'توجد ${parsed.stats.missingUnits} وحدات شراء ناقصة: يجب اعتمادها يدويًا أو قبول استخدام «قطعة» مؤقتًا بوضوح.':''}</div>
       ${parsed.stats.missingUnits?'<label><input id="v126-missing-unit" type="checkbox"> أوافق صراحة على استيراد الوحدات الناقصة كـ«قطعة» مؤقتًا وأتحمل مراجعتها وتصحيح عبواتها</label>':''}`:''}
     ${kind==='menu'?'<div class="notice">يستورد المنيو وكميات الوصفات كاملة، وينشئ المواد غير الموجودة في الشراء برصيد صفر وتكلفة غير معروفة من شيت «المواد» فقط. لا يغيّر مطلقًا أرصدة وأسعار المواد المشتراة. الوصفات التقديرية محفوظة للمراجعة دون حذف مكوناتها.</div>':''}
-    ${kind==='salesArchive'?'<div class="notice">أرشيف تاريخي مستقل: يحتفظ بفواتير المبيع وتفاصيلها وأرقامها وتواريخها، ويربط البنود بالمنيو من ورقة «مطابقة المبيعات» والأسماء الثانوية المعتمدة. لا يسجل قبضًا أو صرف مخزون جديدًا، ولا يُحمّل فواتير البيع التاريخية على صندوق اليوم.</div>':''}
+    ${kind==='salesArchive'?'<div class="notice">أرشيف تاريخي مستقل: يحتفظ بفواتير المبيع وتفاصيلها وأرقامها وتواريخها، ويربط البنود بالمنيو من ورقة «مطابقة المبيعات» والأسماء الثانوية المعتمدة. يُسجّل قبضًا تاريخيًا في صندوق البيع الأول عند غياب صندوق محدد، ويسجل البنود التي تنتظر وصفة في تسوية المبيعات دون خصم المخزون مجددًا.</div>':''}
     ${kind==='count'?`<div class="notice">سيُستخدم الجرد المعتمد في نهاية تاريخ كل سطر: الرصيد الحالي = الكمية المعدودة + صافي الحركات بعد ذلك التاريخ. عند إعادة رفع المادة بنفس تاريخ الجرد تُترك كميتها القديمة دون تكرار، وتُضاف المواد غير المسجلة سابقًا فقط. وستُستعمل الأقسام لتصنيف المواد غير المصنّفة.</div>`:''}
     ${issues.length?`<details><summary>ملاحظات المصدر (${issues.length})</summary><div style="max-height:220px;overflow:auto">${issues.slice(0,35).map(i=>`<p>${esc(typeof i==='string'?i:(i.message||JSON.stringify(i)))}</p>`).join('')}</div></details>`:''}
     ${kind==='count'?'<div class="notice">تأسيس الشراء أولًا: لا تنشئ مواد من الجرد. تأكد أن كل اسم في ملف العد يطابق مادة من فواتير الشراء، وأن العبوات المكررة روجعت قبل الاستيراد.</div>':''}
@@ -67,9 +67,9 @@ export async function renderBaselineImportsV126(root,options={}){
     if(inFlight)return;
     if(token!==selection||kind!==kindInput.value||file!==fileInput.files?.[0]){toast('تغيّر اختيار الملف، أعد المعاينة','error');return;}
     if(kind==='history'&&parsed.stats.missingUnits&&!result.querySelector('#v126-missing-unit')?.checked){toast('أكد مراجعة الوحدات الثلاث الناقصة قبل الاستيراد.','error');return;}
-    const accepted=await confirmBox(kind==='history'?`استيراد ${parsed.stats.invoices} فاتورة تاريخية بعملة SYP، واعتبارها مصفاة خارج النظام دون دفع نقدي أو ديون جديدة؟`:
+    const accepted=await confirmBox(kind==='history'?`استيراد ${parsed.stats.invoices} فاتورة تاريخية بعملة SYP، وترحيل دفعها مرة واحدة من الصندوق العام وفق تاريخ الفواتير، دون إنشاء حركة صرف مخزون مكررة؟`:
       kind==='menu'?`اعتماد ${parsed.dishes.length} وجبة و${parsed.stats.lines} مكونًا، وإضافة ${parsed.newMaterials.length} مادة ناقصة برصيد صفر وتكلفة مجهولة، دون تغيير أرصدة وأسعار المشتريات؟`:
-      kind==='salesArchive'?`أرشفة ${parsed.records.length} فاتورة مبيع مع حفظ الإشارات الأصلية؛ دون قبض صندوق أو صرف مخزون أو احتساب الربح ضمن البرنامج؟`:
+      kind==='salesArchive'?`أرشفة ${parsed.records.length} فاتورة مبيع مع حفظ الإشارات الأصلية؛ وترحيل قبضها مرة واحدة إلى صندوق البيع الأول وإنشاء تسوية تكلفة منفصلة دون صرف مخزون مكرر؟`:
       `اعتماد ${parsed.records.length} سطر جرد وتصنيف ${parsed.catalog?.length||0} مادة غير مصنّفة من عمود القسم، مع تجاهل أي مادة سبق اعتماد جردها بتاريخها؟`,
       'تأكيد الحفظ المالي');
     if(!accepted)return;
@@ -112,8 +112,10 @@ export async function renderBaselineImportsV126(root,options={}){
         alreadyClassified+=Number(classification.alreadyClassified||0);
        }
      }
-     progress.innerHTML=`<div class="notice">اكتمل الاستيراد بنجاح. عدد السجلات المعالجة: ${done}${total?`، جرى تجاهلها لأنها مجرودة من قبل في التاريخ نفسه: ${total}`:''}${kind==='menu'?`، مواد وصفات إضافية أُنشئت برصيد صفر: ${createdMaterials}`:''}${kind==='count'?`، مواد صُنِّفت من عمود القسم: ${categorized}، احتُفظ بتصنيف ${alreadyClassified} مادة`:''}${kind==='salesArchive'?`، أسطر مبيعات مرتبطة بالمنيو: ${linkedSales}، أسماء ثانوية أُضيفت: ${addedAliases}، تحتاج مراجعة: ${heldAliases}`:''}. راجع تقارير المخزون بعد الاستيراد.</div>`;
+     progress.innerHTML=`<div class="notice">اكتمل الاستيراد بنجاح. عدد السجلات المعالجة: ${done}${total?`، جرى تجاهلها لأنها مجرودة من قبل في التاريخ نفسه: ${total}`:''}${kind==='menu'?`، مواد وصفات إضافية أُنشئت برصيد صفر: ${createdMaterials}`:''}${kind==='count'?`، مواد صُنِّفت من عمود القسم: ${categorized}، احتُفظ بتصنيف ${alreadyClassified} مادة`:''}${kind==='salesArchive'?`، أسطر مبيعات مرتبطة بالمنيو: ${linkedSales}، أسماء ثانوية أُضيفت: ${addedAliases}، تحتاج مراجعة: ${heldAliases}`:''}. ${kind==='salesArchive'?'<a href="#/sale-cost-queue/archive">عرض تسوية المبيعات المؤجلة</a>':kind==='history'?'<a href="#/cashboxes">عرض الصندوق العام</a>':''}</div>`;
      if(kind==='menu')document.dispatchEvent(new CustomEvent('maria:recipe-saved'));
+     if(kind==='salesArchive')document.dispatchEvent(new CustomEvent('maria:archive-imported'));
+     if(kind==='history'||kind==='salesArchive')document.dispatchEvent(new CustomEvent('maria:cash-records-changed'));
      toast('اكتمل حفظ البيانات المعتمدة','success');
     }catch(e){progress.innerHTML=`<div class="notice rose">توقف الاستيراد عند ${done} سجل جديد. العمليات السابقة التي أكّدها الخادم محفوظة؛ أعد رفع الملف نفسه بعد معالجة السبب، ولا تعدّل الملف لإنشاء نسخة جديدة قبل المراجعة. التفاصيل: ${esc(asMessage(e))}</div>`;toast(asMessage(e),'error');}
     finally{inFlight=false;review.disabled=false;kindInput.disabled=false;fileInput.disabled=false;submit.disabled=false;}

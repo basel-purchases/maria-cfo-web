@@ -1,14 +1,14 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
-import * as api from './api.js?v=1.0.34.1';
+import * as api from './api.js?v=1.0.35';
 import { esc } from './utils.js?v=1.0';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
-import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.34';
+import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.35';
 import {readThemeV132,applyThemeV132} from './theme-v132.js?v=1.0.34';
 import { renderHub } from './pages/hubs.js?v=1.0.34';
 import { renderMaterials } from './pages/materials.js?v=1.0.31';
 import { renderSuppliersWithAmeen as renderSuppliers,renderSupplierDetail } from './pages/suppliers.js?v=1.0.26';
 import { renderPurchases, renderPurchaseDetail } from './pages/purchases.js?v=1.0.23';
-import { renderMenu } from './pages/menu.js?v=1.0.34.1';
+import { renderMenu } from './pages/menu.js?v=1.0.35';
 import {
   renderInventory,
   renderCashboxes,
@@ -22,14 +22,17 @@ import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
-import { renderSettings } from './pages/settings.js?v=1.0.34';
-import {renderSalesArchiveV134} from './pages/sales-archive-v134.js?v=1.0.34';
+import { renderSettings } from './pages/settings.js?v=1.0.35';
+import {renderSalesArchiveV134} from './pages/sales-archive-v134.js?v=1.0.35';
 import { renderAssets } from './pages/assets.js?v=1.0';
 import { renderAdvances } from './pages/advances.js?v=1.0.29';
 import {renderQuickImportsV030} from './quick-imports-v030.js?v=1.0.2';
 import {renderAmeenDailyV041} from './pages/ameen-daily-v041.js?v=1.0.31';
-import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.34';
-import {renderSaleCostQueueV132} from './pages/sale-cost-queue-v132.js?v=1.0.34.1';
+import {renderBaselineImportsV126} from './pages/baseline-imports-v126.js?v=1.0.35';
+import {renderUnifiedCostQueueV135} from './pages/archive-cost-v135.js?v=1.0.35';
+import {renderDailyInputsV135} from './pages/daily-inputs-v135.js?v=1.0.35';
+import {renderFoodCostV135} from './pages/food-cost-v135.js?v=1.0.35';
+import {renderHistoricalCashV135} from './pages/historical-cash-v135.js?v=1.0.35';
 import {renderPhysicalCountHistoryV131} from './pages/physical-count-history-v131.js?v=1.0.31';
 import {installTableExportV027} from './table-export-v027.js?v=1.0';
 import {installSearchableSelectsV033} from './searchable-select-v033.js?v=1.0.8';
@@ -50,11 +53,11 @@ const aiJobState = new Map();
 const nav = [
   ['#/dashboard', 'الصفحة الرئيسية'],
   ['#/basic', 'الإدخالات الأساسية'],
+  ['#/daily-inputs', 'الإدخالات اليومية'],
   ['#/daily', 'التشغيل اليومي'],
   ['#/employees', 'الموظفون والرواتب'],
   ['#/events', 'الحفلات'],
   ['#/assistant', 'المساعد الذكي'],
-  ['#/statistics', 'الإحصائيات'],
   ['#/more', 'أخرى'],
   ['#/settings', 'الإعدادات'],
 ];
@@ -62,6 +65,7 @@ const nav = [
 function login() {
   if(marketStateV115.timer){clearInterval(marketStateV115.timer);marketStateV115.timer=null;}
   if(cashboxQuickStateV116.timer){clearInterval(cashboxQuickStateV116.timer);cashboxQuickStateV116.timer=null;}
+  if(foodCostHeaderTimerV135){clearInterval(foodCostHeaderTimerV135);foodCostHeaderTimerV135=null;}
   cashboxQuickStateV116.entries=[];cashboxQuickStateV116.lastSuccessAt=0;
   app.innerHTML = `
     <div class="login-page">
@@ -123,14 +127,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.34.1</div>
+        <div class="sidebar-foot">Web v1.0.35</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.34.1</span>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.35</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
@@ -140,6 +144,10 @@ function shell() {
               </a>`).join('')}
           </nav>
           <div class="topbar-actions">
+            <a class="v135-top-cost" href="#/food-cost" id="v135-top-food-cost" title="متوسط Food Cost للوجبات">
+              <small>متوسط الكوست</small><strong id="v135-top-cost-number">—</strong>
+              <span class="v135-top-cost-count" id="v135-top-cost-count" hidden>0</span>
+            </a>
             <button class="ai-notify-btn" id="sales-cost-notify-v131" type="button" title="مبيعات تنتظر استكمال المكونات أو الصرف" aria-label="فتح المبيعات غير المكتملة">
               <span aria-hidden="true">📦</span><span class="ai-notify-count" id="sales-cost-notify-count-v131">0</span>
             </button>
@@ -171,6 +179,7 @@ function shell() {
   app.querySelector('#ai-notify-btn').onclick = openAiJobsPanel;
   installMarketUsdV115();
   installCashboxQuickV116();
+  installFoodCostHeaderV135();
   void syncStoredMaterialFxOnLaunchV120();
 
   app.querySelector('#back-btn').onclick = () => {
@@ -182,6 +191,7 @@ function shell() {
 
   startAiJobWatcher();
   installSaleCostNoticeV131();
+  void syncArchiveCostV135();
   route();
 }
 
@@ -568,10 +578,11 @@ function active(hash) {
     'baseline-imports':'settings', 'count-history':'basic', 'quick-imports':'basic', 'recipes-import':'basic',
     assets:'basic',materials:'basic',suppliers:'basic',supplier:'basic',purchases:'basic',purchase:'basic',menu:'basic',
     inventory:'basic',cashboxes:'daily',expenses:'daily',orders:'daily',order:'daily',
-    'sale-cost-queue':'daily','daily-orders':'daily','ameen-daily':'daily','count-entry':'daily','sales-archive':'daily',
+    'sale-cost-queue':'daily','daily-orders':'daily-inputs','ameen-daily':'daily-inputs','count-entry':'daily-inputs','sales-archive':'daily',
+    'historical-cash':'daily-inputs','food-cost':'dashboard',
     'employees-list':'employees',attendance:'employees',payroll:'employees',advances:'employees',bonuses:'employees',
     'events-list':'events','event-reservations':'events','event-bookings':'events',event:'events',
-    reports:'statistics','reports-hub':'statistics',images:'more',
+    reports:'dashboard','reports-hub':'dashboard',images:'more',
   }[key] || key;
   app.querySelectorAll('.nav a').forEach((a) => {
     const routeKey = a.dataset.route.replace('#/', '');
@@ -604,6 +615,9 @@ async function route() {
     'ameen-daily': 'الأوردرات',
     'daily-orders': 'الأوردرات',
     'sale-cost-queue': 'تسوية تكاليف المبيعات',
+    'daily-inputs': 'الإدخالات اليومية',
+    'historical-cash':'ترحيل نقدي للفواتير القديمة',
+    'food-cost':'متوسط الكوست وتفاصيل الوجبات',
     'count-history': 'سجل الجرد',
     daily: 'التشغيل اليومي',
     employees: 'الموظفون والرواتب',
@@ -643,22 +657,25 @@ async function route() {
   try {
     switch (key) {
       case 'dashboard': return renderAnalyticsTabsV132(root,{initialTab:id||'overview'});
-      case 'statistics': return renderAnalyticsTabsV132(root,{initialTab:id||'finance'});
+      case 'statistics': location.hash='#/dashboard/'+(id||'finance');return;
       case 'more': return renderHub(root,'more');
       case 'basic': return renderHub(root, 'basic');
       case 'quick-imports': return renderQuickImportsV030(root);
       case 'baseline-imports': location.hash='#/settings/first-setup';return;
       case 'count-entry': return renderBaselineImportsV126(root,{fixedKind:'count'});
       case 'sales-archive': return renderSalesArchiveV134(root);
-      case 'sale-cost-queue': return renderSaleCostQueueV132(root,{pendingOnly:id==='pending'});
+      case 'sale-cost-queue': return renderUnifiedCostQueueV135(root,{pendingOnly:id==='pending',archiveOnly:id==='archive'});
       case 'count-history': return renderPhysicalCountHistoryV131(root);
       case 'ameen-daily':
       case 'daily-orders': return renderAmeenDailyV041(root);
       case 'recipes-import': location.hash='#/quick-imports'; return;
       case 'daily': return renderHub(root, 'daily');
+      case 'daily-inputs': return renderDailyInputsV135(root);
+      case 'historical-cash': return renderHistoricalCashV135(root);
+      case 'food-cost': return renderFoodCostV135(root);
       case 'employees': return renderHub(root, 'employees');
       case 'events': return renderHub(root, 'events');
-      case 'reports-hub': location.hash='#/statistics/finance'; return;
+      case 'reports-hub': location.hash='#/dashboard/finance'; return;
       case 'materials': return renderMaterials(root);
       case 'assets': return renderAssets(root);
       case 'advances': return renderAdvances(root);
@@ -680,7 +697,7 @@ async function route() {
       case 'event-reservations': return renderEventsV034(root,'booking');
       case 'event-bookings': return renderEventDetailV034(root,id,'booking');
       case 'event': return renderEventDetailV034(root,id);
-      case 'reports': location.hash='#/statistics/finance'; return;
+      case 'reports': location.hash='#/dashboard/finance'; return;
       case 'assistant': return renderAssistant(root);
       case 'images': return renderImages(root);
       case 'settings': return renderSettings(root,id||'general');
@@ -726,30 +743,41 @@ async function refreshSaleCostNoticeV131({showToast=false}={}){
  const counter=app.querySelector('#sales-cost-notify-count-v131');
  if(!button||!counter)return;
  try{
-  const summary=await api.v131SaleQueueSummary();
-  const count=Math.max(0,Number(summary?.pending||0)+Number(summary?.review||0));
-  const ready=Math.max(0,Number(summary?.ready||0));
-  counter.textContent=String(count);
-  button.hidden=false; // Keep the route available even when no recipe is ready.
-  button.dataset.readyCount=String(ready);
-  button.title=`${count} بنود تشغيلية لم تكتمل تسويتها؛ ${ready} منها لها وصفات قابلة للاستكمال. أرشيف المبيعات التاريخية مستقل.`;
-  button.setAttribute('aria-label',button.title);
-  if(showToast&&ready>0)toast(`هناك ${ready} مبيعات يمكن استكمال صرف مكوناتها. افتح «تسوية تكاليف المبيعات».`,'success');
- }catch(e){
+  const [operating,archive]=await Promise.allSettled([
+   api.v131SaleQueueSummary(),api.v135ArchiveCostReport(1,0,false,'')]);
+  const s=operating.status==='fulfilled'?operating.value:{};
+  const h=archive.status==='fulfilled'?archive.value:{};
+  const daily=Number(s.pending||0)+Number(s.review||0);
+  const historical=Number(h.pending||0)+Number(h.estimated||0);
+  const ready=Number(s.ready||0);
+  const total=Math.max(0,daily+historical);
+  counter.textContent=String(total);
   button.hidden=false;
-  counter.textContent='؟';
-  button.title='تعذر قراءة عداد التسوية. اضغط لفتح الصفحة ومراجعة السبب.';
-  console.warn('Sale cost queue notification unavailable; check SQL v1.0.31',e);
+  button.dataset.readyCount=String(ready);
+  button.dataset.archiveCount=String(historical);
+  button.dataset.operatingCount=String(daily);
+  button.title=`${daily} بند تشغيل و${historical} بند تاريخي يحتاج استكمال أو مراجعة التكلفة`;
+  button.setAttribute('aria-label',button.title);
+  if(showToast && (ready>0||historical>0))
+   toast(`مراجعة تكاليف المبيعات: ${daily} تشغيلية، ${historical} تاريخية مؤجلة.`, 'success');
+ }catch(e){
+  button.hidden=false;counter.textContent='؟';
+  console.warn('Sale cost notice unavailable',e);
  }
 }
 function installSaleCostNoticeV131(){
  app.querySelector('#sales-cost-notify-v131')?.addEventListener('click',()=>{
    const count=Number(app.querySelector('#sales-cost-notify-count-v131')?.textContent||0);
+   const daily=Number(app.querySelector('#sales-cost-notify-v131')?.dataset.operatingCount||0);
+   const historic=Number(app.querySelector('#sales-cost-notify-v131')?.dataset.archiveCount||0);
    const dialog=modal({title:'مبيعات بانتظار استكمال التكلفة',
-     subtitle:'العداد يشمل بنود التشغيل التي تنتظر وصفة أو صرفًا؛ ولا يشمل فواتير المبيع التاريخية المستوردة كأرشيف.',
+     subtitle:'المبيعات التشغيلية والتاريخية محفوظة كل منها بمصدرها، دون صرف مخزون مزدوج.',
      hideActions:true,
-     body:`<div class="card"><strong>${Number.isFinite(count)?count:"—"} بند تشغيل غير مكتمل</strong><p>تظهر كل البنود التي تحتاج مكونات أو صرفًا، وليس الوصفات الجاهزة فقط. أرشيف البيع التاريخي يعرض في صفحة أخرى ولا يخصم المخزون.</p></div>
-     <div class="quick-actions"><button type="button" class="btn" id="v132-open-queue-notice">عرض المبيعات غير المكتملة</button><a class="btn secondary" href="#/sales-archive">أرشيف المبيعات التاريخية</a></div>`});
+     body:`<div class="card"><strong>${daily} بند تشغيل · ${historic} بند بيع تاريخي</strong>
+       <p>عند استكمال وصفة في المنيو تتحدّث حالة المبيعات المرتبطة بها، ويمكن مزامنة التكلفة التاريخية دون أي قبض إضافي.</p></div>
+       <div class="quick-actions"><button type="button" class="btn" id="v132-open-queue-notice">تسوية مبيعات التشغيل</button>
+       <a class="btn secondary" href="#/sale-cost-queue/archive">المبيعات التاريخية المؤجلة</a></div>`});
+   dialog.element.querySelector('a[href="#/sale-cost-queue/archive"]')?.addEventListener('click',()=>void dialog.close());
    dialog.element.querySelector('#v132-open-queue-notice').onclick=async()=>{
      await dialog.close();
      if((location.hash||'').startsWith('#/sale-cost-queue'))
@@ -758,9 +786,61 @@ function installSaleCostNoticeV131(){
    };
  });
  if(!saleNoticeInstalledV131){
-  document.addEventListener('maria:recipe-saved',()=>void refreshSaleCostNoticeV131({showToast:true}));
+  document.addEventListener('maria:recipe-saved',()=>{void syncArchiveCostV135();void refreshFoodCostHeaderV135({force:true});});
   document.addEventListener('maria:cost-queue-changed',()=>void refreshSaleCostNoticeV131());
+  document.addEventListener('maria:archive-imported',()=>{void syncArchiveCostV135();void refreshSaleCostNoticeV131();});
   saleNoticeInstalledV131=true;
  }
  void refreshSaleCostNoticeV131();
+}
+
+
+// v1.0.35: status stays visible on every page and refreshes after every
+// local pricing/recipe change (database triggers store persistent alerts).
+let foodCostHeaderTimerV135=null;
+let foodCostHeaderListenersV135=false;
+let foodCostHeaderInFlightV135=null;
+async function refreshFoodCostHeaderV135({force=false}={}){
+ const chip=app.querySelector('#v135-top-food-cost');if(!currentSession||!chip)return;
+ if(foodCostHeaderInFlightV135)return foodCostHeaderInFlightV135;
+ foodCostHeaderInFlightV135=(async()=>{
+  try{
+   const o=await api.v135FoodCostOverview();
+   if(!app.querySelector('#v135-top-food-cost'))return;
+   const value=app.querySelector('#v135-top-cost-number');
+   const count=app.querySelector('#v135-top-cost-count');
+   value.textContent=o.average==null?'—':`${Number(o.average).toFixed(1)}%`;
+   const outside=Number(o.outside||0),unread=Number(o.unreadAlerts||0);
+   count.hidden=!outside&&!unread;count.textContent=String(unread||outside);
+   chip.classList.toggle('v135-cost-needs-attention',outside>0);
+   chip.title=`المتوسط ${value.textContent} · ${outside} وجبة خارج حدود الكوست · ${unread} تنبيه جديد`;
+  }catch(e){chip.title='تعذر قراءة متوسط الكوست؛ راجع تثبيت قاعدة بيانات v1.0.35';}
+ })();
+ try{await foodCostHeaderInFlightV135;}finally{foodCostHeaderInFlightV135=null;}
+}
+function installFoodCostHeaderV135(){
+ if(foodCostHeaderTimerV135)clearInterval(foodCostHeaderTimerV135);
+ void refreshFoodCostHeaderV135({force:true});
+ foodCostHeaderTimerV135=setInterval(()=>{
+  if(document.visibilityState==='visible')void refreshFoodCostHeaderV135();
+ },90000);
+ if(!foodCostHeaderListenersV135){
+  document.addEventListener('maria:food-cost-changed',()=>void refreshFoodCostHeaderV135({force:true}));
+  document.addEventListener('maria:cash-records-changed',()=>void refreshCashboxQuickV116({force:true}));
+  window.addEventListener('focus',()=>void refreshFoodCostHeaderV135());
+  foodCostHeaderListenersV135=true;
+ }
+}
+let archiveReconcileBusyV135=false;
+async function syncArchiveCostV135(){
+ if(archiveReconcileBusyV135||!currentSession)return;
+ archiveReconcileBusyV135=true;
+ try{
+  for(let page=0;page<100;page++){
+   const r=await api.v135ReconcileArchiveCosts(500,page*500);
+   if(Number(r?.processed||0)<500)break;
+  }
+  await refreshSaleCostNoticeV131({showToast:true});
+ }catch(e){console.warn('v1.0.35 historical recipe costing unavailable',e);}
+ finally{archiveReconcileBusyV135=false;}
 }

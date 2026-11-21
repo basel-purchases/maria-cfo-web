@@ -2284,3 +2284,28 @@ html[data-maria-theme="elegant"] .page-head h2 {letter-spacing:-.3px}
 .v134-step.current .v134-step-number{background:var(--primary,#725066);color:white;border-color:var(--primary,#725066)}
 @media(max-width:680px){.v134-setup-steps{grid-template-columns:1fr 1fr}.v134-step{padding:10px;min-height:90px}}
 @media(max-width:400px){.v134-setup-steps{grid-template-columns:1fr}}
+
+/* Maria CFO v1.0.35: cost visibility, compatible with all existing themes. */
+.v135-top-cost{position:relative;display:flex;flex-direction:column;justify-content:center;gap:2px;
+  min-width:100px;white-space:nowrap;border:1px solid var(--line);background:var(--surface);
+  border-radius:13px;padding:8px 12px;text-align:center;color:var(--plum-dark);}
+.v135-top-cost small{font-size:10px;color:var(--muted);font-weight:600}
+.v135-top-cost strong{font-size:17px;line-height:1.15;font-variant-numeric:tabular-nums}
+.v135-top-cost:hover{border-color:var(--plum);box-shadow:0 0 0 2px var(--rose-soft)}
+.v135-top-cost.v135-cost-needs-attention{border-color:var(--amber);background:var(--amber-soft)}
+.v135-top-cost-count{position:absolute;top:-6px;left:-6px;border-radius:999px;background:var(--danger);
+  color:white;min-width:19px;height:19px;display:grid;place-items:center;padding:0 4px;font-size:10px}
+.v135-top-cost-count[hidden]{display:none}
+.menu-card.v135-foodcost-card-high{border:2px solid var(--danger);box-shadow:0 6px 22px color-mix(in srgb,var(--danger) 12%,transparent)}
+.menu-card.v135-foodcost-card-low{border:2px solid var(--amber);box-shadow:0 6px 22px color-mix(in srgb,var(--amber) 12%,transparent)}
+.v135-menu-cost-warning{font-size:12px;font-weight:800;color:var(--danger);background:var(--danger-soft);
+  padding:6px 10px;border-radius:10px;align-self:start}
+.v135-foodcost-low td{background:color-mix(in srgb,var(--amber-soft) 46%,var(--surface))}
+.v135-foodcost-high td{background:color-mix(in srgb,var(--danger-soft) 56%,var(--surface))}
+.v135-foodcost-missing td{color:var(--muted)}
+.v135-foodcost-high td:last-child,.v135-foodcost-low td:last-child{font-weight:700}
+#v135-cash-reconcile .grid{margin-bottom:20px}
+#v135-cash-reconcile input[type="checkbox"]{margin-inline-end:7px}
+#v135-cash-progress{margin-top:10px;font-size:13px;color:var(--plum)}
+@media(max-width:1150px){.v135-top-cost{padding:7px;min-width:83px}.v135-top-cost small{font-size:9px}}
+@media(max-width:740px){.v135-top-cost{min-width:72px;padding:6px}.v135-top-cost strong{font-size:14px}}

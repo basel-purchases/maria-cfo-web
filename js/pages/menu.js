@@ -1,5 +1,5 @@
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.10';
-import * as api from '../api.js?v=1.0.34.1';
+import * as api from '../api.js?v=1.0.35';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0';
 import { esc, money, unitDisplay, num } from '../utils.js?v=1.0';
 import { materialUnitChoices, openConversionDialog } from '../material-units.js?v=1.0';
@@ -52,7 +52,9 @@ function materialBaseCost(row){
 export async function renderMenu(root,{missingOnly=false,search=''}={}){
  root.innerHTML=loader();
  try{
-  const categories=await api.menuCategoriesV023();
+  const [categories,foodCostsV135]=await Promise.all([api.menuCategoriesV023(),api.v135FoodCostOverview().catch(()=>null)]);
+  let costByIdV135=new Map((foodCostsV135?.items||[]).map(x=>[String(x.id),x]));
+  let minCostV135=Number(foodCostsV135?.min??25),maxCostV135=Number(foodCostsV135?.max??40);
   const categoryMap=new Map(categories.map(c=>[String(c.id),c.name]));
   const state={page:1,categoryId:'',query:String(search||'').trim(),sequence:0,missingOnly};
   root.innerHTML=`
@@ -94,16 +96,22 @@ export async function renderMenu(root,{missingOnly=false,search=''}={}){
       api.menuAliasesForIdsV104(rows.map(r=>r.id)),
     ]);
     if(call!==state.sequence)return;
+    const latestCostsV135=await api.v135FoodCostOverview().catch(()=>null);
+    if(latestCostsV135){
+      costByIdV135=new Map((latestCostsV135.items||[]).map(x=>[String(x.id),x]));
+      minCostV135=Number(latestCostsV135.min??25);maxCostV135=Number(latestCostsV135.max??40);
+    }
     const estimateMap=new Map(estimates.map(r=>[String(r.menu_item_id),r.estimated_unit_cost_base]));
     const aliasMap=new Map();
     for(const a of aliases){const key=String(a.menu_item_id);if(!aliasMap.has(key))aliasMap.set(key,[]);aliasMap.get(key).push(a.alias_name);}
     for(const r of rows){
       r.estimated_unit_cost_base=estimateMap.get(String(r.id))??r.estimated_unit_cost_base??null;
       r.__aliases=aliasMap.get(String(r.id))||[];
+      r.__v135Cost=costByIdV135.get(String(r.id))||null;
     }
     root.querySelector('#menu-count').textContent=`${meta.total} وجبة`;
     host.innerHTML=`${rows.length?`<div id="menu-listing" class="grid cols-3">
-       ${rows.map(r=>`<div class="card section-card menu-card">
+       ${rows.map(r=>`<div class="card section-card menu-card ${r.__v135Cost?.percent==null?'':Number(r.__v135Cost.percent)<minCostV135?'v135-foodcost-card-low':Number(r.__v135Cost.percent)>maxCostV135?'v135-foodcost-card-high':''}">
         <span class="tag menu-category-name">${esc(categoryMap.get(String(r.category_id))|| (r.has_missing_cost?'تكلفة ناقصة':'وجبة'))}</span>
         <h3>${esc(r.name)}</h3>
         ${r.__aliases?.length?`<p class="menu-alias-note-v104"><span>أسماء بديلة:</span> ${esc(r.__aliases.join(" · "))}</p>`:""}
@@ -111,7 +119,8 @@ export async function renderMenu(root,{missingOnly=false,search=''}={}){
           <div><span>${menuDiscount(r)>0?'سعر البيع قبل الخصم':'سعر البيع'}</span><strong>${menuPrice(r)!=null?money(menuPrice(r)):'—'}</strong></div>
           ${menuDiscount(r)>0?`<div class="menu-net-price"><span>سعر البيع بعد الخصم</span><strong>${money(effectiveSalePrice(r))}</strong></div>`:''}
           <div><span>التكلفة المعتمدة للتحليل</span><strong>${r.recipe_cost_base!=null && r.has_missing_cost!==true && Number(r.missing_cost_count||0)===0?`${money(r.recipe_cost_base)} · وصفة`:(r.estimated_unit_cost_base!=null?`${money(r.estimated_unit_cost_base)} · تقديرية`:'غير محسوبة')}</strong></div>
-          <div><span>Food Cost</span><strong>${displayedFoodCost(r)!=null?`${displayedFoodCost(r).toFixed(1)}%`:'—'}</strong></div>
+          <div><span>Food Cost</span><strong>${r.__v135Cost?.percent!=null?Number(r.__v135Cost.percent).toFixed(1)+'%':displayedFoodCost(r)!=null?displayedFoodCost(r).toFixed(1)+'%':'—'}</strong></div>
+          ${r.__v135Cost?.percent!=null&&(Number(r.__v135Cost.percent)<minCostV135||Number(r.__v135Cost.percent)>maxCostV135)?'<div class="v135-menu-cost-warning">خارج حدود الكوست المعتمدة</div>':''}
           <div><span>خصم افتراضي</span><strong>${menuDiscount(r)>0?`${menuDiscount(r)}%`:'—'}</strong></div>
           <div><span>وحدة البيع المستوردة</span><strong>${esc(r.ameen_sale_unit_v024||'—')}</strong></div>
         </div>
@@ -296,6 +305,8 @@ function addMenu(root,categories=[],refresh){
         const values=menuFormValuesV104(fd);
         if(!values.name){toast('اكتب اسم الوجبة.','error');return false;}
         await api.menuSaveV104(values);
+        document.dispatchEvent(new CustomEvent('maria:food-cost-changed'));
+        document.dispatchEvent(new CustomEvent('maria:recipe-saved'));
         toast('تمت إضافة الوجبة وأسمائها البديلة','success');
         await refresh();
         return true;
@@ -313,6 +324,8 @@ function editMenu(root,row,categories=[],refresh){
         const values=menuFormValuesV104(fd,row.id);
         if(!values.name){toast('اسم الوجبة لا يمكن أن يكون فارغًا.','error');return false;}
         await api.menuSaveV104(values);
+        document.dispatchEvent(new CustomEvent('maria:food-cost-changed'));
+        document.dispatchEvent(new CustomEvent('maria:recipe-saved'));
         toast('تم تحديث الوجبة وأسمائها البديلة.','success');
         await refresh();
         return true;
@@ -585,6 +598,7 @@ async function recipeDialog(root,id,name,mats,units,onChanged){
         changed=true;
         toast('تمت إضافة المكوّن إلى الوصفة.','success');
         document.dispatchEvent(new CustomEvent('maria:recipe-saved',{detail:{menuId:id}}));
+        document.dispatchEvent(new CustomEvent('maria:food-cost-changed'));
         await refreshRecipe();
         closeEntry();
       }catch(e){

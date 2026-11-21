@@ -1656,3 +1656,16 @@ export async function v134RecipeImportReview(menuId){
   });
   return rows[0]||null;
 }
+
+// v1.0.35: archive cost reconciliation, one-time historical cash reconciliation,
+// Food Cost settings and monitoring (server calculated).
+export const v135ReconcileArchiveCosts=(limit=500,offset=0)=>rpc('v135_reconcile_archive_costs',{p_limit:limit,p_offset:offset});
+export const v135ArchiveCostReport=(limit=100,offset=0,pending=false,search='')=>rpc('v135_archive_cost_report',{
+ p_limit:limit,p_offset:offset,p_pending_only:pending,p_search:search});
+export const v135HistoricCashPreview=()=>rpc('v135_historical_cash_preview');
+export const v135BackfillHistoricCash=(limit=100)=>rpc('v135_backfill_historical_cash',{p_confirm:true,p_limit:limit});
+export const v135ArchiveFinance=()=>rpc('v135_archive_financial_summary');
+export const v135FoodCostOverview=()=>rpc('v135_food_cost_overview');
+export const v135FoodCostAlerts=(limit=20)=>rpc('v135_food_cost_alerts',{p_limit:limit});
+export const v135ReadCostAlerts=()=>rpc('v135_mark_food_cost_alerts_read');
+export const v135SaveFoodCostSettings=(min,max)=>rpc('v135_set_food_cost_limits',{p_min:min,p_max:max});

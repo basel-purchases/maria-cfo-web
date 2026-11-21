@@ -1,8 +1,8 @@
-import {renderInitialSetupV134} from './initial-setup-v134.js?v=1.0.34';
+import {renderInitialSetupV134} from './initial-setup-v134.js?v=1.0.35';
 import {THEMES_V132,readThemeV132,applyThemeV132} from '../theme-v132.js?v=1.0.33';
 import {validateNewSypRateV120} from '../fx-rate-v120.js?v=1.0.22';
 import {materialSearchTextV106} from '../material-search-v106.js?v=1.0.12';
-import * as api from '../api.js?v=1.0.33';
+import * as api from '../api.js?v=1.0.35';
 import {materialPricingErrorV111} from '../pricing-error-v111.js?v=1.0.12';
 import { modal, toast, loader, friendlyError, confirmBox } from '../ui.js?v=1.0.22';
 import {currencyLabel, esc, unitDisplay } from '../utils.js?v=1.0';
@@ -68,8 +68,20 @@ export async function renderSettings(root, selectedTab='general') {
         <button type="button" class="settings-tab" data-settings-tab="payroll">الرواتب والصناديق</button>
         <button type="button" class="settings-tab" data-settings-tab="staff">الدوام والإجازات</button>
         <button type="button" class="settings-tab" data-settings-tab="categories">التصنيفات</button>
+        <button type="button" class="settings-tab" data-settings-tab="cost">حدود الكوست</button>
         <button type="button" class="settings-tab" data-settings-tab="appearance">ستايل البرنامج</button>
         <button type="button" class="settings-tab" data-settings-tab="about">حول البرنامج</button>
+      </div>
+      <div data-settings-pane="cost" hidden>
+        <section class="card"><h3>حدود نسبة تكلفة الوجبة (Food Cost)</h3>
+         <p>أدخل الحد الأدنى والأعلى كنسبة مئوية من سعر البيع الصافي. الوجبة التي تتجاوز الحد أو تقل عنه ستُميَّز في المنيو، ويُنشئ البرنامج إشعارًا عند تعديل سعرها أو مكوناتها أو تكلفة موادها.</p>
+         <div id="v135-cost-limits-form"><div class="form-grid">
+           <div class="field"><label>الحد الأدنى %</label><input id="v135-limit-min" type="number" min="0" max="99.9" step="0.1" value="25"></div>
+           <div class="field"><label>الحد الأعلى %</label><input id="v135-limit-max" type="number" min="0.1" max="100" step="0.1" value="40"></div>
+         </div><div class="quick-actions"><button type="button" class="btn" id="v135-cost-limits-save">حفظ حدود الكوست</button>
+         <a class="btn secondary" href="#/food-cost">التفاصيل والترتيب والإشعارات</a></div>
+         <p class="metric-note" id="v135-cost-limits-feedback"></p></div>
+        </section>
       </div>
       <div data-settings-pane="appearance" hidden>
         <section class="card"><h3>اختيار ألوان البرنامج وتنسيقه</h3><p>اختر رقم الستايل المناسب. التغيير فوري ومحفوظ لهذا المتصفح دون التأثير في أي بيانات.</p>
@@ -85,7 +97,7 @@ export async function renderSettings(root, selectedTab='general') {
       <div data-settings-pane="about" hidden>
         <section class="card v132-about-card"><div class="v132-about-mark">M</div>
           <h2>Maria CFO</h2><p>برنامج الإدارة المالية والمخزون والموظفين للمطعم</p>
-          <p><strong>الإصدار: Web v1.0.34</strong></p>
+          <p><strong>الإصدار: Web v1.0.35</strong></p>
           <div class="divider"></div><h3>إعداد وبرمجة</h3>
           <p>تمت البرمجة والإعداد من قبل <strong>باسل صليبي</strong></p>
           <p>الهاتف: <a href="tel:0996202134" dir="ltr">0996202134</a></p>
@@ -245,7 +257,7 @@ export async function renderSettings(root, selectedTab='general') {
     tabs.forEach(tab=>{tab.onclick=()=>setTab(tab.dataset.settingsTab);});
     const isCategory=['material-categories','catalogs','expenses'].includes(selectedTab);
     setCategoryTab(isCategory?selectedTab:'material-categories');
-    setTab(isCategory?'categories':(['general','payroll','units','orders','staff','categories','appearance','about'].includes(selectedTab)?selectedTab:'general'));
+    setTab(isCategory?'categories':(['general','payroll','units','orders','staff','categories','cost','appearance','about'].includes(selectedTab)?selectedTab:'general'));
     const drawThemes=()=>root.querySelectorAll('[data-choose-theme]').forEach(b=>{
       const isActive=b.dataset.chooseTheme===readThemeV132();
       b.classList.toggle('active',isActive);
@@ -253,6 +265,7 @@ export async function renderSettings(root, selectedTab='general') {
     });
     root.querySelectorAll('[data-choose-theme]').forEach(b=>b.onclick=()=>{applyThemeV132(b.dataset.chooseTheme);drawThemes();});
     drawThemes();
+    void loadCostSettingsV135(root);
     root.querySelector('#save-payroll-cashbox').onclick=async()=>{
       const id=root.querySelector('#payroll-cashbox').value;
       if(!id){toast('اختر صندوقًا لدفع الرواتب.','error');return;}
@@ -555,4 +568,34 @@ function unitEditor(root,entry,{units,materials,catalog,baseUnits}){
   nameEl.addEventListener('input',refreshPreview);
   materialEl?.addEventListener('change',refreshUnits);
   refreshUnits();
+}
+
+
+async function loadCostSettingsV135(root){
+ const min=root.querySelector('#v135-limit-min');
+ const max=root.querySelector('#v135-limit-max');
+ const btn=root.querySelector('#v135-cost-limits-save');
+ const msg=root.querySelector('#v135-cost-limits-feedback');
+ if(!min||!max||!btn||!msg)return;
+ btn.disabled=true;
+ try{
+  const o=await api.v135FoodCostOverview();
+  min.value=String(o.min??25);max.value=String(o.max??40);
+  msg.textContent=`${Number(o.outside||0)} وجبة خارج الحدود الحالية، و${Number(o.unknown||0)} وجبة بلا تكلفة مكتملة.`;
+ }catch(e){msg.textContent='لتفعيل هذه الإعدادات يجب تطبيق ترحيل قاعدة البيانات v1.0.35.';btn.disabled=true;return;}
+ btn.disabled=false;
+ btn.onclick=async()=>{
+  const a=Number(min.value),b=Number(max.value);
+  if(min.value===''||max.value===''||!Number.isFinite(a)||!Number.isFinite(b)||a<0||b>100||a>=b){
+   toast('الحد الأدنى يجب أن يكون أقل من الأعلى، وأن يكون المجال بين 0% و100%.','error');return;
+  }
+  btn.disabled=true;
+  try{
+   const res=await api.v135SaveFoodCostSettings(a,b);
+   msg.textContent=`تم حفظ الحدود الجديدة. إشعارات جديدة: ${Number(res.newAlerts||0)}.`;
+   document.dispatchEvent(new CustomEvent('maria:food-cost-changed'));
+   toast('حُفظت حدود Food Cost بنجاح.','success');
+  }catch(e){toast(friendlyError(e,'تعذر حفظ حدود الكوست.'),'error');}
+  finally{btn.disabled=false;}
+ };
 }
