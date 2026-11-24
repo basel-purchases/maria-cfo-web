@@ -13,6 +13,7 @@ import {augmentEventQuoteV038} from '../event-external-v038.js?v=1.0';
 import {planningTablesV039,plannedMenuRequirementsV039,externalBudgetV039,externalPreviewV039,portionDisplayV039} from '../event-planning-v039.js?v=1.0';
 import {onDemandRowsV040,onDemandTotalsV040,reservationDashboardV040} from '../event-on-demand-v040.js?v=1.0';
 import {seatReservationDashboardV113,seatPlanV113,seatBookingCheckV113} from '../event-seats-v113.js?v=1.0.13';
+import {installmentCheckV139,bookingInstallmentStatusV139} from '../event-installments-v139.js?v=1.0.39';
 
 import {eventActualResultV125,eventOrderLineV125,eventOrderSourceV125,eventOrderRequestKeyV125,eventInternalPreviewV125,eventExternalPreviewV125,isExternalHospitalityV125,eventReportRowsV125} from '../event-finance-v125.js?v=1.0.25';
 
@@ -25,7 +26,12 @@ const statusLabel={planning:'تخطيط',open:'مفتوحة للحجز',confirme
 const opts=(arr,selected)=>arr.map(([v,t])=>`<option value="${esc(v)}" ${String(v)===String(selected)?'selected':''}>${esc(t)}</option>`).join('');
 const toError=e=>{
  const s=String(e?.message||'');
+ if(/event_(?:book_and_collect_installment|collect_booking_installment|set_booking_installment_plan)_v139|event_booking_installment_ops_v139/i.test(s))return 'يجب تثبيت تحديث قاعدة البيانات SQL v1.0.39 قبل استخدام الأقساط.';
  const errors={
+ EVENT_INSTALLMENT_HISTORY_TOO_LONG:'سجل أقساط الحفلة كبير جدًا ولا يمكن تحميله كاملًا. راجع الدعم قبل متابعة التسجيل.',
+ EVENT_INSTALLMENT_NO_CASH_WITH_ZERO:'لا يجوز اختيار صندوق إذا كانت الدفعة الأولى صفرًا.',
+ EVENT_INSTALLMENT_NOTE_TOO_LONG:'ملاحظة الأقساط طويلة جدًا؛ الحد 500 حرف.',
+
 
  V125_FINANCIAL_SUMMARY_MISSING:'ملخص الحفلة الجديد غير متاح. طبّق SQL v1.0.25 أولًا؛ لا يمكن عرض ربح موثوق بدونه.',
  V125_INTERNAL_ORDER_INVALID:'راجع وصف الطلب والكمية والسعر. دقة الكمية ثلاث منازل، ودقة السعر أربع منازل كحد أقصى.',
@@ -64,6 +70,11 @@ const toError=e=>{
  EVENT_GROUP_TABLE_DUPLICATE:'لا يمكن وضع الطاولة نفسها مرتين في حجز واحد.',
  EVENT_BOOKING_HAS_PAYMENTS:'هذا الحجز لديه دفعات فعلية؛ لا يمكن تعديل قيمته بهذا الإجراء.',
  EVENT_BOOKING_PRICE_INVALID:'حدد سعر حجز موجبًا قبل التحصيل.',
+ EVENT_INSTALLMENT_BOOKING_INVALID:'راجع بيانات الحجز والدفعة الأولى؛ لا تتجاوز الدفعة قيمة التذاكر.',
+ EVENT_INSTALLMENT_AMOUNT_INVALID:'قيمة القسط غير صحيحة. أدخل مبلغًا موجبًا حتى أربع منازل عشرية.',
+ EVENT_INSTALLMENT_EXCEEDS_DUE:'القسط أكبر من الرصيد المستحق. حدّث البيانات قبل إعادة المحاولة.',
+ EVENT_INSTALLMENT_REQUEST_CONFLICT:'هذه العملية سُجلت سابقًا بمبلغ آخر. حدّث الحفلة أولًا.',
+ EVENT_INSTALLMENT_REQUEST_KEY_REQUIRED:'تعذّر إنشاء معرّف العملية. افتح الموقع عبر HTTPS وحدّث الصفحة.',
  EVENT_EXTERNAL_DISH_INVALID:'راجع بيانات الوجبة الخارجية والعدد والتكلفة.',
  EVENT_EXTERNAL_DISH_IN_USE:'هذه الوجبة مستخدمة في خطة الضيافة. احذف قاعدة تقديمها أولًا.',
  EVENT_EXTERNAL_DISH_NOT_FOUND:'الوجبة الخارجية غير موجودة أو أُلغيت.',
@@ -146,7 +157,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
  const reload=async()=>{
   if(busy)return;busy=true;root.innerHTML=loader();
   try{
-   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity,guests,eventGroups,servingRules,servingConversions,menuSaleUnits,externalDishes,externalRules,menuEstimates,externalConversions,onDemandItems,onDemandIssues]=await Promise.all([
+   const [event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary,bookings,bookingBalances,extras,waste,boxes,expenses,planner,settings,activity,guests,eventGroups,servingRules,servingConversions,menuSaleUnits,externalDishes,externalRules,menuEstimates,externalConversions,onDemandItems,onDemandIssues,installmentOps]=await Promise.all([
     api.eventV034(eventId),api.eventTablesV034(eventId),api.eventMenuRulesV034(eventId),
     api.eventMenuRequirementsV034(eventId),api.eventTableMenuV034(eventId),api.menuCostsV034(),
     api.eventCostItemsV034(eventId),api.eventCostComparisonV034(eventId),api.eventLaborV034(eventId),
@@ -157,10 +168,11 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
     api.eventLedgerRowsV125('event_external_dishes_v038',eventId),api.eventExternalServingsV038(eventId),
     api.eventMenuCostEstimatesV039(),api.eventAllExternalUnitsV039(),
     api.eventOnDemandV040(eventId),api.eventLedgerRowsV125('event_on_demand_issues_v040',eventId),
+    api.eventBookingInstallmentOpsV139(eventId),
    ]);
    if(!event)throw Error('EVENT_NOT_FOUND');
    state={event,tables,rules,requirements,tableMenu,menuCosts,costs,costCompare,labor,summary:summary||{},bookings,bookingBalances,
-    extras,waste,boxes,expenses,planner,settings,activity,guests,eventGroups,servingRules,servingConversions,menuSaleUnits,externalDishes,externalRules,menuEstimates,externalConversions,onDemandItems,onDemandIssues,seatGuests:[]};
+    extras,waste,boxes,expenses,planner,settings,activity,guests,eventGroups,servingRules,servingConversions,menuSaleUnits,externalDishes,externalRules,menuEstimates,externalConversions,onDemandItems,onDemandIssues,installmentOps,seatGuests:[]};
    state.seatGuests=await api.eventSeatGuestsV113(eventId);
    paint();
   }catch(e){root.innerHTML=`<div class="page-head"><h2>الحفلة</h2><a class="btn secondary" href="#/${view==='booking'?'event-reservations':'events-list'}">رجوع</a></div><div class="notice"><strong>تعذّر تحميل لوحة الحفلة</strong><p>${esc(toError(e))}</p></div>`;}
@@ -315,7 +327,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   const rows=demand(),recent=state.onDemandIssues.slice().reverse();
   return `<section class="card finance-section"><div class="finance-section-head"><div><h3>تقديم الضيافة حسب طلب الضيوف</h3><p>اختر الصنف والعدد المقدّم. الحصص التي لم تُقدّم لا تُسجّل كمستهلكة.</p></div>${rows.length&&editing()?'<button class="btn" data-action="issue-demand">＋ تسجيل تقديم</button>':''}</div>
    ${rows.length?`<div class="event-demand-available-v040">${rows.map(x=>`<div><strong>${esc(x.name)}</strong><span>${portionDisplayV039(x.remaining)} ${esc(x.unit_label)} متبقية من ${portionDisplayV039(x.maximum_servings)}</span><button type="button" class="event-ctrl-v036 primary" data-demand-issue="${esc(x.id)}" ${x.remaining<=0||!editing()?'disabled':''}>تسجيل تقديم</button></div>`).join('')}</div>`:empty('لا توجد أصناف حسب الطلب. أضفها أولًا من «بناء الحفلة ← ضيافة حسب الطلب».')}
-   ${recent.length?`<h4>سجل التقديمات</h4><div class="table-wrap"><table class="table"><thead><tr><th>التاريخ</th><th>الصنف</th><th>الكمية</th><th>الحالة</th><th></th></tr></thead><tbody>${recent.map(i=>{const row=rows.find(x=>String(x.id)===String(i.on_demand_id));return `<tr><td>${esc(new Date(i.created_at).toLocaleString('ar-SY'))}</td><td>${esc(row?.name||'—')}</td><td>${esc(portionDisplayV039(i.servings))} ${esc(row?.unit_label||'')}</td><td>${i.voided_at?'ملغى':'قُدّم'}</td><td>${!i.voided_at&&editing()?`<button type="button" class="event-ctrl-v036 danger" data-demand-void="${esc(i.id)}">إلغاء التسجيل</button>`:''}</td></tr>`;}).join('')}</tbody></table></div>`:''}</section>`;
+   ${recent.length?`<h4>سجل التقديمات</h4><div class="table-wrap"><table class="table"><thead><tr><th>التاريخ</th><th>الصنف</th><th>الكمية</th><th>الحالة</th><th></th></tr></thead><tbody>${recent.map(i=>{const row=rows.find(x=>String(x.id)===String(i.on_demand_id));return `<tr><td>${esc(new Date(i.created_at).toLocaleString('ar-SY-u-nu-latn'))}</td><td>${esc(row?.name||'—')}</td><td>${esc(portionDisplayV039(i.servings))} ${esc(row?.unit_label||'')}</td><td>${i.voided_at?'ملغى':'قُدّم'}</td><td>${!i.voided_at&&editing()?`<button type="button" class="event-ctrl-v036 danger" data-demand-void="${esc(i.id)}">إلغاء التسجيل</button>`:''}</td></tr>`;}).join('')}</tbody></table></div>`:''}</section>`;
  }
  function openDemandPlan(original=null){
   const isEdit=!!original,items=[...state.menuCosts.filter(x=>x.is_active).map(x=>({id:'menu:'+x.id,name:x.name,kind:'menu'})),...state.externalDishes.filter(isExternalHospitalityV125).map(x=>({id:'external:'+x.id,name:x.name,kind:'external'}))];
@@ -383,15 +395,17 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
  }
  function bookingsHtml(){
   const readOnly=!editing(),stats=bookingStats();
-  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>حجوزات الأشخاص والمقاعد</h3><p>اختر عدد الأشخاص وأسماء المرافقين. ملاحظة مكان الجلوس اختيارية؛ لا يوجد توزيع طاولات.</p></div>${!readOnly?'<button class="btn" data-action="add-booking">＋ حجز جديد</button>':''}</div>
+  return `<section class="card finance-section"><div class="finance-section-head"><div><h3>حجوزات الأشخاص والمقاعد</h3><p>احجز الأشخاص، ثم اختر الدفع كاملًا أو على أقساط. تسجَّل كل دفعة في الصندوق عند قبضها فقط، ويبقى الرصيد ظاهرًا حتى سداده.</p></div>${!readOnly?'<button class="btn" data-action="add-booking">＋ حجز جديد</button>':''}</div>
    <div class="event-guest-plan-strip-v039"><div><small>المقاعد</small><strong>${stats.capacity}</strong></div><div><small>المحجوز</small><strong>${stats.reserved}</strong></div><div><small>المتاح</small><strong>${stats.available}</strong></div></div>
-   ${state.bookings.length?`<div class="table-wrap"><table class="table event-booking-table-v034"><thead><tr><th>صاحب الحجز والمرافقون</th><th>الأشخاص</th><th>ملاحظة مكان الجلوس</th><th>سعر الفرد</th><th>إجمالي الحجز</th><th>المقبوض</th><th>المتبقي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
+   ${state.bookings.length?`<div class="table-wrap"><table class="table event-booking-table-v034"><thead><tr><th>صاحب الحجز والمرافقون</th><th>الأشخاص</th><th>ملاحظة مكان الجلوس</th><th>سعر الفرد</th><th>إجمالي الحجز</th><th>المقبوض</th><th>المتبقي</th><th>القسط القادم</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>
    ${state.bookings.map(b=>{const balance=state.bookingBalances.find(x=>x.booking_id===b.id)||{},due=num(balance.balance_original),paid=num(balance.paid_original),total=num(b.agreed_amount_original),zero=total<=0;
     return `<tr><td><strong>${esc(b.customer_name)}</strong><small>${esc(b.customer_phone||'—')}</small><small class="event-guest-summary-v038">${esc(bookingSummary(b))}</small></td><td>${esc(b.guest_count)}</td><td>${esc(b.seat_note_v113||'—')}</td>
     <td>${moneyTicket(num(b.guest_count)?total/num(b.guest_count):0)}</td><td><strong>${moneyTicket(total)}</strong></td><td>${moneyTicket(paid)}</td><td><strong class="${due>0?'payroll-danger-v034':''}">${moneyTicket(due)}</strong></td>
-    <td>${esc(EVENT_BOOKING_STATUS_AR_V038[b.status]||statusLabel[b.status]||b.status||'حجز')}</td>
+    <td>${due>0&&b.installment_next_due_date_v139?`<span class="${String(b.installment_next_due_date_v139)<todayISO()?'payroll-danger-v034':''}">${dateOnly(b.installment_next_due_date_v139)}</span>`:'—'}</td>
+    <td>${esc(bookingInstallmentStatusV139(total,paid,due,b.installment_next_due_date_v139,todayISO()))}</td>
     <td><div class="event-booking-actions-v038">${editing()&&paid<=0?`<button type="button" class="event-ctrl-v036 subtle" data-book-amount="${esc(b.id)}">${zero?'تحديد القيمة':'تعديل القيمة'}</button>`:''}
-    ${zero?'<span class="badge yellow">بلا سعر محدد</span>':due>0?`<button type="button" class="event-ctrl-v036 primary" data-book-pay="${esc(b.id)}" ${!editing()?'disabled':''}>تحصيل المتبقي</button>`:'<span class="badge green">مقبوض بالكامل</span>'}</div></td></tr>`;
+    ${zero?'<span class="badge yellow">بلا سعر محدد</span>':due>0?`<button type="button" class="event-ctrl-v036 primary" data-book-pay="${esc(b.id)}" ${!editing()?'disabled':''}>تحصيل قسط</button>`:'<span class="badge green">مقبوض بالكامل</span>'}
+    ${editing()&&due>0?`<button type="button" class="event-ctrl-v036 subtle" data-book-plan="${esc(b.id)}">موعد الأقساط</button>`:''}</div></td></tr>`;
    }).join('')}</tbody></table></div>`:empty('لم تُسجّل حجوزات بعد. أضف أول حجز حسب عدد الأشخاص.')}</section>`;
  }
  function externalRuleRows(groupId=null){
@@ -544,7 +558,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   const labels={note:'ملاحظة',incident:'حادثة',table:'إعداد سابق',booking:'الحجوزات',extra:'طلب إضافي',payment:'تحصيل',waste:'هدر',closing:'إقفال'};
   const rows=[...state.activity].reverse();
   return `<section class="card finance-section"><div class="finance-section-head"><div><h3>اليوميات وسجل القرارات</h3><p>كل تغيير مهم خلال الحفلة يضاف إلى التسلسل الزمني. يمكنك توثيق حالة طارئة أو ملاحظة تشغيلية فور حدوثها.</p></div>${editing()?'<button class="btn" data-action="add-activity">+ ملاحظة أو حادثة</button>':''}</div>
-   ${rows.length?`<div class="event-activity-stream-v034">${rows.map(a=>`<article class="event-activity-card-v034"><span class="event-activity-dot-v034"></span><div><small>${esc(labels[a.activity_type]||a.activity_type)} · ${esc(new Date(a.occurred_at).toLocaleString('ar-SY'))}</small><p>${esc(a.description)}</p></div></article>`).join('')}</div>`:empty('لا توجد ملاحظات. أنشئ ملاحظة بعد أول تغيير أو تسجيل حجز.')}</section>`;
+   ${rows.length?`<div class="event-activity-stream-v034">${rows.map(a=>`<article class="event-activity-card-v034"><span class="event-activity-dot-v034"></span><div><small>${esc(labels[a.activity_type]||a.activity_type)} · ${esc(new Date(a.occurred_at).toLocaleString('ar-SY-u-nu-latn'))}</small><p>${esc(a.description)}</p></div></article>`).join('')}</div>`:empty('لا توجد ملاحظات. أنشئ ملاحظة بعد أول تغيير أو تسجيل حجز.')}</section>`;
  }
  function openStatus(){
   modal({title:'تعديل حالة الحفلة',subtitle:'تؤثر الحالة على قابلية تعديل الضيافة والحجوزات. الإقفال النهائي له عملية مستقلة في التقرير.',submitText:'حفظ الحالة',
@@ -866,45 +880,74 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
  function openBooking(){
   const available=bookingStats().available;
   if(available<1){toast('اكتمل حجز جميع المقاعد المتاحة لهذه الحفلة.','error');return;}
+  let requestKey;try{requestKey=eventOrderRequestKeyV125();}catch(e){dialogError(e);return;}
   const defaultTicket=num(state.event.default_price_original);
-  const dlg=modal({title:'حجز مقاعد للمجموعة',subtitle:`المتاح حاليًا ${available} كرسيًا، دون اختيار طاولات.`,submitText:'تأكيد الحجز',wide:true,
+  const dlg=modal({title:'حجز تذاكر أو مقاعد مع خيار التقسيط',subtitle:`المتاح ${available} مقعدًا. يمكنك تحصيل كامل المبلغ أو دفعة أولى أو تأجيل السداد.`,submitText:'تأكيد الحجز',wide:true,
    body:`<div class="form-grid event-booking-form-v038">
     <div class="field full"><label>صاحب الحجز</label><input name="name" maxlength="150" required placeholder="مثال: باسل"></div>
     <div class="field"><label>رقم الهاتف (اختياري)</label><input name="phone" type="tel" maxlength="40"></div>
     <div class="field"><label>عدد الأشخاص في الحجز</label><input name="guests" type="number" min="1" max="${Math.min(1000,available)}" value="1" required></div>
-    <div class="field full"><label>ملاحظة مكان الجلوس (اختياري)</label><input name="seatNote" maxlength="200" placeholder="مثل: قرب المنصة أو الطاولة المفضلة"></div>
-    <div class="field full"><label>أسماء المرافقين (اختياري؛ اسم لكل سطر)</label><textarea name="names" rows="3" placeholder="محمد&#10;أحمد"></textarea></div>
+    <div class="field full"><label>ملاحظة مكان الجلوس (اختياري)</label><input name="seatNote" maxlength="200"></div>
+    <div class="field full"><label>أسماء المرافقين (اسم لكل سطر، اختياري)</label><textarea name="names" rows="3"></textarea></div>
     <div class="field"><label>سعر التذكرة للشخص (${esc(priceCurrency())})</label><input name="unitPrice" type="number" min="0" step="any" value="${defaultTicket}" required></div>
     <div class="field"><label>إجمالي قيمة الحجز (${esc(priceCurrency())})</label><input name="amount" type="number" min="0" step="any" value="${defaultTicket}" required></div>
     <div class="field full"><div class="event-booking-price-preview-v038" data-booking-price-note></div></div>
-    <div class="field full"><label>ملاحظة إضافية</label><textarea name="note" rows="2" maxlength="500"></textarea></div></div>
-    <div class="event-collect-inline-v040"><label class="event-book-collect-checkbox-v040"><input type="checkbox" name="collected" data-collected-v040><span><strong>المبلغ مقبوض الآن</strong><small>يُسجّل الحجز والقبض في عملية واحدة، أو اتركه فارغًا للتحصيل لاحقًا.</small></span></label><div class="field" data-collected-box-v040 hidden><label>صندوق التحصيل</label><select name="cashbox">${withBox()}</select></div></div>`,
+    <div class="field full"><label>ملاحظة الحجز (اختياري)</label><textarea name="note" rows="2" maxlength="500"></textarea></div>
+    <div class="field"><label>طريقة دفع التذاكر</label><select name="paymentMode" data-payment-mode-v139><option value="unpaid">دون قبض الآن</option><option value="full">قبض المبلغ كاملًا</option><option value="installment">قسط / دفعة أولى جزئية</option></select></div>
+    <div class="field" data-payment-amount-v139 hidden><label>المقبوض الآن (${esc(priceCurrency())})</label><input name="firstPayment" type="number" min="0.0001" step="0.0001" value="" disabled></div>
+    <div class="field" data-payment-box-v139 hidden><label>صندوق التحصيل</label><select name="cashbox" disabled>${withBox()}</select></div>
+    <div class="field" data-next-date-v139><label>موعد القسط القادم (اختياري)</label><input name="nextDue" type="date"></div>
+    <div class="field full" data-payment-note-v139><label>ملاحظة الأقساط (اختياري)</label><textarea name="installmentNote" rows="2" maxlength="500" placeholder="مثل: قسط كل أسبوع"></textarea></div>
+    <div class="field full event-booking-price-preview-v038" data-payment-preview-v139></div></div>`,
    onSubmit:async fd=>{
     const count=Number(fd.get('guests')),check=seatBookingCheckV113(count,bookingStats().available);
     if(!check.ok){toast(check.reason,'error');return false;}
     const price=Number(fd.get('unitPrice')),amount=Number(fd.get('amount'));
-    if(!Number.isFinite(price)||price<0||!Number.isFinite(amount)||amount<0){toast('راجع سعر التذكرة والإجمالي.','error');return false;}
+    if(!Number.isFinite(price)||price<0||!Number.isFinite(amount)||amount<0||amount!==Math.round(amount*10000)/10000){toast('راجع سعر التذكرة والإجمالي.','error');return false;}
     const name=String(fd.get('name')||'').trim();if(name.length<2){toast('اكتب اسم صاحب الحجز.','error');return false;}
     const names=String(fd.get('names')||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     if(names[0]!==name)names.unshift(name);
     if(names.length>count){toast('عدد الأسماء يتجاوز عدد الأشخاص في الحجز.','error');return false;}
-    const collected=fd.get('collected')==='on',chosenBox=String(fd.get('cashbox')||'');
-    if(collected&&(!chosenBox||!(amount>0))){toast('حدد مبلغًا وصندوقًا صالحين قبل التحصيل.','error');return false;}
-    return commit(async()=>{await api.eventBookSeatsV113(eventId,{name,guests:count,names,phone:fd.get('phone'),amount:amount,
-      note:fd.get('note'),seatNote:fd.get('seatNote'),collected,cashboxId:chosenBox});tab='bookings';},
-      collected?'تم تسجيل المقاعد وقبض قيمتها في العملية نفسها.':'تم تسجيل المقاعد دون قبض.');
+    const mode=String(fd.get('paymentMode'));
+    const initialPayment=mode==='full'?amount:mode==='installment'?Number(fd.get('firstPayment')):0;
+    const checked=installmentCheckV139(amount,0,initialPayment);
+    if(!checked.ok || mode==='full'&&!(amount>0) || mode==='installment'&&!(initialPayment>0&&initialPayment<amount)){
+      toast(checked.reason||'القسط الأول يجب أن يكون أكبر من صفر وأقل من قيمة الحجز.','error');return false;
+    }
+    const boxId=initialPayment>0?String(fd.get('cashbox')||''):null;
+    if(initialPayment>0&&!boxId){toast('اختر صندوقًا قبل إثبات القبض.','error');return false;}
+    const nextDueDate=checked.remaining>0?String(fd.get('nextDue')||''):'';
+    return commit(async()=>{await api.eventBookSeatsV139(eventId,{name,guests:count,names,phone:fd.get('phone'),amount,
+      note:fd.get('note'),seatNote:fd.get('seatNote'),initialPayment,cashboxId:boxId,
+      nextDueDate,installmentNote:fd.get('installmentNote'),requestKey});tab='bookings';},
+      initialPayment>0?(checked.remaining>0?'تم تسجيل الدفعة الأولى، وبقي باقي الحجز على أقساط.':'تم قبض كامل قيمة الحجز.'):'تم تسجيل الحجز، دون أي قبض.');
    }
   });
-  const f=dlg.form,guests=f.elements.namedItem('guests'),unit=f.elements.namedItem('unitPrice'),amount=f.elements.namedItem('amount');
-  const preview=f.querySelector('[data-booking-price-note]');
-  const sync=()=>{const c=Number(guests.value);if(Number.isInteger(c)&&c>0&&c<=available){
-    amount.value=bookingPriceV038(c,Number(unit.value)||0);preview.textContent=`${c} شخص · متبقٍ بعد الحجز ${available-c} مقعد`;
-  }else preview.textContent=`المتاح ${available} مقعدًا`;};
-  unit.addEventListener('input',sync);guests.addEventListener('input',sync);
-  amount.addEventListener('input',()=>{const c=Number(guests.value);if(c>0)unit.value=(Number(amount.value)/c).toFixed(4);});
-  const toggle=f.querySelector('[data-collected-v040]'),boxField=f.querySelector('[data-collected-box-v040]');
-  toggle.addEventListener('change',()=>boxField.hidden=!toggle.checked);
-  sync();
+  const f=dlg.form,guests=f.elements.namedItem('guests'),unit=f.elements.namedItem('unitPrice'),
+   amount=f.elements.namedItem('amount'),mode=f.elements.namedItem('paymentMode'),first=f.elements.namedItem('firstPayment');
+  const preview=f.querySelector('[data-booking-price-note]'),paymentPreview=f.querySelector('[data-payment-preview-v139]');
+  const syncPayment=()=>{
+   const total=Number(amount.value)||0,method=mode.value;
+   f.querySelector('[data-payment-amount-v139]').hidden=method!=='installment';
+   f.querySelector('[data-payment-box-v139]').hidden=method==='unpaid';
+   f.querySelector('[data-next-date-v139]').hidden=method==='full';
+   f.querySelector('[data-payment-note-v139]').hidden=method==='full';
+   first.disabled=method!=='installment';first.required=method==='installment';
+   f.elements.namedItem('cashbox').disabled=method==='unpaid';
+   if(method==='installment' && !first.value) first.value=total>0?Math.min(Math.round(total/2*10000)/10000,Math.max(0,total-.0001)):'';
+   const paid=method==='full'?total:method==='installment'?Number(first.value)||0:0;
+   const c=installmentCheckV139(total,0,paid);
+   paymentPreview.textContent=c.ok?`المقبوض الآن: ${fmt(paid,priceCurrency())} · المتبقي: ${fmt(c.remaining,priceCurrency())}`:c.reason;
+  };
+  const syncAmount=()=>{const c=Number(guests.value);if(Number.isInteger(c)&&c>0&&c<=available){
+   amount.value=bookingPriceV038(c,Number(unit.value)||0);
+   preview.textContent=`${c} شخص · متبقٍ بعد الحجز ${available-c} مقعد`;
+  }else preview.textContent=`المتاح ${available} مقعدًا`;
+   syncPayment();};
+  unit.addEventListener('input',syncAmount);guests.addEventListener('input',syncAmount);
+  amount.addEventListener('input',()=>{const c=Number(guests.value);if(c>0)unit.value=(Number(amount.value)/c).toFixed(4);syncPayment();});
+  mode.addEventListener('change',syncPayment);first.addEventListener('input',syncPayment);
+  syncAmount();
  }
  function editBookingAmount(booking){
   const paid=num(state.bookingBalances.find(x=>x.booking_id===booking.id)?.paid_original);
@@ -919,15 +962,42 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   total.addEventListener('blur',()=>{if(Number(total.value)>0){unit.value=normalizeTicketV038(Number(total.value)/count,booking.currency_code);total.value=bookingPriceV038(count,Number(unit.value));}});
  }
  function payBooking(booking){
-  const r=state.bookingBalances.find(b=>b.booking_id===booking.id),due=num(r?.balance_original),activeBox=box();
+  const r=state.bookingBalances.find(b=>b.booking_id===booking.id),due=num(r?.balance_original),paid=num(r?.paid_original),activeBox=box();
   if(!r||due<=0||!activeBox){toast('لا يوجد رصيد مطلوب أو صندوق نشط.','error');return;}
-  modal({title:`تحصيل حجز ${booking.customer_name}`,subtitle:'تُسجّل حركة نقدية داخل الصندوق مباشرة عند التأكيد.',submitText:'تأكيد التحصيل',
-   body:`<div class="notice rose">المتبقي: <strong>${fmt(due,booking.currency_code)}</strong> · حالة الحجز ${esc(EVENT_BOOKING_STATUS_AR_V038[booking.status]||statusLabel[booking.status]||booking.status)}</div>
-    <div class="form-grid"><div class="field"><label>المبلغ المطلوب تحصيله (${esc(currencyLabel(booking.currency_code))})</label><input name="amount" type="number" min="0.0001" step="any" max="${due}" value="${due}" required></div>
-    <div class="field"><label>الصندوق</label><select name="box" required>${withBox()}</select></div></div>`,
-   onSubmit:async fd=>{const amt=Number(fd.get('amount'));if(!Number.isFinite(amt)||amt<=0||amt>due+.0001){toast('راجع المبلغ، لا يمكن تحصيل أكثر من المتبقي.','error');return false;}
-    return commit(()=>api.eventPayBookingV034(booking.id,fd.get('box'),amt,booking.currency_code),'تم تحصيل الحجز وتسجيل حركة الصندوق.');}
+  let requestKey;try{requestKey=eventOrderRequestKeyV125();}catch(e){dialogError(e);return;}
+  const prior=(state.installmentOps||[]).filter(x=>String(x.booking_id)===String(booking.id)&&num(x.amount_original)>0);
+  const dlg=modal({title:`قسط تذكرة: ${booking.customer_name}`,subtitle:'يمكن قبض أي جزء من المتبقي. كل قسط يضاف إلى الصندوق مرة واحدة فقط.',submitText:'تسجيل قبض القسط',
+   body:`<div class="notice">إجمالي الحجز: <strong>${fmt(booking.agreed_amount_original,booking.currency_code)}</strong> · المقبوض: <strong>${fmt(paid,booking.currency_code)}</strong> · المتبقي: <strong>${fmt(due,booking.currency_code)}</strong></div>
+    ${prior.length?`<div class="event-installment-history-v139"><strong>الدفعات المسجلة في نظام الأقساط</strong>${prior.map(p=>`<div>${esc(dateOnly(p.created_at))} · ${fmt(p.amount_original,p.currency_code)} ${p.note?' · '+esc(p.note):''}</div>`).join('')}</div>`:''}
+    <div class="form-grid"><div class="field"><label>المبلغ المقبوض الآن (${esc(currencyLabel(booking.currency_code))})</label><input name="amount" type="number" min="0.0001" step="0.0001" max="${due}" value="${due}" required></div>
+    <div class="field"><label>صندوق التحصيل</label><select name="box" required>${withBox()}</select></div>
+    <div class="field" data-future-v139 hidden><label>موعد القسط القادم (اختياري)</label><input type="date" name="nextDue" value="${esc(booking.installment_next_due_date_v139||'')}"></div>
+    <div class="field full"><label>ملاحظة الدفعة (اختياري)</label><input name="note" maxlength="500" placeholder="مثال: القسط الثاني"></div>
+    <div class="field full event-booking-price-preview-v038" data-preview-v139></div></div>`,
+   onSubmit:async fd=>{
+    const amt=Number(fd.get('amount')),
+      checked=installmentCheckV139(num(booking.agreed_amount_original),paid,amt);
+    if(!checked.ok||!(amt>0)){toast(checked.reason||'المبلغ يجب أن يكون موجبًا ولا يتجاوز المتبقي.','error');return false;}
+    return commit(()=>api.eventCollectBookingInstallmentV139(booking.id,{
+      cashboxId:fd.get('box'),amount:amt,nextDueDate:checked.remaining>0?fd.get('nextDue'):null,
+      note:fd.get('note'),requestKey}),
+      checked.remaining>0?'تم قبض القسط وإبقاء الرصيد المتبقي للحجز.':'تم قبض القسط الأخير واكتمال سداد الحجز.');
+   }
   });
+  const f=dlg.form,amount=f.elements.namedItem('amount'),future=f.querySelector('[data-future-v139]'),preview=f.querySelector('[data-preview-v139]');
+  const sync=()=>{const amountValue=Number(amount.value),checked=installmentCheckV139(booking.agreed_amount_original,paid,amountValue);
+    future.hidden=!checked.ok||checked.remaining<=0;
+    preview.textContent=checked.ok?`بعد القسط: المقبوض ${fmt(checked.paid,booking.currency_code)} · المتبقي ${fmt(checked.remaining,booking.currency_code)}`:checked.reason;
+  };
+  amount.addEventListener('input',sync);sync();
+ }
+ function editBookingInstallmentPlan(booking){
+  const r=state.bookingBalances.find(x=>x.booking_id===booking.id),due=num(r?.balance_original);
+  if(due<=0){toast('هذا الحجز مسدد بالكامل.','error');return;}
+  modal({title:`موعد أقساط ${booking.customer_name}`,subtitle:`المتبقي ${fmt(due,booking.currency_code)}. تغيير الموعد لا يحرّك الصندوق.`,submitText:'حفظ موعد الأقساط',
+   body:`<div class="form-grid"><div class="field"><label>موعد القسط القادم</label><input name="nextDue" type="date" value="${esc(booking.installment_next_due_date_v139||'')}"></div>
+   <div class="field full"><label>ملاحظة الأقساط</label><textarea name="note" maxlength="500" rows="3">${esc(booking.installment_note_v139||'')}</textarea></div></div>`,
+   onSubmit:async fd=>commit(()=>api.eventSetBookingInstallmentPlanV139(booking.id,fd.get('nextDue'),fd.get('note')),'تم تحديث موعد القسط وملاحظته دون حركة مالية.')});
  }
 
  function openExternalDish(){
@@ -1173,6 +1243,7 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   emit('[data-demand-issue]',el=>openDemandIssue(el.dataset.demandIssue));
   emit('[data-demand-void]',el=>reasonModal('إلغاء تقديم مسجّل',why=>api.eventVoidOnDemandIssueV040(el.dataset.demandVoid,why)));
   emit('[data-book-pay]',el=>{const x=state.bookings.find(x=>String(x.id)===el.dataset.bookPay);if(x)payBooking(x);});
+  emit('[data-book-plan]',el=>{const x=state.bookings.find(x=>String(x.id)===el.dataset.bookPlan);if(x)editBookingInstallmentPlan(x);});
   emit('[data-book-amount]',el=>{const x=state.bookings.find(x=>String(x.id)===el.dataset.bookAmount);if(x)editBookingAmount(x);});
   emit('[data-action="add-rule"]',()=>openRule());
   emit('[data-action="add-event-group"]',()=>openEventGroup());
@@ -1220,8 +1291,8 @@ export async function renderEventDetailV034(root,eventId,view='planning'){
   if(demandTable)registerTableExport(demandTable,()=>({title:`ضيافة حسب الطلب · ${state.event.name}`,headers:['الصنف','الحد','المقدم','المتبقي','التكلفة المخططة عند استخدام كامل الحد','تكلفة ما قدم فعلاً'],rows:demand().map(x=>[x.name,x.maximum_servings,x.used,x.remaining,x.reservedCost==null?'غير معروفة':exportAmount(x.reservedCost),x.consumedCost==null?'غير معروفة':exportAmount(x.consumedCost)])}));
   const bookingTable=root.querySelector('.event-booking-table-v034');
   if(bookingTable)registerTableExport(bookingTable,()=>({title:`حجوزات ${state.event.name}`,
-   headers:['الاسم','الهاتف','عدد الأشخاص','أسماء المجموعة','ملاحظة الجلوس','سعر الشخص','قيمة الحجز','المقبوض','المتبقي','الحالة'],
-   rows:state.bookings.map(b=>{const ba=state.bookingBalances.find(z=>z.booking_id===b.id)||{};return [b.customer_name,b.customer_phone||'',b.guest_count,bookingSummary(b),b.seat_note_v113||'',exportAmount(num(b.agreed_amount_original)/Math.max(1,num(b.guest_count)),b.currency_code),exportAmount(b.agreed_amount_original,b.currency_code),exportAmount(ba.paid_original||0,b.currency_code),exportAmount(ba.balance_original||0,b.currency_code),EVENT_BOOKING_STATUS_AR_V038[b.status]||statusLabel[b.status]||b.status];})}));
+   headers:['الاسم','الهاتف','عدد الأشخاص','أسماء المجموعة','ملاحظة الجلوس','سعر الشخص','قيمة الحجز','المقبوض','المتبقي','القسط القادم','الحالة'],
+   rows:state.bookings.map(b=>{const ba=state.bookingBalances.find(z=>z.booking_id===b.id)||{};return [b.customer_name,b.customer_phone||'',b.guest_count,bookingSummary(b),b.seat_note_v113||'',exportAmount(num(b.agreed_amount_original)/Math.max(1,num(b.guest_count)),b.currency_code),exportAmount(b.agreed_amount_original,b.currency_code),exportAmount(ba.paid_original||0,b.currency_code),exportAmount(ba.balance_original||0,b.currency_code),b.installment_next_due_date_v139||'',bookingInstallmentStatusV139(b.agreed_amount_original,ba.paid_original,ba.balance_original,b.installment_next_due_date_v139,todayISO())];})}));
   const externalTable=root.querySelector('.event-external-purchases-table-v038');
   if(externalTable)registerTableExport(externalTable,()=>({title:`المشتريات والطلبات الخارجية · ${state.event.name}`,
    headers:['الصنف','المورد','الكمية','الوحدة','النوع','تكلفة الوحدة بالأساس','ربح الوحدة المحدد بالأساس','إجمالي الشراء بالأساس','فاتورة العميل','عملة الفاتورة','ربح العملية بالأساس','سداد المورد','تحصيل العميل'],

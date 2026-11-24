@@ -38,7 +38,7 @@ export function isContextualUnit(unit){
 export function formatUnitAmount(value){
   const n=Number(value);
   if(!Number.isFinite(n)||n<=0) return '؟';
-  return new Intl.NumberFormat('ar-SY',{maximumFractionDigits:8,useGrouping:false}).format(n);
+  return new Intl.NumberFormat('ar-SY-u-nu-latn',{maximumFractionDigits:8,useGrouping:false}).format(n);
 }
 
 export function validateNamedUnitDraft({name, materialId, amount, unitId=null, units=[], catalog=[]}){

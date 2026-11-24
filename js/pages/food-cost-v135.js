@@ -4,7 +4,7 @@ import * as api from '../api.js?v=1.0.35';
 import {esc,money} from '../utils.js?v=1.0';
 import {loader,toast,friendlyError,confirmBox} from '../ui.js?v=1.0.31';
 
-const n=x=>Number(x||0).toLocaleString('ar-SY',{maximumFractionDigits:2});
+const n=x=>Number(x||0).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:2});
 export const foodCostColorV135=(row,low,high)=>row.percent==null?'missing':
   Number(row.percent)<low?'low':Number(row.percent)>high?'high':'ok';
 export const foodCostMenuLinkV135=name=>`#/menu/find/${encodeURIComponent(String(name||''))}`;

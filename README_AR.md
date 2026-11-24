@@ -1,3 +1,5 @@
+> v1.0.39 (Ticket Installments + Latin Digits): [README_v1.0.39_TICKET_INSTALLMENTS_EN.md](README_v1.0.39_TICKET_INSTALLMENTS_EN.md). Apply the new SQL before deploying the frontend.
+
 > **الإصدار الحالي v1.0.35:** تسوية المبيعات التاريخية والصناديق والإدخالات اليومية ولوحة الكوست. اتبع أولًا [دليل التحديث v1.0.35](README_v1.0.35_AR.md).
 
 

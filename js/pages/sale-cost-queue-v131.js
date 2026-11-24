@@ -10,7 +10,7 @@ function saleState(row){
  if(!row.menuName||!row.recipeCount)return {label:'بانتظار مكونات الوصفة',color:'yellow'};
  return {label:row.error?'تعذّر الصرف — راجع السبب':'جاهز لمحاولة التسوية',color:'yellow'};
 }
-const count=n=>Number(n||0).toLocaleString('ar-SY');
+const count=n=>Number(n||0).toLocaleString('ar-SY-u-nu-latn');
 export async function renderSaleCostQueueV131(root){
  root.innerHTML=loader();
  try{

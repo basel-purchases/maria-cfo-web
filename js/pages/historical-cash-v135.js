@@ -3,7 +3,7 @@
 import * as api from '../api.js?v=1.0.35';
 import {esc,money} from '../utils.js?v=1.0';
 import {loader,toast,friendlyError,confirmBox} from '../ui.js?v=1.0.31';
-const count=x=>Number(x||0).toLocaleString('ar-SY');
+const count=x=>Number(x||0).toLocaleString('ar-SY-u-nu-latn');
 const v136Message=e=>String(e?.message||e||'فشل غير محدد').slice(0,400);
 export async function renderHistoricalCashV135(root){
  root.innerHTML=`<div class="page-head"><div><h2>ترحيل المبيعات والمشتريات التاريخية إلى الصناديق</h2>

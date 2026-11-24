@@ -8,7 +8,7 @@ const LINKS={
   'events-list':'الحفلات',settings:'الإعدادات',suppliers:'الموردون',
 };
 function safeLink(href){const s=String(href||'');return /^#\/(?:dashboard|reports|orders|purchases|employees-list|attendance|payroll|cashboxes|expenses|materials|menu|events-list|settings|suppliers|order\/[0-9a-f-]{36}|purchase\/[0-9a-f-]{36})$/i.test(s)?s:null;}
-const fmt=(value)=>Number.isFinite(Number(value))?new Intl.NumberFormat('ar').format(Number(value)):'—';
+const fmt=(value)=>Number.isFinite(Number(value))?new Intl.NumberFormat('ar-u-nu-latn').format(Number(value)):'—';
 function appendText(container,cls,text){const row=document.createElement('div');row.className='msg '+cls;row.textContent=text;container.appendChild(row);container.scrollTop=container.scrollHeight;return row;}
 
 export function renderAssistant(root){

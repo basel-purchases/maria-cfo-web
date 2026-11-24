@@ -2309,3 +2309,8 @@ html[data-maria-theme="elegant"] .page-head h2 {letter-spacing:-.3px}
 #v135-cash-progress{margin-top:10px;font-size:13px;color:var(--plum)}
 @media(max-width:1150px){.v135-top-cost{padding:7px;min-width:83px}.v135-top-cost small{font-size:9px}}
 @media(max-width:740px){.v135-top-cost{min-width:72px;padding:6px}.v135-top-cost strong{font-size:14px}}
+
+/* v1.0.39: ticket installments and ASCII numeric presentation */
+.event-installment-history-v139{padding:12px 14px;margin:10px 0;border:1px solid var(--border,#e4dfe3);border-radius:12px;max-height:150px;overflow:auto;background:var(--surface-soft,#faf9fb);font-size:13px;line-height:1.9}
+.event-installment-history-v139>div{border-top:1px solid #e7e1e8;padding:3px 0}
+input[type=number],input[type=date],input[type=time],input[type=tel],.metric-value,.event-booking-table-v034 td{font-variant-numeric:tabular-nums lining-nums}

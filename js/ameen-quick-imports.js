@@ -167,7 +167,7 @@ export async function renderQuickImports(root){
   const area=root.querySelector('#ameen-history');if(!area)return;
   try{
    const rows=await api.ameenImportHistoryV024();
-   area.innerHTML=`<div class="card"><h3>سجل الإدخالات السابقة</h3>${rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الوقت</th><th>نوع التقرير</th><th>الملف</th><th>سجلات</th><th>حالة المراجعة</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(new Date(r.created_at).toLocaleString('ar-SY'))}</td><td>${esc(AMEEN_TYPES[r.kind]||r.kind)}</td><td>${esc(r.filename)}</td><td>${esc(r.record_count)}</td><td>${esc(r.result?.review??0)}</td></tr>`).join('')}</tbody></table></div>`:'<p>لم تُستورد ملفات بعد.</p>'}</div>`;
+   area.innerHTML=`<div class="card"><h3>سجل الإدخالات السابقة</h3>${rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الوقت</th><th>نوع التقرير</th><th>الملف</th><th>سجلات</th><th>حالة المراجعة</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(new Date(r.created_at).toLocaleString('ar-SY-u-nu-latn'))}</td><td>${esc(AMEEN_TYPES[r.kind]||r.kind)}</td><td>${esc(r.filename)}</td><td>${esc(r.record_count)}</td><td>${esc(r.result?.review??0)}</td></tr>`).join('')}</tbody></table></div>`:'<p>لم تُستورد ملفات بعد.</p>'}</div>`;
   }catch(e){area.innerHTML='<div class="notice">سجل الاستيراد غير متاح. تأكد من تنفيذ SQL v0.24 أولًا.</div>';}
  }
  await history();

@@ -20,7 +20,7 @@ function confirmQuickImport({filename,kind,count}){
 }
 
 const show=x=>esc(String(x??'—'));
-const clock=x=>{try{return new Date(x).toLocaleString('ar-SY');}catch{return String(x||'');}};
+const clock=x=>{try{return new Date(x).toLocaleString('ar-SY-u-nu-latn');}catch{return String(x||'');}};
 function errorMessage(err){
  const message=String(err?.message||err||'');
  if(/quick_import_employees_v031|quick_import_employees_undo_v031/i.test(message))

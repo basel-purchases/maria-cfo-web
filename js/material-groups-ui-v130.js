@@ -5,7 +5,7 @@ import {groupPriceReviewV131,validGroupFactorV131} from './material-group-conver
 
 function readablePrice(row){
   const cost=Number(row?.last_purchase_unit_cost_base);
-  return row?.last_purchase_unit_cost_base!=null&&cost>0?`${cost.toLocaleString('ar')} ل.س`:'غير معروف';
+  return row?.last_purchase_unit_cost_base!=null&&cost>0?`${cost.toLocaleString('ar-u-nu-latn')} ل.س`:'غير معروف';
 }
 function unitLabel(material,units){
   return units.find(u=>String(u.id)===String(material?.base_unit_id))?.name||material?.base_unit_code||'—';
@@ -98,7 +98,7 @@ export async function openMaterialGroupsV130({materials,units,onChanged}){
       const factor=ratios.get(String(r.id));
       const price=Number(r.last_purchase_unit_cost_base);
       const normalized=price>0 && (same||validGroupFactorV131(factor))
-        ? `${(price/(same?1:Number(factor))).toLocaleString('ar',{maximumFractionDigits:4})} / ${esc(refName)}`:'--';
+        ? `${(price/(same?1:Number(factor))).toLocaleString('ar-u-nu-latn',{maximumFractionDigits:4})} / ${esc(refName)}`:'--';
       const conversion=same?`<small>1 ${esc(refName)} = 1 ${esc(refName)}</small>`:
         `<label style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">1 ${esc(unitLabel(r,units))} =
         <input data-factor-v131="${esc(r.id)}" type="number" min="0.000001" max="1000000" step="any"
@@ -106,7 +106,7 @@ export async function openMaterialGroupsV130({materials,units,onChanged}){
         ${esc(refName)}</label>`;
       return `<div style="display:flex;gap:7px;align-items:center;padding:7px 0;border-bottom:1px solid #dedede;flex-wrap:wrap">
       <strong style="flex:1;min-width:155px">${index+1}. ${esc(r.name)}</strong>
-      <small>رصيد: ${Number(r.current_stock_base||0).toLocaleString('ar')} ${esc(unitLabel(r,units))} · آخر سعر: ${esc(readablePrice(r))}</small>
+      <small>رصيد: ${Number(r.current_stock_base||0).toLocaleString('ar-u-nu-latn')} ${esc(unitLabel(r,units))} · آخر سعر: ${esc(readablePrice(r))}</small>
       ${conversion}
       <small data-normalized-v131="${esc(r.id)}">${normalized}</small>
       <button type="button" class="mini-btn" data-move-v130="${index}" data-delta="-1" ${index===0?'disabled':''}>↑</button>
@@ -150,7 +150,7 @@ export async function openMaterialGroupsV130({materials,units,onChanged}){
     const normalized=chosen.querySelector(`[data-normalized-v131="${id}"]`);
     const price=Number(materialMap.get(id)?.last_purchase_unit_cost_base);
     if(normalized) normalized.textContent=price>0&&validGroupFactorV131(factor)
-      ? `${(price/factor).toLocaleString('ar',{maximumFractionDigits:4})} / ${unitLabel({base_unit_id:referenceUnitId},units)}`:'--';
+      ? `${(price/factor).toLocaleString('ar-u-nu-latn',{maximumFractionDigits:4})} / ${unitLabel({base_unit_id:referenceUnitId},units)}`:'--';
     renderWarnings();
   });
   chosen.onclick=e=>{

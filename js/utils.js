@@ -33,7 +33,7 @@ export function dateOnly(value){
   const d=new Date(value);
   return Number.isNaN(d.getTime())
     ? String(value)
-    : new Intl.DateTimeFormat('ar-SY', {
+    : new Intl.DateTimeFormat('ar-SY-u-nu-latn', {
         year:'numeric', month:'2-digit', day:'2-digit'
       }).format(d);
 }

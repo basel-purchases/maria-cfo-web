@@ -13,7 +13,7 @@ export const ANALYTIC_TABS_V132=[
   {key:'events',name:'الحفلات'},
   {key:'alerts',name:'التنبيهات'},
 ];
-const number=n=>Number(n||0).toLocaleString('ar-SY');
+const number=n=>Number(n||0).toLocaleString('ar-SY-u-nu-latn');
 const panelCard=(label,value,foot='')=>`<div class="card"><small>${esc(label)}</small><h3>${value}</h3>${foot?`<p class="metric-note">${esc(foot)}</p>`:''}</div>`;
 const pair=(label,value)=>`<div class="finance-info-row"><span>${esc(label)}</span><strong>${value}</strong></div>`;
 const now=()=>todayISO();

@@ -1,6 +1,7 @@
 import { supabase, configured, configurationMessage } from './supabase.js?v=1.0';
 import * as api from './api.js?v=1.0.35';
 import { esc } from './utils.js?v=1.0';
+import {installLatinDigitsV139} from './latin-digits-v139.js?v=1.0.39';
 import { toast, friendlyError, modal } from './ui.js?v=1.0.31';
 import {renderAnalyticsTabsV132} from './pages/analytics-tabs-v132.js?v=1.0.35';
 import {readThemeV132,applyThemeV132} from './theme-v132.js?v=1.0.34';
@@ -18,7 +19,7 @@ import {
 } from './pages/daily.js?v=1.0.31';
 import { renderEmployees } from './pages/employees.js?v=1.0.29';
 import {renderBonusesV032} from './pages/bonuses.js?v=1.0.29';
-import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.31';
+import {renderEventsV034,renderEventDetailV034} from './pages/events-v034.js?v=1.0.39';
 import {renderPayrollV034} from './pages/payroll-v034.js?v=1.0.29';
 import { renderAssistant } from './pages/assistant.js?v=1.0';
 import { renderImages } from './pages/images.js?v=1.0.13';
@@ -44,6 +45,7 @@ import {cashboxQuickEntriesV116,cashboxNumberV116} from './cashbox-summary-v116.
 
 applyThemeV132(readThemeV132(),false);
 const app = document.querySelector('#app');
+installLatinDigitsV139(document.body);
 installSearchableSelectsV033();
 let currentSession = null;
 let aiJobTimer = null;
@@ -127,14 +129,14 @@ function shell() {
               <span class="nav-dot"></span>${label}
             </a>`).join('')}
         </nav>
-        <div class="sidebar-foot">Web v1.0.36</div>
+        <div class="sidebar-foot">Web v1.0.39</div>
       </aside>
 
       <main class="main">
         <header class="topbar">
           <div class="topbar-leading">
             <button class="icon-btn mobile-menu" type="button" aria-label="فتح القائمة">☰</button>
-            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.36</span>
+            <div class="title" id="top-title">Maria CFO</div><span class="v132-version-chip">v1.0.39</span>
           </div>
           <nav class="cashbox-strip-v116" id="topbar-cashboxes" aria-label="\u0623\u0631\u0635\u062f\u0629 \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642">
             ${['\u0635\u0646\u062f\u0648\u0642 1','\u0635\u0646\u062f\u0648\u0642 2','\u0627\u0644\u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0639\u0627\u0645'].map((name,i)=>`
@@ -213,7 +215,7 @@ function drawCashboxQuickV116(){
     link.querySelector('.cashbox-quick-balance-v116').textContent=amount;
     const status=state.error?'\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0631\u0635\u064a\u062f\u061b \u0622\u062e\u0631 \u0642\u0631\u0627\u0621\u0629 \u0645\u062a\u0627\u062d\u0629':
       state.lastSuccessAt?'\u0627\u0644\u0631\u0635\u064a\u062f \u0627\u0644\u0645\u062a\u0648\u0642\u0639 \u0627\u0644\u0622\u0646':'\u062c\u0627\u0631\u064d \u062c\u0644\u0628 \u0627\u0644\u0631\u0635\u064a\u062f';
-    const updated=state.lastSuccessAt?` - \u0622\u062e\u0631 \u062a\u062d\u062f\u064a\u062b ${new Date(state.lastSuccessAt).toLocaleTimeString('ar-SY',{hour:'2-digit',minute:'2-digit'})}`:'';
+    const updated=state.lastSuccessAt?` - \u0622\u062e\u0631 \u062a\u062d\u062f\u064a\u062b ${new Date(state.lastSuccessAt).toLocaleTimeString('ar-SY-u-nu-latn',{hour:'2-digit',minute:'2-digit'})}`:'';
     link.title=`${name}: ${status}${updated} - ${amount} \u0644.\u0633 - \u0627\u0636\u063a\u0637 \u0644\u0641\u062a\u062d \u0627\u0644\u0635\u0646\u0627\u062f\u064a\u0642`;
     link.setAttribute('aria-label',link.title);
     link.classList.toggle('cashbox-quick-stale-v116',Boolean(state.error));
@@ -273,7 +275,7 @@ const MARKET_CACHE_KEY_V115='maria_cfo_parallel_usd_v114'; // compatible with sa
 const marketStateV115={quote:null,lastSuccessAt:0,lastAttemptAt:0,inFlight:null,verified:false,error:null,timer:null,
   side:readMarketSideV115(),unit:'new'};
 function marketDateV115(value){
-  try{return new Intl.DateTimeFormat('ar-SY',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Damascus'}).format(new Date(value));}
+  try{return new Intl.DateTimeFormat('ar-SY-u-nu-latn',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Damascus'}).format(new Date(value));}
   catch(_){return String(value||'—');}
 }
 function marketCacheReadV115(){

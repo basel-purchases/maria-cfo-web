@@ -33,6 +33,6 @@ export async function renderInitialSetupV134(root){
   const stats=await api.rpc('v134_initial_setup_progress');
   if(!root.isConnected)return;
   for(const s of stages){const el=root.querySelector(`[data-setup-count="${s.counter}"]`);
-   if(el)el.textContent=`سجلات موجودة في النظام: ${Number(stats?.[s.counter]||0).toLocaleString('ar-SY')}`;}
+   if(el)el.textContent=`سجلات موجودة في النظام: ${Number(stats?.[s.counter]||0).toLocaleString('ar-SY-u-nu-latn')}`;}
  }catch(_){for(const el of root.querySelectorAll('[data-setup-count]'))el.textContent='تحتاج ترحيل SQL v1.0.34';}
 }

@@ -1,7 +1,7 @@
 import * as api from '../api.js?v=1.0.34';
 import {esc} from '../utils.js?v=1.0';
 import {loader,friendlyError} from '../ui.js?v=1.0.33';
-const fmt=x=>Number(x||0).toLocaleString('ar-SY',{maximumFractionDigits:2});
+const fmt=x=>Number(x||0).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:2});
 const date=x=>String(x||'').replace('T',' ').slice(0,16);
 export async function renderSalesArchiveV134(root){
  let offset=0;

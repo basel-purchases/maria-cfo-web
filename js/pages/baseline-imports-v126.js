@@ -8,7 +8,7 @@ import {parseHistoryInvoicesV126} from '../baseline-parsers-v126.js?v=1.0.26';
 import {parsePhysicalCountV131} from '../physical-count-standard-v131.js?v=1.0.31';
 
 const kinds={history:'أرشيف فواتير الشراء الشامل (الأمين)',menu:'المنيو والوصفات مع كتالوج المواد (دون أسعار شراء)',count:'الجرد الفعلي بتاريخ العد',salesArchive:'فواتير المبيع التاريخية — تسوية تكلفة وقبض صندوق'};
-const num=n=>Number(n||0).toLocaleString('ar-SY',{maximumFractionDigits:4});
+const num=n=>Number(n||0).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:4});
 let inFlight=false;
 function chunks(arr,n){const list=[];for(let i=0;i<arr.length;i+=n)list.push(arr.slice(i,i+n));return list;}
 // Keep a large invoice whole, but do not send 200+ lines plus eleven additional

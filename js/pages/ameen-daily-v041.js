@@ -12,7 +12,7 @@ import {cashierMoneyV105,reconcileCashierV105,detectCashierHeaderDateV105,priori
 const num=x=>Number(x)||0;
 const curr=x=>cashierMoneyV105(x);
 const text=x=>esc(x??'—');
-const fmt=x=>new Intl.NumberFormat('ar-SY',{maximumFractionDigits:2}).format(num(x));
+const fmt=x=>new Intl.NumberFormat('ar-SY-u-nu-latn',{maximumFractionDigits:2}).format(num(x));
 const dayLabel=x=>String(x||'').slice(0,10);
 const typeName={recipe:'تكلفة وصفة',estimate:'تكلفة تقديرية',missing:'تكلفة مجهولة'};
 export async function renderAmeenDailyV041(root){
@@ -46,7 +46,7 @@ export async function renderAmeenDailyV041(root){
 
  const renderHistory=async()=>{
   try{const rows=await api.ameenDailyHistoryV041();
-   h('#daily-history-v041').innerHTML=rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الملف</th><th>التاريخ</th><th>جديد</th><th>موجود سابقًا</th><th>متعارض</th><th>بنود جديدة</th><th>قبض جديد رحّل للصندوق</th></tr></thead><tbody>${rows.map(r=>{const s=r.summary||{};return `<tr><td>${text(r.filename)}</td><td>${text(new Date(r.created_at).toLocaleString('ar-SY'))}</td><td>${num(s.created)}</td><td>${num(s.existing)}${s.duplicateFile?' (ملف مكرر)':''}</td><td>${num(s.conflicts)}</td><td>${num(s.lines)}</td><td>${s.cashPostedSyp==null?'سابق للتحديث / لم يرحل':curr(s.cashPostedSyp)}</td></tr>`;}).join('')}</tbody></table></div>`:'<p class="metric-note">لا يوجد استيراد بعد.</p>';
+   h('#daily-history-v041').innerHTML=rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>الملف</th><th>التاريخ</th><th>جديد</th><th>موجود سابقًا</th><th>متعارض</th><th>بنود جديدة</th><th>قبض جديد رحّل للصندوق</th></tr></thead><tbody>${rows.map(r=>{const s=r.summary||{};return `<tr><td>${text(r.filename)}</td><td>${text(new Date(r.created_at).toLocaleString('ar-SY-u-nu-latn'))}</td><td>${num(s.created)}</td><td>${num(s.existing)}${s.duplicateFile?' (ملف مكرر)':''}</td><td>${num(s.conflicts)}</td><td>${num(s.lines)}</td><td>${s.cashPostedSyp==null?'سابق للتحديث / لم يرحل':curr(s.cashPostedSyp)}</td></tr>`;}).join('')}</tbody></table></div>`:'<p class="metric-note">لا يوجد استيراد بعد.</p>';
   }catch(e){h('#daily-history-v041').innerHTML=renderError(e);}
  };
  const exportOrders=async()=>({title:`الأوردرات - ${dayLabel(shownDate)}`,
@@ -57,7 +57,7 @@ export async function renderAmeenDailyV041(root){
   rows:allLines.map(l=>[allOrders.find(o=>String(o.id)===String(l.orderId))?.number||'',l.name,num(l.qty),num(l.unitPrice),l.referencePrice??'',num(l.lineNet),l.cost??'',(l.matchKind==='unit_prefix'||l.matchKind==='alias_unit_prefix'?'حصة/وحدة تحتاج مراجعة':typeName[l.costKind]||'')])});
  const renderPriceHistory=()=>{
   const rows=(report?.priceHistory||[]).slice(0,90);
-  h('#daily-prices-v041').innerHTML=rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>التوقيت</th><th>الصنف</th><th>السعر السابق</th><th>السعر الجديد</th><th>المصدر</th><th>إجراء</th></tr></thead><tbody>${rows.map((r,index)=>`<tr><td>${text(new Date(r.at).toLocaleString('ar-SY'))}</td><td>${text(r.item)}</td><td>${r.oldPrice==null?'غير محدد':curr(r.oldPrice)}</td><td>${r.newPrice==null?'غير محدد':curr(r.newPrice)}</td><td>${text(({ameen_import:'الملف المستورد',ameen_new_item:'صنف جديد',manual:'تعديل يدوي',undo:'تراجع'}[r.origin]||r.origin))}</td><td>${r.undone?'تم التراجع':r.origin==='undo'||r.origin==='ameen_new_item'?'—':`<button type="button" class="mini-btn" data-undo-price="${index}">تراجع</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<p class="metric-note">لم يُسجل تعديل أسعار بعد.</p>';
+  h('#daily-prices-v041').innerHTML=rows.length?`<div class="table-wrap"><table class="table"><thead><tr><th>التوقيت</th><th>الصنف</th><th>السعر السابق</th><th>السعر الجديد</th><th>المصدر</th><th>إجراء</th></tr></thead><tbody>${rows.map((r,index)=>`<tr><td>${text(new Date(r.at).toLocaleString('ar-SY-u-nu-latn'))}</td><td>${text(r.item)}</td><td>${r.oldPrice==null?'غير محدد':curr(r.oldPrice)}</td><td>${r.newPrice==null?'غير محدد':curr(r.newPrice)}</td><td>${text(({ameen_import:'الملف المستورد',ameen_new_item:'صنف جديد',manual:'تعديل يدوي',undo:'تراجع'}[r.origin]||r.origin))}</td><td>${r.undone?'تم التراجع':r.origin==='undo'||r.origin==='ameen_new_item'?'—':`<button type="button" class="mini-btn" data-undo-price="${index}">تراجع</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<p class="metric-note">لم يُسجل تعديل أسعار بعد.</p>';
   h('#daily-prices-v041').querySelectorAll('[data-undo-price]').forEach(b=>b.onclick=async()=>{
    const row=rows[Number(b.dataset.undoPrice)];if(!row)return;
    if(!(await confirmBox(`إعادة سعر «${row.item}» من ${curr(row.newPrice)} إلى ${row.oldPrice==null?'سعر غير محدد':curr(row.oldPrice)}؟ لن تتغير قيم الأوردرات السابقة.`, 'تأكيد التراجع')))return;

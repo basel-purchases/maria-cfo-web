@@ -4,7 +4,7 @@ import { esc, money } from '../utils.js?v=1.0';
 import { toast, friendlyError, loader, confirmBox, modal } from '../ui.js?v=1.0.31';
 import { queueActionV132, menuFilterLinkV132, sortQueueNamesV132 } from '../sale-queue-actions-v132.js?v=1.0.33';
 
-const count = n => Number(n || 0).toLocaleString('ar-SY');
+const count = n => Number(n || 0).toLocaleString('ar-SY-u-nu-latn');
 const norm = x => String(x || '').trim().replace(/[أإآٱ]/g, 'ا').replace(/ى/g,'ي').replace(/\s+/g,' ').toLowerCase();
 function readableSaleErrorV132(error) {
   const e=String(error||'');

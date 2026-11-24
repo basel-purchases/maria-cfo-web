@@ -1,3 +1,9 @@
+## v1.0.39 - Ticket installments, cash posting safety, and Latin 0-9 digits
+- Partial or full event-seat ticket receipts; balance, next due date, receipts and cashbox selection.
+- Server-side checks prevent overpayment and duplicate retries.
+- Arabic and Persian numerals are displayed as Western 0-9 throughout the UI.
+- Database migration: database/Maria-CFO-Web-v1.0.39-Event-Ticket-Installments.sql
+
 ## v1.0.36 — 2026-11-21
 - إصلاح الأداء في فواتير شراء الأمين: تحديث المجاميع مرة واحدة لكل فاتورة بدل كل بند، ومجموعات حسب عدد البنود.
 - فصل فشل دفع/قبض الصندوق عن حفظ فواتير الأرشيف، وتسجيل الأسباب المحاسبية المؤجلة للمطابقة وإعادة المحاولة الآمنة.

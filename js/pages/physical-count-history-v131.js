@@ -2,7 +2,7 @@
 import * as api from '../api.js?v=1.0.31';
 import {esc} from '../utils.js?v=1.0';
 import {loader,friendlyError} from '../ui.js?v=1.0.30';
-const n=v=>Number(v??0).toLocaleString('ar-SY',{maximumFractionDigits:6});
+const n=v=>Number(v??0).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:6});
 export async function renderPhysicalCountHistoryV131(root){
  root.innerHTML=loader();
  try{
@@ -10,7 +10,7 @@ export async function renderPhysicalCountHistoryV131(root){
   root.innerHTML=`<div class="page-head"><div><h2>سجل الجرد المعتمد</h2><p>كل تاريخ جرد وحركة تصحيح محفوظان للمراجعة، وإعادة رفع ملف لن تكرر احتساب كمية المادة في تاريخها.</p></div></div>
    <div class="card"><a class="btn secondary" href="#/baseline-imports">استيراد جرد</a></div>
    <div class="table-wrap"><table class="table"><thead><tr><th>تاريخ الجرد</th><th>الملف</th><th>التاريخ الفعلي للرفع</th><th>مواد مسجلة</th><th>موجودة سابقًا</th><th>تفاصيل</th></tr></thead><tbody>
-   ${sessions.map(x=>`<tr><td><strong>${esc(x.date)}</strong></td><td>${esc(x.file)}</td><td>${esc(x.submittedAt?new Date(x.submittedAt).toLocaleString('ar-SY'):'')}</td><td>${n(x.posted)}</td><td>${n(x.duplicates)}</td><td><button class="mini-btn v131-count-detail" data-id="${esc(x.id)}">فتح</button></td></tr>`).join('')}</tbody></table></div>
+   ${sessions.map(x=>`<tr><td><strong>${esc(x.date)}</strong></td><td>${esc(x.file)}</td><td>${esc(x.submittedAt?new Date(x.submittedAt).toLocaleString('ar-SY-u-nu-latn'):'')}</td><td>${n(x.posted)}</td><td>${n(x.duplicates)}</td><td><button class="mini-btn v131-count-detail" data-id="${esc(x.id)}">فتح</button></td></tr>`).join('')}</tbody></table></div>
    <div id="v131-count-detail-slot"></div>`;
   root.querySelectorAll('.v131-count-detail').forEach(b=>b.onclick=async()=>{
    const host=root.querySelector('#v131-count-detail-slot');host.innerHTML=loader();

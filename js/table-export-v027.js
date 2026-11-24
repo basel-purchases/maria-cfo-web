@@ -62,7 +62,7 @@ function printableHtml({title,headers,rows}){
  tr{break-inside:avoid}thead{display:table-header-group}footer{margin-top:10px;color:#666;font-size:10px}
  @media screen{body{margin:20px}.noprint{margin-bottom:15px}}@media print{.noprint{display:none}}</style></head>
  <body><div class="noprint">استخدم «حفظ بتنسيق PDF» من نافذة الطباعة.</div><h1>${escapeHtml(title)}</h1>
- <div class="meta">Maria CFO · ${escapeHtml(new Date().toLocaleString('ar'))} · ${rows.length} سجل حسب التصفية</div>
+ <div class="meta">Maria CFO · ${escapeHtml(new Date().toLocaleString('ar-u-nu-latn'))} · ${rows.length} سجل حسب التصفية</div>
  <table><thead><tr>${heading}</tr></thead><tbody>${body}</tbody></table><footer>تصدير حسب التصفية المطبقة في الصفحة</footer></body></html>`;
 }
 

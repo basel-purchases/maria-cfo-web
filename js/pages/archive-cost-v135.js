@@ -4,7 +4,7 @@ import * as api from '../api.js?v=1.0.35';
 import {esc,money} from '../utils.js?v=1.0';
 import {loader,friendlyError,toast} from '../ui.js?v=1.0.31';
 import {renderSaleCostQueueV132} from './sale-cost-queue-v132.js?v=1.0.34.1';
-const fmt=x=>Number(x||0).toLocaleString('ar-SY',{maximumFractionDigits:2});
+const fmt=x=>Number(x||0).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:2});
 const menuLink=name=>`#/menu/find/${encodeURIComponent(String(name||''))}`;
 
 export function renderUnifiedCostQueueV135(root,{pendingOnly=false,archiveOnly=false}={}){

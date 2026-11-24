@@ -8,7 +8,7 @@ const PACKAGING=new Set(['CARTON','BOX','PACK','BAG','SACK','TRAY','CRATE','SACH
 export function stockNumber(value,maxDigits=6){
   const n=Number(value);
   if(!Number.isFinite(n))return '—';
-  return new Intl.NumberFormat('ar-SY',{maximumFractionDigits:maxDigits,useGrouping:false}).format(n);
+  return new Intl.NumberFormat('ar-SY-u-nu-latn',{maximumFractionDigits:maxDigits,useGrouping:false}).format(n);
 }
 
 function nearIntegerRatio(ratio){

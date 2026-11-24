@@ -1669,3 +1669,32 @@ export const v135FoodCostOverview=()=>rpc('v135_food_cost_overview');
 export const v135FoodCostAlerts=(limit=20)=>rpc('v135_food_cost_alerts',{p_limit:limit});
 export const v135ReadCostAlerts=()=>rpc('v135_mark_food_cost_alerts_read');
 export const v135SaveFoodCostSettings=(min,max)=>rpc('v135_set_food_cost_limits',{p_min:min,p_max:max});
+
+// v1.0.39: atomic ticket booking/deposit, subsequent installments and optional due date.
+export const eventBookSeatsV139=(eventId,booking)=>rpc('event_book_and_collect_installment_v139',{
+ p_event_id:eventId,p_customer_name:booking.name,p_guest_count:Number(booking.guests),
+ p_amount:Number(booking.amount),p_guest_names:booking.names||[],p_phone:booking.phone||null,
+ p_note:booking.note||null,p_seat_note:booking.seatNote||null,
+ p_initial_payment:Number(booking.initialPayment||0),p_cashbox_id:Number(booking.initialPayment||0)>0?booking.cashboxId:null,
+ p_next_due_date:booking.nextDueDate||null,p_installment_note:booking.installmentNote||null,
+ p_request_key:booking.requestKey,
+});
+export const eventCollectBookingInstallmentV139=(bookingId,input)=>rpc('event_collect_booking_installment_v139',{
+ p_booking_id:bookingId,p_cashbox_id:input.cashboxId,p_amount:Number(input.amount),
+ p_next_due_date:input.nextDueDate||null,p_note:input.note||null,p_request_key:input.requestKey,
+});
+export const eventSetBookingInstallmentPlanV139=(bookingId,nextDueDate,note)=>rpc('event_set_booking_installment_plan_v139',{
+ p_booking_id:bookingId,p_next_due_date:nextDueDate||null,p_note:note||null,
+});
+// Read all historical installment receipts; Supabase limits a single result page.
+export async function eventBookingInstallmentOpsV139(eventId){
+ const result=[];
+ for(let start=0;start<100000;start+=500){
+  const rows=await dataOrThrow(need().from('event_booking_installment_ops_v139')
+   .select('*').eq('event_id',eventId).order('created_at',{ascending:true})
+   .order('request_key',{ascending:true}).range(start,start+499));
+  result.push(...(rows||[]));
+  if(!rows||rows.length<500)return result;
+ }
+ throw new Error('EVENT_INSTALLMENT_HISTORY_TOO_LONG');
+}

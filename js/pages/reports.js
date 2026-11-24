@@ -12,7 +12,7 @@ function periodStart(kind){
 }
 function val(v){return v==null?'—':money(v);}
 function num(v){return Number.isFinite(Number(v))?Number(v):0;}
-function pct(v){return v==null?'—':`${esc(Number(v).toLocaleString('ar-SY',{maximumFractionDigits:1}))}%`;}
+function pct(v){return v==null?'—':`${esc(Number(v).toLocaleString('ar-SY-u-nu-latn',{maximumFractionDigits:1}))}%`;}
 const itemColumns=[
   {key:'name',label:'الصنف'},
   {key:'quantity_sold',label:'الكمية',format:v=>esc(v??'—')},
